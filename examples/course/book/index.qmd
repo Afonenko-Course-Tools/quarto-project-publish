@@ -1,0 +1,9 @@
+# Введение {.unnumbered #sec-intro}
+
+Из книги в лекцию: @lectures:sec-memory.
+
+Из книги в практику: @practice:exr-demo.
+
+Рисунок на слайде: @lectures:fig-demo.
+
+Локальная ссылка остаётся штатной: @sec-objects.

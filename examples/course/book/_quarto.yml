@@ -1,0 +1,20 @@
+project:
+  type: book
+  output-dir: _book
+book:
+  title: Программирование
+  chapters:
+    - index.qmd
+    - topics/objects.qmd
+  appendices:
+    - appendix.qmd
+format:
+  html:
+    theme: cosmo
+lang: ru
+crossref:
+  fig-labels: roman
+  custom:
+    - key: vid
+      kind: float
+      reference-prefix: Видео

@@ -1,0 +1,5 @@
+# Дополнение {#sec-appendix}
+
+$$ E = mc^2 $$ {#eq-appendix}
+
+Проверка обозначений: @practice:sec-exercise.

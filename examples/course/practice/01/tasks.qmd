@@ -1,0 +1,19 @@
+---
+title: Практика — контракты
+---
+
+## Постановка {#sec-exercise}
+
+Лекция: @lectures:sec-contracts. Книга: @book:sec-objects.
+
+::: {#exr-demo}
+### Ограничение диапазона
+
+Реализуйте ограничение целого числа заданным диапазоном.
+:::
+
+## Сверка {#sec-results}
+
+Сопоставьте [@book:fig-demo; @lectures:fig-demo].
+
+{{< xref book eq-appendix "Формула в приложении" >}}

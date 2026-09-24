@@ -1,0 +1,15 @@
+{
+  "name": "quarto-reference-catalog",
+  "version": "1.0.0",
+  "quarto": ">=1.10.0",
+  "catalog_schema": "quarto-reference-catalog/2",
+  "formats": [
+    "html",
+    "revealjs"
+  ],
+  "installation": "quarto add",
+  "runtime_dependencies": [
+    "Quarto bundled Lua and Deno"
+  ],
+  "private_quarto_index": false
+}

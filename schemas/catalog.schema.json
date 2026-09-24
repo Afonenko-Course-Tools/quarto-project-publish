@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Quarto Reference Catalog v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "generator",
+    "targets"
+  ],
+  "properties": {
+    "schema": {
+      "const": "quarto-reference-catalog/2"
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "quarto"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "quarto": {
+          "type": "string"
+        }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/target"
+      }
+    }
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "id",
+        "page",
+        "fragment",
+        "labelHtml",
+        "numberHtml",
+        "label",
+        "number"
+      ],
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "page": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fragment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "labelHtml": {
+          "type": "string",
+          "minLength": 1
+        },
+        "numberHtml": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "number": {
+          "type": "string"
+        },
+        "slide": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://.*/$"
+        }
+      }
+    }
+  }
+}

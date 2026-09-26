@@ -1,5 +1,6 @@
 import { workspace } from "../infrastructure/config.ts";
 import { quarto } from "../infrastructure/process.ts";
+import { profileArguments } from "../infrastructure/profiles.ts";
 import { copyTree, exists, join, relative, resolve } from "../infrastructure/files.ts";
 const w = await workspace(Deno.cwd());
 const option = (name: string, fallback: string) => {
@@ -46,7 +47,7 @@ async function rebuild() {
     dirty = false;
     try {
       console.log("QRC rebuilding workspace");
-      await quarto(["render", "."], w.root);
+      await quarto(["render", ".", ...profileArguments(w.profiles)], w.root);
       await snapshot();
       for (const client of clients) {
         try { client.enqueue(encoder.encode("data: reload\n\n")); } catch { clients.delete(client); }
@@ -57,7 +58,7 @@ async function rebuild() {
   running = false;
 }
 const outputRelative = relative(w.root, w.output).split(/[\\/]/)[0];
-const ignored = new Set([".qrc", ".quarto", ".git", "node_modules", "_output", "_book", "_site", outputRelative]);
+const ignored = new Set([".qrc", ".quarto", ".git", "node_modules", "_output", "_book", "_site", outputRelative, ...w.outputs]);
 const sourceExtension = /\.(qmd|md|ipynb|ya?ml|bib|css|scss|lua|ts|js|py|r|jl|svg|png|jpe?g|webp|csv|tsv|json|toml|sh|java|gradle|kts|txt|html|xml|c|h|cpp|hpp)$/i;
 for await (const event of Deno.watchFs(w.root, { recursive: true })) {
   const changed = event.paths.some((path) => sourceExtension.test(path) && !relative(w.root, path).split(/[\\/]/).some((part) => ignored.has(part)));

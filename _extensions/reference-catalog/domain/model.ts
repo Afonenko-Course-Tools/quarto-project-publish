@@ -22,4 +22,4 @@ export interface Catalog {
 }
 export interface Member { namespace: string; path: string; mount: string; format: "html" | "revealjs" }
 export interface Import { namespace: string; file: string; sourceNamespace: string; baseUrl: string }
-export interface Workspace { root: string; output: string; members: Member[]; imports: Import[]; extension: string; home?: string }
+export interface Workspace { root: string; output: string; members: Member[]; imports: Import[]; extension: string; profiles: string[]; outputs: string[]; home?: string }

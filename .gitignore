@@ -8,6 +8,8 @@
 **/.qrc/
 **/_generated/
 **/_site/
+**/_site-student/
+**/_site-full/
 **/_book/
 **/_output/
 **/site_libs/

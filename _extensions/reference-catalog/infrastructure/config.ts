@@ -1,9 +1,11 @@
 import type { Workspace, Member, Import } from "../domain/model.ts";
 import { dirname, join, within, fromFileUrl, relative, isAbsolute } from "./files.ts";
 import { quarto } from "./process.ts";
+import { activeProfiles, profileArguments } from "./profiles.ts";
 export async function workspace(root: string): Promise<Workspace> {
   const extension = dirname(dirname(fromFileUrl(import.meta.url)));
-  const inspected = JSON.parse(await quarto(["inspect", root], root));
+  const profiles = activeProfiles();
+  const inspected = JSON.parse(await quarto(["inspect", root, ...profileArguments(profiles)], root));
   const config = inspected.config;
   const ref = config["reference-catalog"];
   if (!ref?.projects || typeof ref.projects !== "object") throw new Error("QRC reference-catalog.projects is required at workspace root");
@@ -35,6 +37,13 @@ export async function workspace(root: string): Promise<Workspace> {
     if (format !== "html" && format !== "revealjs") throw new Error(`QRC unsupported format ${format}`);
     if (namespace === home && format !== "html") throw new Error("QRC home must use HTML and produce index.html");
     await Deno.stat(join(path, "_quarto.yml"));
+    for (const profile of profiles) {
+      try { await Deno.stat(join(path, `_quarto-${profile}.yml`)); }
+      catch (error) {
+        if (error instanceof Deno.errors.NotFound) throw new Error(`QRC project ${namespace} has no _quarto-${profile}.yml; every member must support the selected profile`);
+        throw error;
+      }
+    }
     members.push({ namespace, path, mount, format });
   }
   if (!members.length) throw new Error("QRC no project members");
@@ -48,5 +57,15 @@ export async function workspace(root: string): Promise<Workspace> {
     if (!["http:", "https:"].includes(url.protocol) || url.search || url.hash || !url.pathname.endsWith("/")) throw new Error("QRC import base-url must be HTTP(S) ending in /");
     imports.push({ namespace, file: within(root, item.file), sourceNamespace: item.namespace, baseUrl: url.href });
   }
-  return { root, output, members, imports, extension, home };
+  // A previous publication is generated data even when another profile is active.
+  const outputs = new Set([relative(root, output)]);
+  for await (const entry of Deno.readDir(root)) {
+    const match = entry.isFile && entry.name.match(/^_quarto-([A-Za-z0-9][A-Za-z0-9_.-]*)\.yml$/);
+    if (!match) continue;
+    const profileConfig = JSON.parse(await quarto(["inspect", root, "--profile", match[1]], root)).config;
+    const name = profileConfig.project?.["output-dir"] || "_site";
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(name)) throw new Error(`QRC profile ${match[1]} output-dir must be one directory name`);
+    outputs.add(name);
+  }
+  return { root, output, members, imports, extension, profiles, outputs: [...outputs], home };
 }

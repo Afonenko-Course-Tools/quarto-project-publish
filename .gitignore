@@ -1,10 +1,10 @@
-# Quarto local state. Keep the exact entries Quarto adds automatically.
+# Локальное состояние Quarto; сохраняем штатные записи инструмента.
 /.quarto/
 **/.quarto/
 **/*.quarto_ipynb
 /_*.local
 
-# Rendered output, generated course models and caches at any depth.
+# Результаты сборки, сгенерированные модели курса и кеши.
 **/.qrc/
 **/_generated/
 **/_site/
@@ -17,6 +17,10 @@
 **/*_cache/
 
 .DS_Store
+/node_modules/
 
-# Demo dependencies; the authored /_extensions directory stays tracked.
+# Устанавливаемые зависимости примера; исходники /_extensions хранятся в Git.
 /examples/**/_extensions/
+
+# Deno запускается из поставки Quarto без локального lock-файла.
+/deno.lock

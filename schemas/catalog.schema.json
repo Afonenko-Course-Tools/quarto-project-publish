@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Quarto Reference Catalog v2",
+  "title": "Каталог перекрёстных ссылок Quarto",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,19 +10,15 @@
   ],
   "properties": {
     "schema": {
-      "const": "quarto-reference-catalog/2"
+      "const": "quarto-reference-catalog"
     },
     "generator": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "version",
         "quarto"
       ],
       "properties": {
-        "version": {
-          "type": "string"
-        },
         "quarto": {
           "type": "string"
         }
@@ -32,6 +28,19 @@
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/target"
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   },
@@ -84,10 +93,9 @@
           "type": "string",
           "minLength": 1
         },
-        "baseUrl": {
+        "title": {
           "type": "string",
-          "format": "uri",
-          "pattern": "^https?://.*/$"
+          "minLength": 1
         }
       }
     }

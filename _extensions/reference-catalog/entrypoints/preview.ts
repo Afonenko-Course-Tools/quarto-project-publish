@@ -20,7 +20,7 @@ const clients = new Set<ReadableStreamDefaultController<Uint8Array>>();
 const encoder = new TextEncoder();
 const mime: Record<string, string> = { html: "text/html; charset=utf-8", js: "text/javascript", css: "text/css", json: "application/json", svg: "image/svg+xml", png: "image/png", jpg: "image/jpeg", woff: "font/woff", woff2: "font/woff2", pdf: "application/pdf" };
 const reloadScript = '<script>new EventSource("/__qrc/events").onmessage=()=>location.reload();</script>';
-Deno.serve({ port, hostname, onListen: () => console.log(`QRC preview ready http://${hostname}:${port}`) }, async (request) => {
+Deno.serve({ port, hostname, onListen: () => console.log(`QRC предпросмотр готов http://${hostname}:${port}`) }, async (request) => {
   const url = new URL(request.url);
   if (url.pathname === "/__qrc/events") {
     let controller: ReadableStreamDefaultController<Uint8Array>;
@@ -29,14 +29,14 @@ Deno.serve({ port, hostname, onListen: () => console.log(`QRC preview ready http
   }
   try {
     const path = resolve(served, "." + decodeURIComponent(url.pathname));
-    if (relative(served, path).startsWith("..")) return new Response("Forbidden", { status: 403 });
+    if (relative(served, path).startsWith("..")) return new Response("Доступ запрещён", { status: 403 });
     const file = (await Deno.stat(path)).isDirectory ? join(path, "index.html") : path;
     const type = mime[file.split(".").pop()!] || "application/octet-stream";
     const bytes = type.startsWith("text/html") ? (await Deno.readTextFile(file)).replace("</body>", reloadScript + "</body>") : await Deno.readFile(file);
     return new Response(bytes, { headers: { "content-type": type, "cache-control": "no-store" } });
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return new Response("Not found", { status: 404 });
-    return new Response("Preview error", { status: 500 });
+    if (error instanceof Deno.errors.NotFound) return new Response("Страница не найдена", { status: 404 });
+    return new Response("Ошибка предпросмотра", { status: 500 });
   }
 });
 let timer: number | undefined, running = false, dirty = false;
@@ -46,14 +46,14 @@ async function rebuild() {
   do {
     dirty = false;
     try {
-      console.log("QRC rebuilding workspace");
+      console.log("QRC пересборка составного проекта");
       await quarto(["render", ".", ...profileArguments(w.profiles)], w.root);
       await snapshot();
       for (const client of clients) {
         try { client.enqueue(encoder.encode("data: reload\n\n")); } catch { clients.delete(client); }
       }
-      console.log("QRC preview updated");
-    } catch (error) { console.error(String(error)); console.error("QRC preview keeps the last successful build"); }
+      console.log("QRC предпросмотр обновлён");
+    } catch (error) { console.error(String(error)); console.error("QRC предпросмотр продолжает показывать последнюю успешную сборку"); }
   } while (dirty);
   running = false;
 }

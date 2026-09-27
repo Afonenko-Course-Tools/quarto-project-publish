@@ -3,7 +3,7 @@ local function finish(doc)
   if not quarto.doc.is_format("html") then return doc end
   local config = doc.meta["reference-catalog"]
   local ns = os.getenv("QRC_NAMESPACE") or (config and pandoc.utils.stringify(config.namespace))
-  assert(ns and ns ~= "", "QRC render from the workspace root (missing namespace)")
+  assert(ns and ns ~= "", "QRC запустите сборку из корня составного проекта: не задано пространство имён")
   local rows = pandoc.Blocks({})
   for _, id in ipairs(targets.sorted()) do
     for _, style in ipairs({"default", "number"}) do
@@ -13,8 +13,10 @@ local function finish(doc)
         ref = style == "number" and pandoc.Span({}, pandoc.Attr("", {"qrc-unavailable"}))
           or pandoc.Link(targets.title(id), "#" .. id, "", pandoc.Attr("", {"qrc-anchor"}))
       end
-      rows:insert(pandoc.Div({pandoc.Para({ref})}, pandoc.Attr("", {"qrc-probe"},
-        {["data-qrc-id"]=id, ["data-qrc-style"]=style})))
+      local attrs = {["data-qrc-id"]=id, ["data-qrc-style"]=style}
+      local title = targets.heading_title(id)
+      if style == "default" and title and title ~= "" then attrs["data-qrc-title"] = title end
+      rows:insert(pandoc.Div({pandoc.Para({ref})}, pandoc.Attr("", {"qrc-probe"}, attrs)))
     end
   end
   doc.blocks:insert(pandoc.Div(rows, pandoc.Attr("", {"qrc-probes"},

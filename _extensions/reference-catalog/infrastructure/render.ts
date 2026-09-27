@@ -21,7 +21,7 @@ export async function renderMembers(w: Workspace): Promise<BuildState> {
   for (const member of w.members) {
     const output = join(w.root, ".qrc", "builds", id, "output", member.namespace);
     const source = join(snapshot, relative(w.root, member.path));
-    console.log(`QRC render ${member.namespace} (${member.format})`);
+    console.log(`QRC сборка ${member.namespace} (${member.format})`);
     await quarto(["render", ".", "--to", member.format, "--output-dir", relative(source, output),
       "--metadata-file", overlay, "--fail-if-warnings", ...profileArguments(w.profiles)], source,
       { QRC_MEMBER: "1", QRC_NAMESPACE: member.namespace });

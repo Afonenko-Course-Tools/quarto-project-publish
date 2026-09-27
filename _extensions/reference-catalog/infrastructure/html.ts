@@ -1,5 +1,5 @@
 import { parse } from "../vendor/parse5/dist/index.js";
-// Minimal HTML adapter contract. The vendor implementation is isolated here.
+// Минимальный интерфейс адаптера HTML; сторонняя библиотека изолирована в этом модуле.
 interface Offset { startOffset: number; endOffset: number }
 interface Location extends Offset { startTag?: Offset; endTag?: Offset }
 interface Document { nodeName: "#document"; childNodes: Node[] }
@@ -30,7 +30,7 @@ export function content(node: Node): string {
 }
 export function inner(html: string, node: Element): string {
   const loc = node.sourceCodeLocation;
-  if (!loc?.startTag || !loc.endTag) throw new Error(`QRC missing HTML offsets for ${node.tagName}`);
+  if (!loc?.startTag || !loc.endTag) throw new Error(`QRC отсутствуют позиции HTML-элемента ${node.tagName}`);
   return html.slice(loc.startTag.endOffset, loc.endTag.startOffset);
 }
 export function escape(value: string): string {
@@ -41,7 +41,7 @@ export function replace(html: string, edits: Edit[]): string {
   edits.sort((a, b) => b.start - a.start);
   let end = html.length;
   for (const edit of edits) {
-    if (edit.end > end) throw new Error("QRC overlapping HTML transformations");
+    if (edit.end > end) throw new Error("QRC пересекающиеся изменения HTML");
     html = html.slice(0, edit.start) + edit.value + html.slice(edit.end);
     end = edit.start;
   }

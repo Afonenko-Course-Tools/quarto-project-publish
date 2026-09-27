@@ -2,12 +2,13 @@ import type { BuildPorts } from "../application/workflow.ts";
 import { workspace } from "./config.ts";
 import { renderMembers } from "./render.ts";
 import { publish } from "./publish.ts";
+import { importTargets } from "./imports.ts";
 import { join, exists } from "./files.ts";
 export function runtime(): BuildPorts {
   return {
     workspace: () => workspace(Deno.cwd()),
     async clearState(w) {
-      // A change of home/mount must never keep pages from the previous layout.
+      // При изменении home/mount прежнее размещение страниц не сохраняется.
       if (await exists(w.output)) await Deno.remove(w.output, { recursive: true });
       await Deno.mkdir(join(w.root, ".qrc"), { recursive: true });
       const file = join(w.root, ".qrc/state.json");
@@ -18,6 +19,7 @@ export function runtime(): BuildPorts {
         if (entry.isDirectory && entry.name.startsWith("publish-")) await Deno.remove(join(w.root, ".qrc", entry.name), { recursive: true });
       }
     },
+    imports: (w) => importTargets(w.imports),
     render: renderMembers,
     saveState: (w, state) => Deno.writeTextFile(join(w.root, ".qrc/state.json"), JSON.stringify(state)),
     loadState: async (w) => JSON.parse(await Deno.readTextFile(join(w.root, ".qrc/state.json"))),

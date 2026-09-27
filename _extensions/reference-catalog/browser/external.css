@@ -1,4 +1,4 @@
-/* Inherit the publication theme's link color and underline. */
+/* Цвет и подчёркивание ссылки наследуются от темы публикации. */
 .qrc-external .qrc-source {
   font-size: 0.9em;
   opacity: 0.8;

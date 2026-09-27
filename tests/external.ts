@@ -111,7 +111,7 @@ lang: ru
 `);
   await render(os);
   const published = await catalog(os);
-  assert(published.schema === "quarto-reference-catalog/3", "New publications must use catalog schema 3");
+  assert(published.schema === "quarto-reference-catalog", "Публикация должна использовать текущую схему без номера версии");
   assert(published.publication?.title === "Операционные системы", "Publication title missing from exported catalog");
   assert(Object.keys(published.targets).sort().join() === "book:sec-addressing,book:sec-memory", "Explicit exports must contain only the selected own targets");
   const memory = published.targets["book:sec-memory"];
@@ -149,8 +149,8 @@ lang: ru
       namespace: book
       base-url: https://example.test/OS/
       style: external
-    os-legacy:
-      file: ../os/_site/reference-catalog.json
+    os-native:
+      source: ../os/_site/reference-catalog.json
       namespace: book
       base-url: https://example.test/OS/
 `);
@@ -171,7 +171,7 @@ lang: ru
 
 Каталог соседнего репозитория: @os-local:sec-memory.
 
-Совместимость с file: @os-legacy:sec-memory.
+Штатная подпись из локального каталога: @os-native:sec-memory.
 
 Авторский текст: {{< xref os sec-memory "Читать о памяти" style="external" >}}.
 `);
@@ -190,7 +190,7 @@ lang: ru
   assert(content(link(nodes, "os:sec-memory", "number")) === memory.number, "Explicit number style must override the import default");
   assert(content(link(nodes, "os:sec-memory", "external")) === "Читать о памяти — Операционные системы", "External styling must preserve author-supplied title text");
   assert(content(link(nodes, "os-local:sec-memory")) === content(defaultLink), "A sibling file source must resolve like an HTTP source");
-  assert(content(link(nodes, "os-legacy:sec-memory")) === memory.label, "Legacy file imports must retain their default Quarto label");
+  assert(content(link(nodes, "os-native:sec-memory")) === memory.label, "Локальный импорт без style сохраняет штатную подпись Quarto");
   const javaCatalog = await catalog(java);
   assert(Object.keys(javaCatalog.targets).join() === "book:sec-memory", "Default exports must include own targets and exclude every imported namespace");
 
@@ -212,7 +212,10 @@ lang: ru
     sourceNamespace: "not-exported", baseUrl: "https://example.test/OS/",
   }]), "not-exported");
 
-  console.log("PASS external catalogs: selective own exports, HTTP and sibling files, legacy file imports, external/title/number styles, one fetch per build, fresh build snapshot, no reexports, invalid export/import rejection");
+  await write(java, "_quarto.yml", javaConfig + "  version: 1\n");
+  await render(java, "неизвестное свойство reference-catalog.version");
+
+  console.log("PASS external catalogs: selective own exports, HTTP and sibling files, штатные подписи локального импорта, external/title/number styles, one fetch per build, fresh build snapshot, no reexports, invalid export/import rejection");
 } finally {
   if (server) await server.shutdown();
   await Deno.remove(root, { recursive: true });

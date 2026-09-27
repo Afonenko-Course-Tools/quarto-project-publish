@@ -1,5 +1,5 @@
-title: Reference Catalog
-author: Anatoly Afonenko
+title: Каталог перекрёстных ссылок
+author: Анатолий Афоненко
 version: 1.2.0
 quarto-required: ">=1.10.0"
 contributes:
@@ -22,4 +22,4 @@ contributes:
         watch-inputs: false
         serve:
           cmd: "quarto run ../.qrc/preview.ts --port {port} --host {host}"
-          ready: "QRC preview ready"
+          ready: "QRC предпросмотр готов"

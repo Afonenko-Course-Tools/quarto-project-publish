@@ -16,8 +16,8 @@ async function rejects(action: () => unknown | Promise<unknown>, message: string
   throw new Error(`Expected rejection: ${message}`);
 }
 const fixture: Catalog = {
-  schema: "quarto-reference-catalog/3",
-  generator: { version: "test", quarto: "test" },
+  schema: "quarto-reference-catalog",
+  generator: { quarto: "test" },
   publication: { title: "Operating systems" },
   targets: {
     "book:sec-memory": { namespace: "book", id: "sec-memory", page: "chapters/memory.html", fragment: "sec-memory", labelHtml: "Section 1", numberHtml: "1", label: "Section 1", number: "1", title: "Virtual memory" },
@@ -46,7 +46,7 @@ const parse = (source: string, extra: Record<string, unknown> = {}) => parseImpo
 try {
   const [local] = parse("../os/reference.json");
   equal(local.source, sibling, "Sibling repositories are independent sources");
-  equal(parseImports({ os: { file: "../os/reference.json", namespace: "book", "base-url": local.baseUrl } }, consumer, ["book"])[0], local, "Legacy file alias");
+  await rejects(() => parseImports({ os: { file: "../os/reference.json", namespace: "book", "base-url": local.baseUrl } }, consumer, ["book"]), "неизвестное свойство импорта");
   equal(parse(toFileUrl(sibling).href)[0].source, sibling, "file URL normalisation");
   equal(parse(sibling)[0].source, sibling, "absolute local source");
   const localTargets = await importTargets([local]);
@@ -64,48 +64,42 @@ try {
   const redirected = await importTargets(parse(`${url}/redirect`));
   equal(redirected[0].page, "chapters/memory.html", "HTTP redirect preserves catalog");
   await rejects(() => importTargets(parse(`${url}/missing`)), "HTTP 404");
-  await rejects(() => importTargets(parse(`${url}/invalid-json`)), "invalid imported catalog JSON");
-  await rejects(() => importTargets(parse(`${url}/invalid-schema`)), "unsupported imported catalog schema");
-  await rejects(() => importTargets([{ ...local, sourceNamespace: "absent" }]), "no namespace absent");
-  await rejects(() => importTargets(parse("../absent.json")), "cannot read imported catalog");
+  await rejects(() => importTargets(parse(`${url}/invalid-json`)), "некорректный JSON импортированного каталога");
+  await rejects(() => importTargets(parse(`${url}/invalid-schema`)), "неподдерживаемая схема импортированного каталога");
+  await rejects(() => importTargets([{ ...local, sourceNamespace: "absent" }]), "не содержит пространство имён absent");
+  await rejects(() => importTargets(parse("../absent.json")), "не удалось прочитать импортированный каталог");
 
-  const legacy = structuredClone(fixture);
-  legacy.schema = "quarto-reference-catalog/2";
-  delete legacy.publication;
-  Object.assign(legacy.targets["book:sec-memory"], { baseUrl: "https://old.example/", sourceTitle: "Old source", defaultStyle: "number" });
-  await Deno.writeTextFile(sibling, JSON.stringify(legacy));
-  const [old] = await importTargets([local]);
-  equal(old.baseUrl, "https://old.example/", "Legacy re-export keeps its original publication URL");
-  equal(old.sourceTitle, "os", "Alias fallback and no inherited attribution");
-  assert(old.defaultStyle === undefined, "Legacy presentation metadata leaked");
-  delete legacy.targets["book:sec-memory"].baseUrl;
-  await Deno.writeTextFile(sibling, JSON.stringify(legacy));
-  equal((await importTargets([local]))[0].baseUrl, local.baseUrl, "Legacy own target uses configured publication URL");
+  for (const schema of ["quarto-reference-catalog/2", "quarto-reference-catalog/3"]) {
+    await Deno.writeTextFile(sibling, JSON.stringify({ ...fixture, schema }));
+    await rejects(() => importTargets([local]), "неподдерживаемая схема импортированного каталога");
+  }
   for (const [property, valid] of [["baseUrl", "https://other.example/"], ["sourceTitle", "Other course"], ["defaultStyle", "external"]]) {
     const candidate = structuredClone(fixture);
     Object.assign(candidate.targets["book:sec-memory"], { [property]: valid });
     await Deno.writeTextFile(sibling, JSON.stringify(candidate));
-    await rejects(() => importTargets([local]), `${property} is not allowed in an own-target schema 3 catalog`);
+    await rejects(() => importTargets([local]), `${property} недопустимо в каталоге публикации`);
   }
 
-  for (const [source, message] of [["ftp://example.edu/reference.json", "unsupported import source protocol"], ["https://[", "invalid import source URL"], ["https://example.edu/reference.json#part", "must not contain a fragment"], ["file:///tmp/ref.json?query", "file source must not contain"]]) {
+  for (const [source, message] of [["ftp://example.edu/reference.json", "неподдерживаемый протокол источника импорта"], ["https://[", "некорректный URL источника импорта"], ["https://example.edu/reference.json#part", "не должен содержать фрагмент"], ["file:///tmp/ref.json?query", "источник file: не должен содержать"]]) {
     await rejects(() => parse(source), message);
   }
-  await rejects(() => parse("../os/reference.json", { file: "other.json" }), "not both");
-  await rejects(() => parse(""), "needs source");
-  await rejects(() => parseImports([], consumer, []), "imports must be a mapping");
-  await rejects(() => parseImports({ book: config(sibling).os }, consumer, ["book"]), "invalid import namespace");
-  await rejects(() => parse(sibling, { namespace: "bad:namespace" }), "valid source namespace");
-  await rejects(() => parse(sibling, { style: "italic" }), "invalid import style");
-  await rejects(() => parse(sibling, { title: 9 }), ".title must be a nonempty string");
-  await rejects(() => parse(sibling, { unknown: true }), "unknown import property");
+  await rejects(() => parse("../os/reference.json", { file: "other.json" }), "неизвестное свойство импорта");
+  await rejects(() => parse(""), "требуется source");
+  await rejects(() => parseImports([], consumer, []), "imports должен сопоставлять");
+  await rejects(() => parseImports({ book: config(sibling).os }, consumer, ["book"]), "некорректное пространство имён импорта");
+  await rejects(() => parse(sibling, { namespace: "bad:namespace" }), "корректное пространство имён источника");
+  await rejects(() => parse(sibling, { style: "italic" }), "некорректный стиль импорта");
+  await rejects(() => parse(sibling, { title: 9 }), ".title должен быть непустой строкой");
+  await rejects(() => parse(sibling, { unknown: true }), "неизвестное свойство импорта");
   for (const invalid of [undefined, "https://example.edu/os", "ftp://example.edu/os/", "https://example.edu/os/?v=1", "https://example.edu/os/#x"]) {
-    await rejects(() => parse(sibling, { "base-url": invalid }), "base-url must be an HTTP(S) URL");
+    await rejects(() => parse(sibling, { "base-url": invalid }), "base-url должен быть HTTP(S) URL");
   }
 
   const malformed: [unknown, string][] = [
-    [{ ...fixture, generator: null }, "catalog generator"],
-    [{ ...fixture, targets: [] }, "catalog targets"],
+    [{ ...fixture, generator: null }, "поле generator каталога"],
+    [{ ...fixture, generator: { quarto: "test", version: "1" } }, "недопустимое поле version"],
+    [{ ...fixture, version: "1" }, "недопустимое поле version"],
+    [{ ...fixture, targets: [] }, "поле targets каталога"],
     [{ ...fixture, publication: { title: 10 } }, "publication.title"],
   ];
   for (const [property, invalid] of [["page", "../secret.html"], ["page", "/absolute.html"], ["page", "https://other.example/x"], ["page", "folder\\x.html"], ["page", "a//x.html"], ["page", "x.html?q=1"], ["fragment", ""], ["slide", 1], ["title", null], ["sourceTitle", 1], ["defaultStyle", "bad"], ["baseUrl", "javascript:alert(1)"], ["number", 1]] as [string, unknown][]) {
@@ -113,12 +107,12 @@ try {
     Object.assign(candidate.targets["book:sec-memory"], { [property]: invalid });
     malformed.push([candidate, property]);
   }
-  malformed.push([{ ...fixture, targets: { "book:wrong": fixture.targets["book:sec-memory"] } }, "catalog key must match"]);
+  malformed.push([{ ...fixture, targets: { "book:wrong": fixture.targets["book:sec-memory"] } }, "ключ каталога должен совпадать"]);
   for (const [candidate, message] of malformed) {
     await Deno.writeTextFile(sibling, JSON.stringify(candidate));
     await rejects(() => importTargets([local]), message);
   }
-  console.log("PASS imports: HTTP and redirects, one snapshot per source, file compatibility, sibling repositories, schema 2/3, publication metadata, malformed catalog/config rejection");
+  console.log("PASS imports: HTTP and redirects, one snapshot per source, required source, sibling repositories, current schema only, publication metadata, malformed catalog/config rejection");
 } finally {
   await server.shutdown();
   await Deno.remove(root, { recursive: true });

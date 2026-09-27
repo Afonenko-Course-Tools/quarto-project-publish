@@ -11,7 +11,7 @@ export interface Target {
   number: string;
   baseUrl?: string;
   title?: string;
-  /** Consumer-only presentation metadata; never exported. */
+  /** Настройки представления у потребителя; в экспорт не входят. */
   sourceTitle?: string;
   defaultStyle?: ReferenceStyle;
 }
@@ -21,8 +21,8 @@ export interface Reference {
   custom: boolean;
 }
 export interface Catalog {
-  schema: "quarto-reference-catalog/2" | "quarto-reference-catalog/3";
-  generator: { version: string; quarto: string };
+  schema: "quarto-reference-catalog";
+  generator: { quarto: string };
   publication?: { title: string };
   targets: Record<string, Target>;
 }
@@ -31,7 +31,7 @@ export interface Import {
   namespace: string; source: string; sourceNamespace: string; baseUrl: string;
   title?: string; style?: ReferenceStyle;
 }
-/** Missing selection exports every local target; an empty mapping exports none. */
+/** Без настройки экспортируются все локальные цели; пустое отображение запрещает экспорт. */
 export type Exports = Record<string, "*" | string[]>;
 export interface Workspace {
   root: string; output: string; members: Member[]; imports: Import[];

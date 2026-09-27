@@ -47,6 +47,7 @@ try {
   let links = 0;
   for (const path of (await files(output)).filter(path => path.endsWith(".html"))) {
     const nodes = elements(parseHtml(await Deno.readTextFile(path)));
+    assert(nodes.some(node => node.tagName === "script" && attr(node, "data-qrc-navigation") !== undefined), `Missing target navigation: ${path}`);
     pages.set(path, new Set(nodes.map(node => attr(node, "id")).filter((id): id is string => !!id)));
     for (const node of nodes) for (const name of ["href", "src"]) {
       const raw = attr(node, name);

@@ -53,15 +53,15 @@ assert(!number.includes("data-qrc-external-style"), "CSS was injected without an
 const title = render(link("title"));
 assert(content(elements(parseHtml(title)).find(n => n.tagName === "a")!) === imported.title, "Explicit title did not override import style");
 assert(!title.includes("qrc-source"), "Title style unexpectedly appended the publication title");
-const legacy: Target = { ...imported, title: undefined, sourceTitle: undefined };
-const fallback = render(link("external"), legacy);
-assert(fallback.includes('class="qrc-title">Chapter 7</span>') && fallback.includes('class="qrc-source"> — os</span>'), "Schema-2 title and publication fallbacks failed");
+const uncaptioned: Target = { ...imported, title: undefined, sourceTitle: undefined };
+const fallback = render(link("external"), uncaptioned);
+assert(fallback.includes('class="qrc-title">Chapter 7</span>') && fallback.includes('class="qrc-source"> — os</span>'), "Uncaptioned target and publication alias fallback failed");
 const native = render(link("default"), { ...imported, defaultStyle: undefined });
 assert(native.includes("Chapter&nbsp;7") && !native.includes('class="qrc-source"'), "The existing default label behavior changed");
 
 const reveal = render(link("external"), { ...imported, page: "lectures/memory.html", fragment: "fig-layout", slide: "sec-memory" });
 assert(reveal.includes('href="https://example.edu/courses/os/lectures/memory.html?qrc-target=fig-layout#/sec-memory"'), "External Revealjs destination lost its object/slide navigation");
 assert(!render(link("external"), imported, false).includes("<style"), "CSS was inserted into a fragment without a real head");
-reject(() => render(link("external"), { ...imported, baseUrl: undefined }), "external style requires an imported target");
-reject(() => render(link("number"), { ...imported, number: "", numberHtml: "" }), "is unnumbered");
-console.log("PASS link styles: AST title extraction, title/number overrides, schema-2 fallback, rich custom labels, escaped source titles, external metadata, Revealjs URLs and scoped CSS");
+reject(() => render(link("external"), { ...imported, baseUrl: undefined }), "стиль external требует импортированной цели");
+reject(() => render(link("number"), { ...imported, number: "", numberHtml: "" }), "не имеет номера");
+console.log("PASS link styles: AST title extraction, title/number overrides, uncaptioned target fallback, rich custom labels, escaped source titles, external metadata, Revealjs URLs and scoped CSS");

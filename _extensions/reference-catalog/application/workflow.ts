@@ -1,6 +1,6 @@
 import type { Target, Workspace } from "../domain/model.ts";
 export interface BuildState { id: string; quarto: string; members: { mount: string; output: string }[]; imports?: Target[] }
-/** Use cases depend on ports; CLI, files, HTML and Quarto stay in adapters. */
+/** Сценарии используют порты; CLI, файлы, HTML и Quarto остаются в адаптерах. */
 export interface BuildPorts {
   workspace(): Promise<Workspace>;
   clearState(w: Workspace): Promise<void>;

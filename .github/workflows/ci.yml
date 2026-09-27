@@ -1,4 +1,4 @@
-name: Check Quarto and CUE
+name: Проверка Quarto и CUE
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   check:
-    name: Check (${{ matrix.quarto }})
+    name: Проверка (${{ matrix.quarto }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -34,20 +34,28 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c # v2.0.0
         with:
           version: latest
-      - name: Tool versions
+      - name: Версии инструментов
         run: |
           quarto --version
           cue version
-      - name: Profile arguments
+      - name: Аргументы профилей
         run: quarto run tests/profiles.ts
-      - name: Catalog sources and link styles
+      - name: Источники каталогов и оформление ссылок
         run: |
           quarto run tests/imports.ts
           quarto run tests/link-styles.ts
           quarto run tests/exports.ts
-      - name: Independent publications with HTTP imports
+      - name: Независимые публикации с импортом по HTTP
         run: quarto run tests/external.ts
-      - name: Composite profile regressions
+      - name: Навигация к целям в HTML
+        run: quarto run tests/navigation.ts
+      - name: Профили составного проекта
         run: quarto run tests/composition.ts
-      - name: Render example and validate catalog with CUE
+      - name: Сборка примера и проверка каталога CUE
         run: quarto run tests/example.ts
+      - name: Установка браузерных зависимостей
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Раскрытие HTML-блоков и фрагментов Revealjs
+        run: npm run test:browser

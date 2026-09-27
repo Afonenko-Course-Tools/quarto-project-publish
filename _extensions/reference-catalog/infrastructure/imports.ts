@@ -6,11 +6,11 @@ async function readCatalog(source: string): Promise<Catalog> {
   const text = await readCatalogSource(source);
   let data: unknown;
   try { data = JSON.parse(text); }
-  catch { throw new Error(`QRC invalid imported catalog JSON in ${source}`); }
+  catch { throw new Error(`QRC некорректный JSON импортированного каталога in ${source}`); }
   return validateImportedCatalog(data, source);
 }
 
-/** One source read per preparation, even when several namespaces are imported. */
+/** Каждый источник читается один раз, в том числе при импорте нескольких пространств имён. */
 export async function importTargets(imports: Import[]): Promise<Target[]> {
   const snapshots = new Map<string, Promise<Catalog>>();
   const result: Target[] = [];
@@ -23,13 +23,13 @@ export async function importTargets(imports: Import[]): Promise<Target[]> {
       result.push({
         ...item,
         namespace: spec.namespace,
-        baseUrl: item.baseUrl ?? spec.baseUrl,
+        baseUrl: spec.baseUrl,
         sourceTitle: spec.title ?? catalog.publication?.title ?? spec.namespace,
         ...(spec.style === undefined ? {} : { defaultStyle: spec.style }),
       });
       count++;
     }
-    if (!count) throw new Error(`QRC import has no namespace ${spec.sourceNamespace}: ${spec.source}`);
+    if (!count) throw new Error(`QRC импорт не содержит пространство имён ${spec.sourceNamespace}: ${spec.source}`);
   }
   return result;
 }

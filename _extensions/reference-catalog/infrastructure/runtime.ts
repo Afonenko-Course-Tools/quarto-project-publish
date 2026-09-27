@@ -8,7 +8,7 @@ export function runtime(): BuildPorts {
   return {
     workspace: () => workspace(Deno.cwd()),
     async clearState(w) {
-      // A change of home/mount must never keep pages from the previous layout.
+      // При изменении home/mount прежнее размещение страниц не сохраняется.
       if (await exists(w.output)) await Deno.remove(w.output, { recursive: true });
       await Deno.mkdir(join(w.root, ".qrc"), { recursive: true });
       const file = join(w.root, ".qrc/state.json");

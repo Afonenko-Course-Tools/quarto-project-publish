@@ -9,7 +9,7 @@ function slideOf(node: Element): string | undefined {
   while (current) {
     if (current.tagName === "section" && hasClass(current, "slide")) {
       const id = attr(current, "id");
-      if (!id) throw new Error("QRC a referenced slide needs a stable explicit ID");
+      if (!id) throw new Error("QRC слайду, на который ведёт ссылка, необходим явно заданный устойчивый ID");
       return id;
     }
     current = current.parentNode && "tagName" in current.parentNode ? current.parentNode : undefined;
@@ -36,28 +36,28 @@ export function readPage(path: string, html: string): Page {
       const title = attr(row, "data-qrc-title");
       if (title !== undefined) titles.set(id, title);
       const pair = paired.get(id) ?? new Map();
-      if (pair.has(style)) throw new Error(`QRC duplicate probe ${namespace}:${id}/${style}`);
+      if (pair.has(style)) throw new Error(`QRC повторяющаяся ссылка-проба ${namespace}:${id}/${style}`);
       if (style === "number" && elements(row).some((n) => hasClass(n, "qrc-unavailable"))) {
         pair.set(style, { html: "", text: "" }); paired.set(id, pair); continue;
       }
       const links = elements(row).filter((n) => n.tagName === "a" && (hasClass(n, "quarto-xref") || hasClass(n, "qrc-anchor")));
       if (links.length !== 1 || !content(links[0]).trim()) {
-        throw new Error(`QRC Quarto did not resolve native ${namespace}:${id}/${style} in ${path}`);
+        throw new Error(`QRC Quarto не разрешил штатную ссылку ${namespace}:${id}/${style} в ${path}`);
       }
       const link = links[0];
       const url = new URL(attr(link, "href")!, `https://qrc.invalid/${path}`);
       if (decodeURIComponent(url.pathname).slice(1) !== path || decodeURIComponent(url.hash.slice(1)).replace(/^\//, "") !== id) {
-        throw new Error(`QRC native destination changed for ${namespace}:${id}: ${attr(link, "href")}`);
+        throw new Error(`QRC изменился адрес штатной ссылки для ${namespace}:${id}: ${attr(link, "href")}`);
       }
       pair.set(style, { html: inner(html, link), text: content(link) }); paired.set(id, pair);
     }
     for (const [id, pair] of paired) {
       const anchor = ids.get(id);
-      if (anchor?.length !== 1) throw new Error(`QRC target ${namespace}:${id} has ${anchor?.length ?? 0} HTML anchors in ${path}`);
+      if (anchor?.length !== 1) throw new Error(`QRC для цели ${namespace}:${id} найдено HTML-якорей: ${anchor?.length ?? 0}; файл ${path}`);
       const label = pair.get("default"), number = pair.get("number");
-      if (!label || !number) throw new Error(`QRC incomplete native probe ${namespace}:${id}`);
+      if (!label || !number) throw new Error(`QRC неполная штатная ссылка-проба ${namespace}:${id}`);
       const slide = reveal ? slideOf(anchor[0]) : undefined;
-      if (reveal && !slide) throw new Error(`QRC target ${id} is outside a slide in ${path}`);
+      if (reveal && !slide) throw new Error(`QRC цель ${id} находится вне слайда в ${path}`);
       targets.push({ namespace, id, page: path, fragment: id, slide,
         labelHtml: label.html, numberHtml: number.html, label: label.text, number: number.text,
         ...(titles.has(id) ? { title: titles.get(id)! } : {}) });

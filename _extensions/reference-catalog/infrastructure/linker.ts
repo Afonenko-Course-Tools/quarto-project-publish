@@ -3,7 +3,7 @@ import { assemble, resolve } from "../domain/catalog.ts";
 import { href } from "../domain/urls.ts";
 import type { Page } from "./pages.ts";
 import { attr, escape, inner, replace, type Edit } from "./html.ts";
-export function linkPages(pages: Page[], revealScript: string, imports: Target[] = [], externalCss = ""): { pages: Map<string, string>; targets: Map<string, Target>; links: number } {
+export function linkPages(pages: Page[], navigationScript: string, imports: Target[] = [], externalCss = ""): { pages: Map<string, string>; targets: Map<string, Target>; links: number } {
   const targets = assemble([...pages.flatMap((p) => p.targets), ...imports]);
   const result = new Map<string, string>();
   let links = 0;
@@ -13,14 +13,14 @@ export function linkPages(pages: Page[], revealScript: string, imports: Target[]
     for (const node of page.nodes) {
       const key = attr(node, "data-qrc-ref");
       if (!key) continue;
-      if (node.tagName !== "a") throw new Error(`QRC invalid link markup in ${page.path}`);
+      if (node.tagName !== "a") throw new Error(`QRC некорректная разметка ссылки в ${page.path}`);
       const target = resolve(targets, key, page.path);
       const requestedStyle = attr(node, "data-qrc-style");
-      if (requestedStyle !== "default" && requestedStyle !== "number" && requestedStyle !== "title" && requestedStyle !== "external") throw new Error(`QRC invalid reference style in ${page.path}`);
+      if (requestedStyle !== "default" && requestedStyle !== "number" && requestedStyle !== "title" && requestedStyle !== "external") throw new Error(`QRC некорректный стиль ссылки в ${page.path}`);
       const style = requestedStyle === "default" ? target.defaultStyle ?? "default" : requestedStyle;
-      if (style === "external" && !target.baseUrl) throw new Error(`QRC external style requires an imported target: ${key}`);
+      if (style === "external" && !target.baseUrl) throw new Error(`QRC стиль external требует импортированной цели: ${key}`);
       const custom = attr(node, "data-qrc-custom") === "true";
-      if (style === "number" && !custom && !target.numberHtml) throw new Error(`QRC ${key} is unnumbered; use its title or explicit link text`);
+      if (style === "number" && !custom && !target.numberHtml) throw new Error(`QRC ${key} не имеет номера; используйте название или задайте текст ссылки`);
       let label = custom ? inner(page.html, node) : style === "number" ? target.numberHtml
         : style === "title" || style === "external" ? escape(target.title ?? target.label) : target.labelHtml;
       const classes = new Set((attr(node, "class") ?? "").split(/\s+/).filter(Boolean));
@@ -48,10 +48,18 @@ export function linkPages(pages: Page[], revealScript: string, imports: Target[]
       const head = page.nodes.find((n) => n.tagName === "head")?.sourceCodeLocation?.endTag;
       if (head) edits.push({ start: head.startOffset, end: head.startOffset, value: `<style data-qrc-external-style>${externalCss}</style>\n` });
     }
-    if (page.reveal) {
-      const body = page.nodes.find((n) => n.tagName === "body")?.sourceCodeLocation?.endTag;
-      if (!body) throw new Error(`QRC missing HTML body in ${page.path}`);
-      edits.push({ start: body.startOffset, end: body.startOffset, value: `<script data-qrc-navigation>${revealScript}</script>\n` });
+    // Фрагмент URL может указывать на цель внутри свёрнутого блока.
+    // Статические ресурсы без явного закрывающего body сохраняются без изменений.
+    const body = page.nodes.find((n) => n.tagName === "body")?.sourceCodeLocation?.endTag;
+    if (!body && page.reveal) throw new Error(`QRC отсутствует элемент body в ${page.path}`);
+    if (body) {
+      // В результатах портала может остаться ранее добавленный скрипт.
+      // Заменяем его, чтобы обработчики событий не дублировались.
+      for (const script of page.nodes.filter(n => n.tagName === "script" && attr(n, "data-qrc-navigation") !== undefined)) {
+        const loc = script.sourceCodeLocation!;
+        edits.push({ start: loc.startOffset, end: loc.endOffset, value: "" });
+      }
+      edits.push({ start: body.startOffset, end: body.startOffset, value: `<script data-qrc-navigation>${navigationScript}</script>\n` });
     }
     result.set(page.path, replace(page.html, edits));
   }

@@ -26,12 +26,12 @@ assert(Object.keys(exportedTargets(local)).length === 3, "Default must export ev
 assert(Object.keys(exportedTargets(local, {})).length === 0, "Empty selection must export nothing");
 assert(Object.keys(exportedTargets(local, { lectures: "*" })).join() === "lectures:sec-memory", "Wildcard leaked another namespace");
 assert(JSON.stringify(local.map(t => t.id)) === '["sec-private","sec-memory","sec-memory"]', "Export mutated local targets");
-rejects(() => parseExports({ os: "*" }, ["book"]), "not a local project");
-rejects(() => parseExports({ book: ["sec-memory", "sec-memory"] }, ["book"]), "distinct target IDs");
-rejects(() => parseExports({ book: "sec-*" }, ["book"]), "distinct target IDs");
-rejects(() => parseExports(null, ["book"]), "must map");
+rejects(() => parseExports({ os: "*" }, ["book"]), "не относится к локальному проекту");
+rejects(() => parseExports({ book: ["sec-memory", "sec-memory"] }, ["book"]), "неповторяющихся ID целей");
+rejects(() => parseExports({ book: "sec-*" }, ["book"]), "неповторяющихся ID целей");
+rejects(() => parseExports(null, ["book"]), "должен сопоставлять");
 rejects(() => exportedTargets(local, { book: ["sec-removed"] }), "book:sec-removed");
 assert(parsePublication({ title: "  Operating systems  " })?.title === "Operating systems", "Publication title normalization failed");
-rejects(() => parsePublication({ title: " " }), "nonempty title");
-rejects(() => parsePublication({ title: "OS", typo: "value" }), "nonempty title");
+rejects(() => parsePublication({ title: " " }), "непустое название title");
+rejects(() => parsePublication({ title: "OS", typo: "value" }), "непустое название title");
 console.log("PASS explicit exports: namespace/ID selection, local scope, empty/default export and invalid selections");

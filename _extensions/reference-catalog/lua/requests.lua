@@ -1,6 +1,6 @@
 local links = require("./links")
 return {{Meta = function(meta)
-  -- Build configuration belongs to hooks, not document resource discovery.
+  -- Конфигурацию сборки обрабатывают проектные скрипты; она не задаёт ресурсы документа.
   local config = meta["reference-catalog"]
   if config then meta["reference-catalog"] = {namespace=config.namespace} end
   return meta
@@ -11,7 +11,7 @@ end}, {Cite = function(el)
     if ns then refs[#refs + 1] = {ns=ns, id=id, cite=c} end
   end
   if #refs == 0 then return nil end
-  assert(#refs == #el.citations, "QRC separate bibliography citations from catalog references")
+  assert(#refs == #el.citations, "QRC библиографические ссылки и ссылки каталога следует записывать отдельно")
   local out = pandoc.Inlines({})
   for i, r in ipairs(refs) do
     if i > 1 then out:insert(pandoc.Str(";")); out:insert(pandoc.Space()) end

@@ -1,4 +1,4 @@
--- This adapter consumes documented Pandoc/Quarto nodes, never a private index.
+-- Адаптер использует публичные узлы Pandoc/Quarto, не обращаясь к внутреннему индексу.
 local M = {}
 local types = {}
 local ids = {}
@@ -20,8 +20,8 @@ function M.capture(el)
   if id and types[id:match("^([^-]+)%-")] then
     ids[id] = true
     if el.t == "Header" then heading_titles[id] = str(el.content) end
-    -- Book chapter H1s have already become metadata.title before pre-ast.
-    -- Quarto preserves their public identifier and chapter-title spans there.
+    -- К фазе pre-ast заголовки глав первого уровня уже перенесены в metadata.title.
+    -- Quarto сохраняет там явный ID и элементы chapter-title.
     if el.t == "Span" and el.classes:includes("quarto-section-identifier") then
       local title = nil
       el:walk({Span = function(span)
@@ -36,8 +36,8 @@ function M.capture(el)
   end
 end
 function M.equations(block)
-  -- Equation labels remain ordinary inline annotations at post-ast.
-  -- Only inspect attributes immediately following display math, never code/text.
+  -- К фазе post-ast метки формул остаются обычными строчными аннотациями.
+  -- Читаем атрибуты только непосредственно после выключной формулы.
   local pending = false
   for _, el in ipairs(block.content) do
     if el.t == "Math" and el.mathtype == "DisplayMath" then pending = true
@@ -54,7 +54,7 @@ function M.sorted()
   table.sort(out); return out
 end
 function M.title(id) return titles[id] end
--- Titles are plain display text, distinct from the native cross-reference label.
--- Keep M.title's existing unnumbered fallback separate from numbered headings.
+-- Название — обычный текст; штатная подпись перекрёстной ссылки хранится отдельно.
+-- Для ненумерованных целей M.title предоставляет название вместо номера.
 function M.heading_title(id) return heading_titles[id] end
 return M

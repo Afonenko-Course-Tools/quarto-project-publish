@@ -1,8 +1,8 @@
-/** The workspace's selected profiles are explicit inputs to every child render. */
+/** Выбранные профили явно передаются каждой сборке подпроекта. */
 export function activeProfiles(value = Deno.env.get("QUARTO_PROFILE") ?? ""): string[] {
   const result = value.split(",").map((name) => name.trim()).filter(Boolean);
-  if (result.some((name) => !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(name))) throw new Error("QRC invalid active profile name");
-  if (new Set(result).size !== result.length) throw new Error("QRC duplicate active profile");
+  if (result.some((name) => !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(name))) throw new Error("QRC некорректное имя активного профиля");
+  if (new Set(result).size !== result.length) throw new Error("QRC повторяющийся активный профиль");
   return result;
 }
 export function profileArguments(profiles: string[]): string[] {

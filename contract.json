@@ -1,6 +1,6 @@
 {
   "name": "quarto-reference-catalog",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "quarto": ">=1.10.0",
   "catalog_schema": "quarto-reference-catalog/2",
   "formats": [

@@ -33,11 +33,11 @@ export async function publish(w: Workspace, state: BuildState): Promise<void> {
       throw new Error(`QRC ${member.namespace} exported no targets; check member filters and explicit IDs`);
     }
   }
-  const script = await Deno.readTextFile(join(w.extension, "browser/reveal.js"));
+  const script = await Deno.readTextFile(join(w.extension, "browser/navigation.js"));
   const linked = linkPages(pages, script, await importTargets(w.imports));
   for (const [path, html] of linked.pages) await Deno.writeTextFile(join(stage, path), html);
   await updateSearch(stage, (await files(stage)).filter((p) => p.endsWith("/search.json")), linked.pages);
-  const catalog: Catalog = { schema: "quarto-reference-catalog/2", generator: { version: "1.1.0", quarto: state.quarto }, targets: Object.fromEntries(linked.targets) };
+  const catalog: Catalog = { schema: "quarto-reference-catalog/2", generator: { version: "1.1.1", quarto: state.quarto }, targets: Object.fromEntries(linked.targets) };
   await Deno.writeTextFile(join(stage, "reference-catalog.json"), JSON.stringify(catalog, null, 2) + "\n");
   await Deno.writeTextFile(join(stage, ".nojekyll"), "");
   // Validate the complete candidate before replacing the output tree.

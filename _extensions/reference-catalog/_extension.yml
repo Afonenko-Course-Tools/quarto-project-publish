@@ -1,6 +1,6 @@
 title: Reference Catalog
 author: Anatoly Afonenko
-version: 1.1.0
+version: 1.1.1
 quarto-required: ">=1.10.0"
 contributes:
   filters:

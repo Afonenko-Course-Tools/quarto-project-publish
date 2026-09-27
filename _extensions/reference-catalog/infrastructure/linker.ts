@@ -3,7 +3,7 @@ import { assemble, resolve } from "../domain/catalog.ts";
 import { href } from "../domain/urls.ts";
 import type { Page } from "./pages.ts";
 import { attr, escape, inner, replace, type Edit } from "./html.ts";
-export function linkPages(pages: Page[], revealScript: string, imports: Target[] = []): { pages: Map<string, string>; targets: Map<string, Target>; links: number } {
+export function linkPages(pages: Page[], navigationScript: string, imports: Target[] = []): { pages: Map<string, string>; targets: Map<string, Target>; links: number } {
   const targets = assemble([...pages.flatMap((p) => p.targets), ...imports]);
   const result = new Map<string, string>();
   let links = 0;
@@ -29,10 +29,18 @@ export function linkPages(pages: Page[], revealScript: string, imports: Target[]
       const loc = probe.sourceCodeLocation!;
       edits.push({ start: loc.startOffset, end: loc.endOffset, value: "" });
     }
-    if (page.reveal) {
-      const body = page.nodes.find((n) => n.tagName === "body")?.sourceCodeLocation?.endTag;
-      if (!body) throw new Error(`QRC missing HTML body in ${page.path}`);
-      edits.push({ start: body.startOffset, end: body.startOffset, value: `<script data-qrc-navigation>${revealScript}</script>\n` });
+    // HTML hashes can address objects inside native disclosures too. Preserve
+    // copied HTML fragments/static resources that have no explicit body end.
+    const body = page.nodes.find((n) => n.tagName === "body")?.sourceCodeLocation?.endTag;
+    if (!body && page.reveal) throw new Error(`QRC missing HTML body in ${page.path}`);
+    if (body) {
+      // A portal can reuse its previous output, including our owned script.
+      // Replace it on each build rather than accumulating event listeners.
+      for (const script of page.nodes.filter(n => n.tagName === "script" && attr(n, "data-qrc-navigation") !== undefined)) {
+        const loc = script.sourceCodeLocation!;
+        edits.push({ start: loc.startOffset, end: loc.endOffset, value: "" });
+      }
+      edits.push({ start: body.startOffset, end: body.startOffset, value: `<script data-qrc-navigation>${navigationScript}</script>\n` });
     }
     result.set(page.path, replace(page.html, edits));
   }

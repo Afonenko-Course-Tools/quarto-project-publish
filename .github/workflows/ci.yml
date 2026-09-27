@@ -40,7 +40,15 @@ jobs:
           cue version
       - name: Profile arguments
         run: quarto run tests/profiles.ts
+      - name: HTML target navigation publication
+        run: quarto run tests/navigation.ts
       - name: Composite profile regressions
         run: quarto run tests/composition.ts
       - name: Render example and validate catalog with CUE
         run: quarto run tests/example.ts
+      - name: Install browser test dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Native disclosure and Revealjs browser regressions
+        run: npm run test:browser

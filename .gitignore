@@ -17,6 +17,7 @@
 **/*_cache/
 
 .DS_Store
+/node_modules/
 
 # Demo dependencies; the authored /_extensions directory stays tracked.
 /examples/**/_extensions/

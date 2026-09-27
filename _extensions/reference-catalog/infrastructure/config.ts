@@ -1,7 +1,9 @@
-import type { Workspace, Member, Import } from "../domain/model.ts";
+import type { Workspace, Member } from "../domain/model.ts";
 import { dirname, join, within, fromFileUrl, relative, isAbsolute } from "./files.ts";
 import { quarto } from "./process.ts";
 import { activeProfiles, profileArguments } from "./profiles.ts";
+import { parseImports } from "./import-config.ts";
+import { parseExports, parsePublication } from "./export-config.ts";
 export async function workspace(root: string): Promise<Workspace> {
   const extension = dirname(dirname(fromFileUrl(import.meta.url)));
   const profiles = activeProfiles();
@@ -47,16 +49,10 @@ export async function workspace(root: string): Promise<Workspace> {
     members.push({ namespace, path, mount, format });
   }
   if (!members.length) throw new Error("QRC no project members");
-  const imports: Import[] = [];
-  for (const [namespace, value] of Object.entries(ref.imports ?? {})) {
-    const item = value as Record<string, string>;
-    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(namespace) || members.some((m) => m.namespace === namespace)) throw new Error(`QRC invalid import namespace ${namespace}`);
-    if (!item || typeof item.file !== "string" || typeof item.namespace !== "string") throw new Error(`QRC import ${namespace} needs file and namespace`);
-    for (const key of Object.keys(item)) if (!["file", "namespace", "base-url"].includes(key)) throw new Error(`QRC unknown import property ${namespace}.${key}`);
-    const url = new URL(item["base-url"]);
-    if (!["http:", "https:"].includes(url.protocol) || url.search || url.hash || !url.pathname.endsWith("/")) throw new Error("QRC import base-url must be HTTP(S) ending in /");
-    imports.push({ namespace, file: within(root, item.file), sourceNamespace: item.namespace, baseUrl: url.href });
-  }
+  const namespaces = members.map(member => member.namespace);
+  const imports = parseImports(ref.imports, root, namespaces);
+  const exports = parseExports(ref.exports, namespaces);
+  const publication = parsePublication(ref.publication);
   // A previous publication is generated data even when another profile is active.
   const outputs = new Set([relative(root, output)]);
   for await (const entry of Deno.readDir(root)) {
@@ -67,5 +63,5 @@ export async function workspace(root: string): Promise<Workspace> {
     if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(name)) throw new Error(`QRC profile ${match[1]} output-dir must be one directory name`);
     outputs.add(name);
   }
-  return { root, output, members, imports, extension, profiles, outputs: [...outputs], home };
+  return { root, output, members, imports, extension, profiles, outputs: [...outputs], home, exports, publication };
 }

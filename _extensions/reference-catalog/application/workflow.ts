@@ -1,9 +1,10 @@
-import type { Workspace } from "../domain/model.ts";
-export interface BuildState { id: string; quarto: string; members: { mount: string; output: string }[] }
+import type { Target, Workspace } from "../domain/model.ts";
+export interface BuildState { id: string; quarto: string; members: { mount: string; output: string }[]; imports?: Target[] }
 /** Use cases depend on ports; CLI, files, HTML and Quarto stay in adapters. */
 export interface BuildPorts {
   workspace(): Promise<Workspace>;
   clearState(w: Workspace): Promise<void>;
+  imports(w: Workspace): Promise<Target[]>;
   render(w: Workspace): Promise<BuildState>;
   saveState(w: Workspace, state: BuildState): Promise<void>;
   loadState(w: Workspace): Promise<BuildState>;
@@ -14,8 +15,10 @@ export interface BuildPorts {
 }
 export async function prepare(ports: BuildPorts): Promise<void> {
   const w = await ports.workspace();
+  const imports = await ports.imports(w);
   await ports.clearState(w);
   const state = await ports.render(w);
+  state.imports = imports;
   await ports.saveState(w, state);
   await ports.preparePreview(w);
 }

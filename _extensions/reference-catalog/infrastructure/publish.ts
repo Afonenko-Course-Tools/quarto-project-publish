@@ -4,7 +4,7 @@ import { copyTree, exists, files, join, relative } from "./files.ts";
 import { readPage } from "./pages.ts";
 import { linkPages } from "./linker.ts";
 import { updateSearch } from "./search.ts";
-import { importTargets } from "./imports.ts";
+import { exportedTargets } from "../domain/exports.ts";
 export async function publish(w: Workspace, state: BuildState): Promise<void> {
   const stage = join(w.root, ".qrc", "publish-" + state.id);
   await Deno.mkdir(stage, { recursive: true });
@@ -34,10 +34,13 @@ export async function publish(w: Workspace, state: BuildState): Promise<void> {
     }
   }
   const script = await Deno.readTextFile(join(w.extension, "browser/reveal.js"));
-  const linked = linkPages(pages, script, await importTargets(w.imports));
+  const externalCss = await Deno.readTextFile(join(w.extension, "browser/external.css"));
+  const local = pages.flatMap(page => page.targets);
+  const exported = exportedTargets(local, w.exports);
+  const linked = linkPages(pages, script, state.imports ?? [], externalCss);
   for (const [path, html] of linked.pages) await Deno.writeTextFile(join(stage, path), html);
   await updateSearch(stage, (await files(stage)).filter((p) => p.endsWith("/search.json")), linked.pages);
-  const catalog: Catalog = { schema: "quarto-reference-catalog/2", generator: { version: "1.1.0", quarto: state.quarto }, targets: Object.fromEntries(linked.targets) };
+  const catalog: Catalog = { schema: "quarto-reference-catalog/3", generator: { version: "1.2.0", quarto: state.quarto }, publication: w.publication, targets: exported };
   await Deno.writeTextFile(join(stage, "reference-catalog.json"), JSON.stringify(catalog, null, 2) + "\n");
   await Deno.writeTextFile(join(stage, ".nojekyll"), "");
   // Validate the complete candidate before replacing the output tree.

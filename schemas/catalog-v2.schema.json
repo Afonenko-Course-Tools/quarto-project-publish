@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Quarto Reference Catalog v3",
+  "title": "Quarto Reference Catalog v2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "quarto-reference-catalog/3"
+      "const": "quarto-reference-catalog/2"
     },
     "generator": {
       "type": "object",
@@ -32,19 +32,6 @@
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/target"
-      }
-    },
-    "publication": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "title"
-      ],
-      "properties": {
-        "title": {
-          "type": "string",
-          "minLength": 1
-        }
       }
     }
   },
@@ -97,9 +84,10 @@
           "type": "string",
           "minLength": 1
         },
-        "title": {
+        "baseUrl": {
           "type": "string",
-          "minLength": 1
+          "format": "uri",
+          "pattern": "^https?://.*/$"
         }
       }
     }

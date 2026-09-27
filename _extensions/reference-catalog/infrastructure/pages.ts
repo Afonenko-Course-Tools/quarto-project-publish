@@ -29,9 +29,12 @@ export function readPage(path: string, html: string): Page {
     const namespace = attr(container, "data-qrc-namespace")!;
     const rows = elements(container).filter((n) => hasClass(n, "qrc-probe"));
     const paired = new Map<string, Map<string, { html: string; text: string }>>();
+    const titles = new Map<string, string>();
     for (const row of rows) {
       const id = attr(row, "data-qrc-id")!;
       const style = attr(row, "data-qrc-style")!;
+      const title = attr(row, "data-qrc-title");
+      if (title !== undefined) titles.set(id, title);
       const pair = paired.get(id) ?? new Map();
       if (pair.has(style)) throw new Error(`QRC duplicate probe ${namespace}:${id}/${style}`);
       if (style === "number" && elements(row).some((n) => hasClass(n, "qrc-unavailable"))) {
@@ -56,7 +59,8 @@ export function readPage(path: string, html: string): Page {
       const slide = reveal ? slideOf(anchor[0]) : undefined;
       if (reveal && !slide) throw new Error(`QRC target ${id} is outside a slide in ${path}`);
       targets.push({ namespace, id, page: path, fragment: id, slide,
-        labelHtml: label.html, numberHtml: number.html, label: label.text, number: number.text });
+        labelHtml: label.html, numberHtml: number.html, label: label.text, number: number.text,
+        ...(titles.has(id) ? { title: titles.get(id)! } : {}) });
     }
   }
   return { path, html, nodes, targets, probes, ids, reveal };

@@ -40,6 +40,13 @@ jobs:
           cue version
       - name: Profile arguments
         run: quarto run tests/profiles.ts
+      - name: Catalog sources and link styles
+        run: |
+          quarto run tests/imports.ts
+          quarto run tests/link-styles.ts
+          quarto run tests/exports.ts
+      - name: Independent publications with HTTP imports
+        run: quarto run tests/external.ts
       - name: Composite profile regressions
         run: quarto run tests/composition.ts
       - name: Render example and validate catalog with CUE

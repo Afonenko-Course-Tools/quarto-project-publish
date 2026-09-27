@@ -3,6 +3,7 @@ local M = {}
 local types = {}
 local ids = {}
 local titles = {}
+local heading_titles = {}
 local function str(v) return v and pandoc.utils.stringify(v) or "" end
 function M.init(meta)
   for name in ("fig tbl lst eq sec thm lem cor prp cnj def exm exr sol rem alg nte tip wrn imp cau"):gmatch("%S+") do
@@ -18,6 +19,16 @@ function M.capture(el)
   if not id and el.div then id = el.div.identifier end
   if id and types[id:match("^([^-]+)%-")] then
     ids[id] = true
+    if el.t == "Header" then heading_titles[id] = str(el.content) end
+    -- Book chapter H1s have already become metadata.title before pre-ast.
+    -- Quarto preserves their public identifier and chapter-title spans there.
+    if el.t == "Span" and el.classes:includes("quarto-section-identifier") then
+      local title = nil
+      el:walk({Span = function(span)
+        if span.classes:includes("chapter-title") then title = str(span.content) end
+      end})
+      heading_titles[id] = title or str(el.content)
+    end
     if el.t == "Header" and id:match("^sec%-") and
       (el.classes:includes("unnumbered") or not PANDOC_WRITER_OPTIONS.number_sections) then
       titles[id] = el.content
@@ -43,4 +54,7 @@ function M.sorted()
   table.sort(out); return out
 end
 function M.title(id) return titles[id] end
+-- Titles are plain display text, distinct from the native cross-reference label.
+-- Keep M.title's existing unnumbered fallback separate from numbered headings.
+function M.heading_title(id) return heading_titles[id] end
 return M

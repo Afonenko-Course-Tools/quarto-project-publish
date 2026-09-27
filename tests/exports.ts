@@ -22,7 +22,8 @@ const local = [target("book", "sec-private"), target("book", "sec-memory"), targ
 const selected = exportedTargets(local, parseExports({ book: ["sec-memory"] }, ["book", "lectures"]));
 assert(Object.keys(selected).join() === "book:sec-memory", "Explicit exports exposed another target");
 assert(resolve(assemble(local), "book:sec-private", "index.html"), "Export selection removed a local reference");
-assert(Object.keys(exportedTargets(local)).length === 3, "Default must export every local target");
+assert(Object.keys(exportedTargets(local)).length === 0, "Без явного exports публичных целей быть не должно");
+assert(Object.keys(exportedTargets(local, { book: "*", lectures: "*" })).length === 3, "Явный выбор всех пространств имён должен экспортировать все собственные цели");
 assert(Object.keys(exportedTargets(local, {})).length === 0, "Empty selection must export nothing");
 assert(Object.keys(exportedTargets(local, { lectures: "*" })).join() === "lectures:sec-memory", "Wildcard leaked another namespace");
 assert(JSON.stringify(local.map(t => t.id)) === '["sec-private","sec-memory","sec-memory"]', "Export mutated local targets");

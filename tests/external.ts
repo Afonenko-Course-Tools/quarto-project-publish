@@ -192,7 +192,7 @@ lang: ru
   assert(content(link(nodes, "os-local:sec-memory")) === content(defaultLink), "A sibling file source must resolve like an HTTP source");
   assert(content(link(nodes, "os-native:sec-memory")) === memory.label, "Локальный импорт без style сохраняет штатную подпись Quarto");
   const javaCatalog = await catalog(java);
-  assert(Object.keys(javaCatalog.targets).join() === "book:sec-memory", "Default exports must include own targets and exclude every imported namespace");
+  assert(Object.keys(javaCatalog.targets).length === 0, "Без явного exports нельзя публиковать собственные или импортированные цели");
 
   // Each build chooses a fresh snapshot; repeated references and aliases within it share that snapshot.
   remoteCatalog = JSON.stringify({ ...published, publication: { title: "ОС: новая редакция" } });

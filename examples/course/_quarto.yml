@@ -13,6 +13,10 @@ filters:
 reference-catalog:
   namespace: site
   home: book
+  exports:
+    book: "*"
+    lectures: "*"
+    practice: "*"
   projects:
     book:
       path: book

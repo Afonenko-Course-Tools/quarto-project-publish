@@ -31,7 +31,7 @@ export interface Import {
   namespace: string; source: string; sourceNamespace: string; baseUrl: string;
   title?: string; style?: ReferenceStyle;
 }
-/** Без настройки экспортируются все локальные цели; пустое отображение запрещает экспорт. */
+/** Публикуются только явно выбранные цели; отсутствие настройки означает пустой каталог. */
 export type Exports = Record<string, "*" | string[]>;
 export interface Workspace {
   root: string; output: string; members: Member[]; imports: Import[];

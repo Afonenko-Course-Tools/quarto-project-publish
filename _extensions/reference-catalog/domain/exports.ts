@@ -5,18 +5,14 @@ import { assemble } from "./catalog.ts";
 export function exportedTargets(local: Target[], selection?: Exports): Record<string, Target> {
   const available = assemble(local);
   const chosen = new Map<string, Target>();
-  if (selection === undefined) {
-    for (const [key, target] of available) chosen.set(key, target);
-  } else {
-    for (const [namespace, ids] of Object.entries(selection)) {
-      if (ids === "*") {
-        for (const [key, target] of available) if (target.namespace === namespace) chosen.set(key, target);
-      } else {
-        for (const id of ids) {
-          const key = `${namespace}:${id}`, target = available.get(key);
-          if (!target) throw new Error(`QRC экспортируемая цель отсутствует в публикации: ${key}`);
-          chosen.set(key, target);
-        }
+  for (const [namespace, ids] of Object.entries(selection ?? {})) {
+    if (ids === "*") {
+      for (const [key, target] of available) if (target.namespace === namespace) chosen.set(key, target);
+    } else {
+      for (const id of ids) {
+        const key = `${namespace}:${id}`, target = available.get(key);
+        if (!target) throw new Error(`QRC экспортируемая цель отсутствует в публикации: ${key}`);
+        chosen.set(key, target);
       }
     }
   }

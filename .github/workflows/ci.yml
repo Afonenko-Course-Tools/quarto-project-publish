@@ -1,61 +1,32 @@
-name: Проверка Quarto и CUE
-
+name: Проверка публикации
 on:
   pull_request:
   push:
     branches: [main, master]
   workflow_dispatch:
-  schedule:
-    - cron: '17 5 * * 1'
-
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   check:
-    name: Проверка (${{ matrix.quarto }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         quarto: [release, pre-release]
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b # v2.2.0
+      - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
-      - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c # v2.0.0
+          tinytex: true
+      - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: latest
-      - name: Версии инструментов
+      - name: Проверка профилей, PDF и составной публикации
         run: |
-          quarto --version
-          cue version
-      - name: Аргументы профилей
-        run: quarto run tests/profiles.ts
-      - name: Источники каталогов и оформление ссылок
-        run: |
-          quarto run tests/imports.ts
-          quarto run tests/link-styles.ts
-          quarto run tests/exports.ts
-      - name: Независимые публикации с импортом по HTTP
-        run: quarto run tests/external.ts
-      - name: Навигация к целям в HTML
-        run: quarto run tests/navigation.ts
-      - name: Профили составного проекта
-        run: quarto run tests/composition.ts
-      - name: Сборка примера и проверка каталога CUE
-        run: quarto run tests/example.ts
-      - name: Установка браузерных зависимостей
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-      - name: Раскрытие HTML-блоков и фрагментов Revealjs
-        run: npm run test:browser
+          quarto run tests/schema.ts
+          quarto run tests/profiles.ts
+          quarto run tests/publication.ts
+          quarto run tests/portal.ts

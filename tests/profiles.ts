@@ -1,4 +1,4 @@
-import { activeProfiles, profileArguments } from "../_extensions/reference-catalog/infrastructure/profiles.ts";
+import { activeProfiles, profileArguments } from "../_extensions/project-publish/infrastructure/profiles.ts";
 const equal = (a: unknown,b: unknown)=>{if(JSON.stringify(a)!==JSON.stringify(b)) throw new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);};
 equal(activeProfiles(""), []);
 equal(activeProfiles("student"), ["student"]);

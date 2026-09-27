@@ -8,6 +8,8 @@
 quarto add Afonenko-Course-Tools/quarto-project-publish
 ```
 
+Команды установки из GitHub создают каталоги `_extensions/Afonenko-Course-Tools/…`; пути обработчиков ниже учитывают это пространство имён. Локальная установка из checkout может создавать короткие пути `_extensions/reference-catalog/…` и `_extensions/project-publish/…`; такие пути используются в локальных тестах и примерах и должны соответствовать фактическим установленным каталогам.
+
 Установка пассивна. Обработчики включаются явно в `_quarto.yml`:
 
 ```yaml
@@ -15,8 +17,8 @@ project:
   type: website
   output-dir: _site
   render: []
-  pre-render: _extensions/project-publish/entrypoints/pre.ts
-  post-render: _extensions/project-publish/entrypoints/post.ts
+  pre-render: _extensions/Afonenko-Course-Tools/project-publish/entrypoints/pre.ts
+  post-render: _extensions/Afonenko-Course-Tools/project-publish/entrypoints/post.ts
 project-publish:
   home: book
   projects:
@@ -42,7 +44,7 @@ project-publish:
 ```yaml
 project-publish:
   integrations:
-    - _extensions/reference-catalog/entrypoints/publication.ts
+    - _extensions/Afonenko-Course-Tools/reference-catalog/entrypoints/publication.ts
   # home и projects — как выше
 reference-catalog:
   exports:

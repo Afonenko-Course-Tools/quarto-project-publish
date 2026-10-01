@@ -1,5 +1,5 @@
-import { copy } from "stdlib/fs";
-import { dirname, fromFileUrl, join } from "stdlib/path";
+import { copy, walk } from "stdlib/fs";
+import { dirname, fromFileUrl, isAbsolute, join } from "stdlib/path";
 import { finalize } from "../_extensions/project-publish/application/workflow.ts";
 import { renderMembers } from "../_extensions/project-publish/infrastructure/render.ts";
 import { publish } from "../_extensions/project-publish/infrastructure/publish.ts";
@@ -133,7 +133,22 @@ project-publish:
     assert(r.success === expected, text);
     return text;
   }
-  return { root, write, events, render };
+  async function recordMetadata() {
+    const log = join(root, "_metadata-context.jsonl");
+    await write(
+      "modules/legacy.ts",
+      `export default {async metadata(c:any) {
+        await Deno.writeTextFile(${
+        JSON.stringify(log)
+      }, JSON.stringify(c)+"\\n", {append:true});
+        return {title: c.attemptId};
+      }};\n`,
+    );
+    return async () =>
+      (await Deno.readTextFile(log)).trim().split("\n")
+        .map((line) => JSON.parse(line));
+  }
+  return { root, write, events, render, recordMetadata };
 }
 const cases: Record<
   string,
@@ -167,6 +182,77 @@ const cases: Record<
     assert(
       !await exists(join(f.root, ".project-publish/state.json")),
       "Состояние успешной попытки не очищено",
+    );
+  },
+  async metadata_output(f) {
+    const contexts = await f.recordMetadata();
+    const state = await renderMembers(await workspace(f.root));
+    const [c] = await contexts();
+    assert(
+      typeof c.output === "string" && isAbsolute(c.output),
+      "Metadata не получил абсолютный output",
+    );
+    assert(
+      c.output === state.members[0].output,
+      "Metadata получил другой output, чем native render",
+    );
+    assert(
+      c.output !== c.members[0].path &&
+        !c.output.startsWith(c.sourceRoot + "/"),
+      "Metadata получил source вместо output",
+    );
+    const html = await Deno.readTextFile(join(c.output, "index.html"));
+    assert(
+      html.includes(c.attemptId),
+      "Native render не использовал metadata текущей попытки",
+    );
+  },
+  async metadata_attempts(f) {
+    await f.recordMetadata();
+    const w = await workspace(f.root);
+    const first = await renderMembers(w);
+    async function overlays() {
+      const paths: string[] = [];
+      for await (const entry of walk(join(f.root, ".project-publish"))) {
+        if (entry.isFile && entry.name.endsWith("-metadata.json")) {
+          paths.push(entry.path);
+        }
+      }
+      return paths;
+    }
+    const [firstOverlay] = await overlays();
+    assert(firstOverlay, "Первый render не создал metadata overlay");
+    const firstText = await Deno.readTextFile(firstOverlay);
+    const second = await renderMembers(w);
+    const paths = await overlays();
+    assert(
+      paths.length === 2,
+      "Две попытки одной namespace перезаписали общий overlay",
+    );
+    assert(
+      first.id !== second.id,
+      "Повторный render использовал прежнюю попытку",
+    );
+    for (const state of [first, second]) {
+      const attemptRoot = join(f.root, ".project-publish", "builds", state.id);
+      const owned = paths.filter((path) => path.startsWith(attemptRoot + "/"));
+      assert(
+        owned.length === 1,
+        "Metadata overlay не принадлежит своей попытке",
+      );
+      assert(
+        JSON.parse(await Deno.readTextFile(owned[0])).title === state.id,
+        "Overlay содержит metadata чужой попытки",
+      );
+      assert(
+        (await Deno.readTextFile(join(state.members[0].output, "index.html")))
+          .includes(state.id),
+        "Native output потерял metadata своей попытки",
+      );
+    }
+    assert(
+      await Deno.readTextFile(firstOverlay) === firstText,
+      "Повторная попытка изменила первый overlay",
     );
   },
   async before_failure(f) {

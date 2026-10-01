@@ -44,6 +44,8 @@ export interface PublicationContext extends BeforeRenderContext {
   quarto: string;
 }
 export interface RenderContext extends BeforeRenderContext {
+  /** Фактический абсолютный каталог output текущего подпроекта для native render. */
+  output: string;
   namespace: string;
   format: Format;
 }

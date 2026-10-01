@@ -46,6 +46,8 @@ export async function renderMembers(w: Workspace): Promise<BuildState> {
       const overlay = join(
         w.root,
         ".project-publish",
+        "builds",
+        id,
         `${member.namespace}-${index}-metadata.json`,
       );
       await Deno.writeTextFile(
@@ -55,6 +57,7 @@ export async function renderMembers(w: Workspace): Promise<BuildState> {
             ...context(state),
             namespace: member.namespace,
             format: member.format,
+            output,
           }),
         ),
       );

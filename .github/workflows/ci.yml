@@ -24,6 +24,13 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: latest
+      - name: Шрифт native PDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fontconfig fonts-lmodern
+          fc-cache -f
+          fc-match --format '%{file}\n' 'Latin Modern Roman'
+          test "$(fc-match --format '%{family[0]}' 'Latin Modern Roman')" = 'Latin Modern Roman'
       - name: Проверка профилей, PDF и составной публикации
         run: |
           quarto run tests/schema.ts

@@ -30,3 +30,4 @@ jobs:
           quarto run tests/profiles.ts
           quarto run tests/publication.ts
           quarto run tests/portal.ts
+          quarto run tests/stages.ts

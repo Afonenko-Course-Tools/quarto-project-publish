@@ -4,6 +4,7 @@ import { renderMembers } from "./render.ts";
 import { publish } from "./publish.ts";
 import { exists, join, safeDirectory } from "./files.ts";
 import { owned } from "./attempt.ts";
+import { notifyFailure } from "./failure.ts";
 export function runtime(): BuildPorts {
   return {
     workspace: () => workspace(Deno.cwd()),
@@ -46,6 +47,7 @@ export function runtime(): BuildPorts {
       }
     },
     render: renderMembers,
+    failure: notifyFailure,
     saveState: (w, state) =>
       Deno.writeTextFile(
         join(w.root, ".project-publish/state.json"),

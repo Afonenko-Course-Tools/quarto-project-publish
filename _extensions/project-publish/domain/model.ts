@@ -42,6 +42,8 @@ export interface BuildState {
     mount: string;
     output: string;
   }[];
+  /** Ordered configured callbacks registered before rendering; no ownership grant. */
+  failureIntegrations?: string[];
 }
 /** Проверка фиксированного снимка до рендера; path участников находится в sourceRoot. */
 export interface BeforeRenderContext {
@@ -65,10 +67,33 @@ export interface RenderContext extends BeforeRenderContext {
   namespace?: string;
   format: Format;
 }
+export interface FailureContext extends BeforeRenderContext {
+  failure: {
+    phase: "preparation" | "render" | "publication";
+    operation:
+      | "before-render"
+      | "metadata"
+      | "portal-render"
+      | "member-render"
+      | "save-state"
+      | "preview"
+      | "workspace"
+      | "stage"
+      | "finalize"
+      | "commit";
+    error: { name: string; message: string };
+  };
+  namespace?: string;
+  format?: Format;
+  output?: string;
+  stage?: string;
+}
 export interface Integration {
   beforeRender?(context: BeforeRenderContext): Promise<void> | void;
   metadata?(
     context: RenderContext,
   ): Promise<Record<string, unknown>> | Record<string, unknown>;
   finalize?(context: PublicationContext): Promise<void>;
+  /** Awaited diagnostics before attempt cleanup; return values cannot veto failure. */
+  onFailure?(context: FailureContext): Promise<void> | void;
 }

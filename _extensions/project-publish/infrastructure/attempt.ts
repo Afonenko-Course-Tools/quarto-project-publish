@@ -17,6 +17,23 @@ export function context(state: BuildState): BeforeRenderContext {
     })),
   };
 }
+/** Registration can only select configured modules, in their existing order. */
+export function failurePaths(state: BuildState): string[] {
+  if (state.failureIntegrations === undefined) return [];
+  const paths = state.failureIntegrations;
+  if (
+    !Array.isArray(paths) || paths.some((path) => typeof path !== "string") ||
+    new Set(paths).size !== paths.length ||
+    JSON.stringify(paths) !== JSON.stringify(
+        [...new Set(state.workspace.integrations)].filter((path) =>
+          paths.includes(path)
+        ),
+      )
+  ) {
+    throw new Error("Публикация: повреждена регистрация failure callbacks");
+  }
+  return paths;
+}
 /** Проверяем владение путями перед использованием сохранённого состояния для очистки. */
 export function owned(state: BuildState, root: string): void {
   const w = state?.workspace;
@@ -35,6 +52,7 @@ export function owned(state: BuildState, root: string): void {
     typeof w.output !== "string" || !Array.isArray(state.members) ||
     !Array.isArray(w.members) || !Array.isArray(w.integrations)
   ) invalid();
+  failurePaths(state);
   const project = w.config?.project as Record<string, unknown> | undefined;
   const pub = w.config?.["project-publish"] as
     | Record<string, unknown>

@@ -8,12 +8,25 @@ export interface Member {
 export interface Workspace {
   root: string;
   output: string;
+  /** Декларативный native output корня; managed portal никогда не рендерится в public. */
+  nativeOutput: string;
+  portal?: string;
   members: Member[];
   profiles: string[];
   outputs: string[];
   home?: string;
   integrations: string[];
   config: Record<string, unknown>;
+}
+/** Фактический portal child текущей попытки. */
+export interface PortalSelection {
+  input: string;
+  output: string;
+  renderProfiles: string[];
+  control: string;
+  controlHash: string;
+  /** Native inspect перечисляет все реально подключённые author/control configs снимка. */
+  configHashes: Record<string, string>;
 }
 export interface BuildState {
   id: string;
@@ -22,6 +35,7 @@ export interface BuildState {
   workspace: Workspace;
   /** Документированный override Quarto, зафиксированный при подготовке. */
   outputOverride?: string;
+  portal?: PortalSelection;
   members: {
     namespace: string;
     format: Format;
@@ -37,6 +51,7 @@ export interface BeforeRenderContext {
   profiles: string[];
   config: Record<string, unknown>;
   members: Member[];
+  portal?: PortalSelection;
 }
 /** Результат уже собран, но ещё не опубликован. */
 export interface PublicationContext extends BeforeRenderContext {
@@ -46,7 +61,8 @@ export interface PublicationContext extends BeforeRenderContext {
 export interface RenderContext extends BeforeRenderContext {
   /** Фактический абсолютный каталог output текущего подпроекта для native render. */
   output: string;
-  namespace: string;
+  /** У portal отсутствует member namespace; его определяет собственная конфигурация интеграции. */
+  namespace?: string;
   format: Format;
 }
 export interface Integration {

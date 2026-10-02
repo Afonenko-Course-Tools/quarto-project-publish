@@ -35,6 +35,54 @@ project-publish:
 
 Ссылка из домашней книги: `[Скачать раздатку](handouts/topic.pdf)`. Из слайдов, размещённых в `lectures/`: `[Скачать раздатку](../handouts/topic.pdf)`. Вложенные страницы используют обычные относительные пути. PDF-файлы не коммитятся: их создаёт текущая сборка. Для формата `pdf` требуется доступный движок LaTeX, настроенный в подпроекте.
 
+## Управляемый портал
+
+Для новой страницы навигации, которая публикуется только после общих проверок, включите `portal` вместо `home`:
+
+```yaml
+project:
+  type: website
+  output-dir: .project-publish/native
+  render: []
+  pre-render: _extensions/Afonenko-Course-Tools/project-publish/entrypoints/pre.ts
+  post-render: _extensions/Afonenko-Course-Tools/project-publish/entrypoints/post.ts
+format: html
+project-publish:
+  portal: index.qmd
+  output-dir: _site
+  projects:
+    book: {path: book, format: html}
+```
+
+`portal` выбирает один обычный QMD в корне; child создаёт `index.html`. Каталоги исходников подпроектов и публичный результат не должны пересекаться. `project.output-dir` обязательно равен `.project-publish/native`: это отдельная служебная область stock Quarto. Окончательный каталог выбирает `project-publish.output-dir`, одно имя внутри корня. Audience profile задаёт, например, `project-publish.output-dir: _site-student`; исходные root/profile configs сохраняются побайтово. `portal` несовместим с `home`. Без `portal` прежний native-root/home режим и его правила очистки остаются прежними.
+
+Поддержанный запуск с проверкой до stock cleanup:
+
+```sh
+quarto run _extensions/Afonenko-Course-Tools/project-publish/entrypoints/render.ts --profile student
+```
+
+Обёртка принимает только необязательный `--profile` с comma-separated именами и запрещает `--output-dir` и другие native overrides **до запуска render**. Обычный `quarto render --profile student` с декларативной private конфигурацией также допустим. Прямой stock вызов с публичным `--output-dir` не обеспечивает сохранность прежнего выпуска: Quarto очищает выбранный output раньше pre-render, поэтому отказ из hook уже опоздает. Symlink и каталоги storage/output в другой файловой системе отклоняются при preflight; используйте обёртку, чтобы проверить их до native cleanup.
+
+Координатор готовит принадлежащий попытке native profile `publish-portal` только в snapshot, проверяет actual render selection через `quarto inspect` и фиксирует SHA-256 control и подключённых config files. Native `inspect.files.config` определяет подключённые файлы; bundled `stdlib/yaml` читает в них только декларацию `profile`, чтобы отклонить зарезервированное имя, которое Quarto убирает из effective config. Собственного YAML merge, profile selection или glob parser нет. Авторский `_quarto-publish-portal.yml`/`.yaml`, включение этого имени в profile groups/default или его ручной выбор запрещены. Дополнительный profile действует только на portal child; owner audience и profiles участников сохраняются. Его control исключается из native resources. При широком `resources: ["**/*"]` авторские исходники/configs тоже могут быть выбраны Quarto: их разрешённость проверяет интеграция владельца ресурсов. Publisher не вводит учебную политику видимости.
+
+Текущий portal output начинает чистый private stage; затем размещаются участники и выполняются ordered finalizers. До commit новый public не создаётся. Отказ beforeRender, portal/member render или finalizer сохраняет полный набор файлов и bytes прежнего выпуска и другого профиля. Failed stage→public rename восстанавливает backup прежнего выпуска. Если само восстановление отказало, ошибка указывает сохранённый `.project-publish/output-<attemptId>`; cleanup и следующий render не удаляют этот recovery backup. Восстановите его явно перед новой попыткой. После успешного commit отказ удаления старого backup сохраняет новый выпуск и сообщает путь оставшегося backup.
+
+Поддерживается один активный render на root. Hooks и интеграции — доверенный код: свои записи они делают в attempt outputs или stage. Два rename при commit допускают краткий промежуток отсутствия public; crash recovery и произвольные параллельные записи не являются частью этого договора. Дополнительные author hooks могут выполняться в outer и portal child; `PROJECT_PUBLISH_MEMBER=1` отмечает child и предотвращает повторный запуск entrypoints координатора.
+
+Для managed preview настройте команду относительно private native output:
+
+```yaml
+project:
+  preview:
+    watch-inputs: false
+    serve:
+      cmd: "quarto run ../preview.ts --port {port} --host {host}"
+      ready: "Публикация предпросмотр готов"
+```
+
+Preview пересобирает managed сайт через тот же preflight. При отказе он продолжает отдавать последнюю успешную страницу и сохраняет текущий опубликованный выпуск.
+
 ## Профили
 
 `quarto render --profile student` передаёт выбранные профили всем подпроектам. Каждый подпроект обязан иметь соответствующий `_quarto-student.yml`; отсутствие считается ошибкой. Файлы могут содержать только `metadata: {}` при отсутствии отдельных настроек. Выходные каталоги всех профилей исключаются из снимка исходников и публикации; собственные промежуточные данные лежат в `.project-publish/`.
@@ -76,7 +124,9 @@ CUE-определение текущей конфигурации находи�
 
 Интеграция экспортирует по умолчанию объект с одним или несколькими обработчиками `beforeRender(context)`, `metadata(context)` и `finalize(context)`. Стабильный договор определён интерфейсом `Integration` в `domain/model.ts`.
 
-Все обработчики получают `root`, `sourceRoot`, `attemptId`, `profiles`, `config`, `members`. `root` — исходный корень проекта; `sourceRoot` — отдельный снимок этой попытки. Каждый `members[].path` указывает в снимок. Профили и эффективная конфигурация фиксируются перед сборкой; каждому вызову передаются отдельные копии данных. Модули интеграций и их относительные импорты также загружаются из снимка. `metadata` дополнительно получает `namespace`, `format`, `output` — фактический абсолютный каталог результата текущего подпроекта, переданный его native render через `--output-dir`. Это не путь исходников и не итоговый каталог публикации. Metadata overlays хранятся в каталоге конкретной попытки `.project-publish/builds/<attemptId>/`, поэтому повторные сборки одной namespace не перезаписывают overlays друг друга; `finalize` — `stage`, `quarto` (версия Quarto).
+Все обработчики получают `root`, `sourceRoot`, `attemptId`, `profiles`, `config`, `members`. `root` — исходный корень проекта; `sourceRoot` — отдельный снимок этой попытки. Каждый `members[].path` указывает в снимок. Профили и эффективная конфигурация фиксируются перед сборкой; каждому вызову передаются отдельные копии данных. Модули интеграций и их относительные импорты также загружаются из снимка. `metadata` участника дополнительно получает `namespace`, `format`, `output` — фактический абсолютный каталог результата текущего подпроекта, переданный его native render через `--output-dir`. Это не путь исходников и не итоговый каталог публикации. Metadata overlays хранятся в каталоге конкретной попытки `.project-publish/builds/<attemptId>/`, поэтому повторные сборки одной namespace не перезаписывают overlays друг друга; `finalize` — `stage`, `quarto` (версия Quarto).
+
+В managed режиме каждый context дополнительно содержит `portal: {input, output, renderProfiles, control, controlHash, configHashes}` — фактические абсолютные пути и native selection текущего child. Portal вызывает `metadata` с `format: html`, собственным `output` и **без member namespace**; интеграция использует собственный configured root namespace. Member callbacks сохраняют прежнюю семантику. Portal selection подготовлена до `beforeRender`, control и configs проверяются повторно перед render и commit.
 
 Сначала выполняются все `beforeRender` в порядке списка интеграций. Их отказ останавливает попытку до рендера первого подпроекта. Затем для каждого подпроекта вызываются `metadata` и обычный Quarto render. После сборки корня и всех подпроектов каждый `finalize` выполняется в том же порядке: он может проверять или дополнять общий `stage`. Например, проект может перечислить владельца правил ресурсов, QRC, адаптер PDF, упаковку ZIP и проверку результата. PDF-адаптер после QRC должен находиться после него в списке; обычные PDF-подпроекты из `projects` продолжают собираться независимо до финализации.
 
@@ -92,6 +142,9 @@ quarto run tests/profiles.ts
 quarto run tests/publication.ts
 quarto run tests/portal.ts
 quarto run tests/stages.ts
+quarto run tests/managed-portal.ts
 ```
 
 `tests/publication.ts` проверяет сборку без QRC/Core, HTML, Reveal, настоящие PDF и профили. `tests/portal.ts` проверяет повторную публикацию, переход от домашней книги к порталу, изменение размещения и корневой CLI `--output-dir`. `tests/stages.ts` проверяет точный output в metadata, изоляцию overlays двух попыток одной namespace, порядок обработчиков, отдельные копии контекста, загрузку модулей из снимка, отказы до и после render, изменение профиля/конфигурации/вывода и безопасное отклонение повреждённых путей состояния. Его маркеры финализации не заменяют проверку реальных PDF/ZIP в потребителе. Интеграция с QRC проверяется в его репозитории. Исходный код перенесён из `quarto-reference-catalog`; авторство и лицензия сохранены в истории Git.
+
+`tests/managed-portal.ts` проверяет actual native root selection и один проход тела, ресурсы, metadata portal/member, неизменность configs, populated releases при отказах before/child/member/outer/finalizer, отсутствие ранних public events, rollback/backup recovery, control/config/state drift, symlink guards, profile conflicts, CLI preflight и HTTP preview с последним успешным снимком.

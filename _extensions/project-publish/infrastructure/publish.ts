@@ -6,10 +6,12 @@ import {
   files,
   join,
   relative,
+  safeDirectory,
   within,
 } from "./files.ts";
 import { integrations } from "./integrations.ts";
 import { context, owned } from "./attempt.ts";
+import { unchangedPortal } from "./portal.ts";
 import { unchanged } from "../domain/attempt.ts";
 export async function publish(
   w: Workspace,
@@ -18,11 +20,24 @@ export async function publish(
 ): Promise<void> {
   owned(state, w.root);
   unchanged(w, state);
+  await unchangedPortal(state);
+  if (w.portal) {
+    await safeDirectory(w.root, join(w.root, ".project-publish"));
+    await safeDirectory(w.root, w.output);
+  }
   const stage = join(w.root, ".project-publish", "publish-" + state.id);
   const backup = join(w.root, ".project-publish", "output-" + state.id);
+  if (w.portal) {
+    await safeDirectory(w.root, state.portal!.output);
+    await safeDirectory(w.root, stage);
+    await safeDirectory(w.root, backup);
+  }
+  let backedUp = false;
+  let committed = false;
   try {
     await Deno.mkdir(stage, { recursive: true });
-    if (!w.home && await exists(w.output)) await copyTree(w.output, stage);
+    if (state.portal) await copyTree(state.portal.output, stage);
+    else if (!w.home && await exists(w.output)) await copyTree(w.output, stage);
     // Не допускаем публикацию результатов других профилей как ресурсов корня.
     for (const name of w.outputs) {
       if (!name || !/^[A-Za-z_][A-Za-z0-9_-]*$/.test(name)) continue;
@@ -75,17 +90,64 @@ export async function publish(
     }
     await Deno.writeTextFile(join(stage, ".nojekyll"), "");
     const hadOutput = await exists(w.output);
-    if (hadOutput) await rename(w.output, backup);
-    // Backup содержит предварительный native output, а не проверенную публикацию.
-    // При отказе commit он удаляется вместе со stage в общем обработчике.
-    await rename(stage, w.output);
-    if (hadOutput) await Deno.remove(backup, { recursive: true });
-  } catch (error) {
-    if (await exists(stage)) await Deno.remove(stage, { recursive: true });
-    if (await exists(w.output)) {
-      await Deno.remove(w.output, { recursive: true });
+    await unchangedPortal(state);
+    if (w.portal) {
+      await safeDirectory(w.root, join(w.root, ".project-publish"));
+      await safeDirectory(w.root, w.output);
+      await safeDirectory(w.root, stage);
+      await safeDirectory(w.root, backup);
+      await files(stage);
     }
-    if (await exists(backup)) await Deno.remove(backup, { recursive: true });
+    if (hadOutput) {
+      await rename(w.output, backup);
+      backedUp = true;
+    }
+    // Managed backup — последний проверенный выпуск; legacy backup — native output.
+    await rename(stage, w.output);
+    committed = true;
+    if (hadOutput) {
+      if (w.portal) {
+        try {
+          await Deno.remove(backup, { recursive: true });
+        } catch (error) {
+          console.error(
+            `Публикация новый выпуск committed; очистка старого backup ${backup} отказала: ${error}`,
+          );
+        }
+      } else await Deno.remove(backup, { recursive: true });
+    }
+  } catch (error) {
+    if (w.portal) {
+      if (backedUp && !committed) {
+        if (await exists(w.output)) {
+          await Deno.remove(w.output, { recursive: true });
+        }
+        if (await exists(backup)) {
+          try {
+            await rename(backup, w.output);
+          } catch (rollback) {
+            throw new AggregateError(
+              [error, rollback],
+              `Публикация восстановление отказало; прежний выпуск сохранён в ${backup}: ${error}; ${rollback}`,
+            );
+          }
+        }
+      }
+    } else {
+      if (await exists(w.output)) {
+        await Deno.remove(w.output, { recursive: true });
+      }
+      if (await exists(backup)) await Deno.remove(backup, { recursive: true });
+    }
+    if (await exists(stage)) {
+      try {
+        await Deno.remove(stage, { recursive: true });
+      } catch (cleanup) {
+        console.error(
+          `Публикация очистка private stage ${stage} отказала: ${cleanup}`,
+        );
+      }
+    }
     throw error;
   }
 }

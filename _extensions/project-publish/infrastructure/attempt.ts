@@ -10,6 +10,7 @@ export function context(state: BuildState): BeforeRenderContext {
     attemptId: state.id,
     profiles: w.profiles,
     config: w.config,
+    portal: structuredClone(state.portal),
     members: w.members.map((member) => ({
       ...member,
       path: join(state.sourceRoot, relative(w.root, member.path)),
@@ -35,7 +36,12 @@ export function owned(state: BuildState, root: string): void {
     !Array.isArray(w.members) || !Array.isArray(w.integrations)
   ) invalid();
   const project = w.config?.project as Record<string, unknown> | undefined;
-  const requested = state.outputOverride ?? project?.["output-dir"] ?? "_site";
+  const pub = w.config?.["project-publish"] as
+    | Record<string, unknown>
+    | undefined;
+  const requested = w.portal
+    ? pub?.["output-dir"]
+    : state.outputOverride ?? project?.["output-dir"] ?? "_site";
   if (typeof requested !== "string") invalid();
   const output = resolve(root, requested as string);
   if (
@@ -48,6 +54,39 @@ export function owned(state: BuildState, root: string): void {
       (rel !== ".." && !rel.startsWith("../") && !rel.startsWith("..\\") &&
         !isAbsolute(rel));
   };
+  if (
+    w.nativeOutput !==
+      resolve(root, project?.["output-dir"] as string || "_site")
+  ) invalid();
+  if (w.portal) {
+    const portal = state.portal;
+    if (
+      project?.["output-dir"] !== ".project-publish/native" ||
+      pub?.home !== undefined || typeof pub?.portal !== "string" ||
+      !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.qmd$/.test(pub.portal) ||
+      w.portal !== join(root, pub.portal) || !portal ||
+      portal.input !== join(state.sourceRoot, pub.portal) ||
+      portal.output !==
+        join(root, ".project-publish", "builds", state.id, "portal") ||
+      portal.control !== join(state.sourceRoot, "_quarto-publish-portal.yml") ||
+      !/^[0-9a-f]{64}$/.test(portal.controlHash) ||
+      JSON.stringify(portal.renderProfiles) !==
+        JSON.stringify([...w.profiles, "publish-portal"]) ||
+      (state.outputOverride &&
+        resolve(root, state.outputOverride) !== w.nativeOutput)
+    ) invalid();
+    if (
+      !portal?.configHashes || typeof portal.configHashes !== "object" ||
+      Array.isArray(portal.configHashes) ||
+      portal.configHashes[portal.control] !== portal.controlHash
+    ) invalid();
+    for (const [path, digest] of Object.entries(portal!.configHashes)) {
+      if (
+        !inside(state.sourceRoot, path) || path === state.sourceRoot ||
+        typeof digest !== "string" || !/^[0-9a-f]{64}$/.test(digest)
+      ) invalid();
+    }
+  } else if (state.portal) invalid();
   // Сохранённый output не даёт права удалять авторские исходники или интеграции.
   for (const path of [...w.members.map((m) => m.path), ...w.integrations]) {
     if (

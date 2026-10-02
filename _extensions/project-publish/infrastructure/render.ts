@@ -5,6 +5,7 @@ import { quarto } from "./process.ts";
 import { profileArguments } from "./profiles.ts";
 import { integrations } from "./integrations.ts";
 import { context } from "./attempt.ts";
+import { preparePortal, unchangedPortal } from "./portal.ts";
 export async function renderMembers(w: Workspace): Promise<BuildState> {
   const id = crypto.randomUUID();
   const snapshot = join(w.root, ".project-publish", "builds", id, "sources");
@@ -21,8 +22,69 @@ export async function renderMembers(w: Workspace): Promise<BuildState> {
     snapshot,
     new Set([...ignoredDirectories, ...w.outputs]),
   );
+  await preparePortal(state);
   const adapters = await integrations(state.workspace, snapshot);
   for (const adapter of adapters) await adapter.beforeRender?.(context(state));
+  await unchangedPortal(state);
+  if (state.portal) {
+    const args = [
+      "render",
+      ".",
+      "--to",
+      "html",
+      "--output-dir",
+      relative(snapshot, state.portal.output),
+    ];
+    const outputOverlay = join(
+      w.root,
+      ".project-publish",
+      "builds",
+      id,
+      "portal-output-metadata.json",
+    );
+    await Deno.writeTextFile(
+      outputOverlay,
+      JSON.stringify({ "output-file": "index.html" }),
+    );
+    args.push("--metadata-file", outputOverlay);
+    for (let index = 0; index < adapters.length; index++) {
+      if (!adapters[index].metadata) continue;
+      const overlay = join(
+        w.root,
+        ".project-publish",
+        "builds",
+        id,
+        `portal-${index}-metadata.json`,
+      );
+      await Deno.writeTextFile(
+        overlay,
+        JSON.stringify(
+          await adapters[index].metadata!({
+            ...context(state),
+            format: "html",
+            output: state.portal.output,
+          }),
+        ),
+      );
+      args.push("--metadata-file", overlay);
+    }
+    console.log("Публикация: сборка portal (html)");
+    await unchangedPortal(state);
+    await quarto(
+      [
+        ...args,
+        "--fail-if-warnings",
+        ...profileArguments(state.portal.renderProfiles),
+      ],
+      snapshot,
+      {
+        PROJECT_PUBLISH_MEMBER: "1",
+        QUARTO_PROJECT_OUTPUT_DIR: "",
+        QUARTO_PROFILE: "",
+      },
+    );
+    await unchangedPortal(state);
+  }
   for (const member of w.members) {
     const output = join(
       w.root,

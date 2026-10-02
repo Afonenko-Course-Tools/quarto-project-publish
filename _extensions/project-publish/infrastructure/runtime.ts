@@ -2,15 +2,32 @@ import type { BuildPorts } from "../application/workflow.ts";
 import { workspace } from "./config.ts";
 import { renderMembers } from "./render.ts";
 import { publish } from "./publish.ts";
-import { exists, join } from "./files.ts";
+import { exists, join, safeDirectory } from "./files.ts";
 import { owned } from "./attempt.ts";
 export function runtime(): BuildPorts {
   return {
     workspace: () => workspace(Deno.cwd()),
     async clearState(w) {
+      if (w.portal) {
+        await safeDirectory(w.root, join(w.root, ".project-publish"));
+        await safeDirectory(w.root, w.output);
+        if (await exists(join(w.root, ".project-publish"))) {
+          for await (
+            const entry of Deno.readDir(join(w.root, ".project-publish"))
+          ) {
+            if (entry.name.startsWith("output-")) {
+              throw new Error(
+                `Публикация сохранён recovery backup ${
+                  join(w.root, ".project-publish", entry.name)
+                }; сначала восстановите или удалите его явно`,
+              );
+            }
+          }
+        }
+      }
       // Явно подключённый координатор владеет текущим выходным каталогом проекта.
       // Результаты других профилей не изменяются.
-      if (await exists(w.output)) {
+      if (!w.portal && await exists(w.output)) {
         await Deno.remove(w.output, { recursive: true });
       }
       await Deno.mkdir(join(w.root, ".project-publish"), { recursive: true });
@@ -55,13 +72,19 @@ export function runtime(): BuildPorts {
     publish,
     async cleanup(w, state, failed = false) {
       owned(state, w.root);
+      if (w.portal) {
+        await safeDirectory(w.root, join(w.root, ".project-publish"));
+        await safeDirectory(w.root, w.output);
+      }
       const paths = [
         join(w.root, ".project-publish/state.json"),
         join(w.root, ".project-publish/builds", state.id),
         join(w.root, ".project-publish/publish-" + state.id),
-        join(w.root, ".project-publish/output-" + state.id),
       ];
-      if (failed) paths.push(w.output);
+      if (!w.portal) {
+        paths.push(join(w.root, ".project-publish/output-" + state.id));
+      }
+      if (failed && !w.portal) paths.push(w.output);
       for (const path of paths) {
         if (await exists(path)) await Deno.remove(path, { recursive: true });
       }

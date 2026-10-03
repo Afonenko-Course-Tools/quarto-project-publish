@@ -12,6 +12,10 @@ import { renderMembers } from "../_extensions/project-publish/infrastructure/ren
 import { runtime } from "../_extensions/project-publish/infrastructure/runtime.ts";
 import { publish } from "../_extensions/project-publish/infrastructure/publish.ts";
 import { owned } from "../_extensions/project-publish/infrastructure/attempt.ts";
+import {
+  copySources,
+  copyTree,
+} from "../_extensions/project-publish/infrastructure/files.ts";
 
 function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
@@ -167,6 +171,78 @@ function deferred() {
 }
 function portsFor(f: Fixture) {
   return { ...runtime(), workspace: async () => f.w };
+}
+async function declaredSelection(f: Fixture) {
+  // Public configuration for authority tests; the fake inspect reports this exact
+  // single-file JSON/YAML declaration, without simulating merges or Native work.
+  f.w.config = {
+    ...f.w.config,
+    project: { type: "website", "output-dir": "_site" },
+    "project-publish": {
+      projects: { member: { path: "member", format: "html" } },
+      integrations: f.w.integrations.map((path) =>
+        path.slice(f.root.length + 1)
+      ),
+    },
+  };
+  await f.write("_quarto.yml", JSON.stringify(f.w.config));
+  await f.write("_quarto-student.yml", '{"metadata":{}}');
+  await f.write(
+    "member/_quarto.yml",
+    '{"project":{"type":"default"},"format":"html"}',
+  );
+  await f.write("member/_quarto-student.yml", '{"metadata":{}}');
+  const cli = join(f.retained, "fake-quarto.sh");
+  const script = await Deno.readTextFile(cli);
+  await Deno.writeTextFile(
+    cli,
+    script.replace(
+      'if [ "$1" != "render" ];',
+      `if [ "$1" = "inspect" ]; then
+printf '{"config":'
+cat "$PWD/_quarto.yml" || exit 92
+printf ',"files":{"config":["%s/_quarto.yml"],"input":[]}}' "$PWD"
+exit 0
+fi
+if [ "$1" != "render" ];`,
+    ),
+  );
+}
+function activeStudentProfile() {
+  const prior = Deno.env.get("QUARTO_PROFILE");
+  Deno.env.set("QUARTO_PROFILE", "student");
+  return () => {
+    if (prior === undefined) Deno.env.delete("QUARTO_PROFILE");
+    else Deno.env.set("QUARTO_PROFILE", prior);
+  };
+}
+async function freshResumedCopy(state: BuildState): Promise<BuildState> {
+  // A fresh valid Source URL prevents this process's earlier module cache from
+  // hiding a missing file/function that a resumed process must report.
+  const resumed = structuredClone(state);
+  resumed.id = crypto.randomUUID();
+  resumed.sourceRoot = join(
+    state.workspace.root,
+    ".project-publish/builds",
+    resumed.id,
+    "sources",
+  );
+  await copySources(state.sourceRoot, resumed.sourceRoot, new Set());
+  for (const member of resumed.members) {
+    const original = state.members.find((item) =>
+      item.namespace === member.namespace
+    )!;
+    member.output = join(
+      state.workspace.root,
+      ".project-publish/builds",
+      resumed.id,
+      "output",
+      member.namespace,
+    );
+    await copyTree(original.output, member.output);
+  }
+  owned(resumed, state.workspace.root);
+  return resumed;
 }
 async function failureApi() {
   return await import(
@@ -811,19 +887,18 @@ if [ "$1" != "render" ];`,
   },
   async resumed_missing_hook_is_reported_without_throwing_notifier() {
     const f = await fixture(false, "success");
+    const restoreProfiles = activeStudentProfile();
     try {
-      const state = await renderMembers(f.w);
       const path = join(f.root, "modules/fresh-resumed.ts");
-      state.workspace.integrations.push(path);
-      await Deno.mkdir(join(state.sourceRoot, "modules"), { recursive: true });
-      await Deno.writeTextFile(
-        join(state.sourceRoot, "modules/fresh-resumed.ts"),
+      f.w.integrations.push(path);
+      await f.write(
+        "modules/fresh-resumed.ts",
         "export default {beforeRender() {}};",
       );
-      const resumed = {
-        ...structuredClone(state),
-        failureIntegrations: [path],
-      };
+      await declaredSelection(f);
+      const state = await renderMembers(f.w);
+      const resumed = await freshResumedCopy(state);
+      resumed.failureIntegrations = [path];
       const { notifyFailure, failureError } = await failureApi();
       const primary = new Error("PURE_RESUMED");
       const errors = await notifyFailure(resumed, primary, {
@@ -831,7 +906,10 @@ if [ "$1" != "render" ];`,
         operation: "finalize",
       });
       assert(
-        errors.length === 1,
+        errors.length === 1 &&
+          String(errors[0]).includes(
+            "зарегистрированный onFailure отсутствует",
+          ),
         "A previously registered but missing resumed hook was silently skipped",
       );
       const error = failureError(primary, errors);
@@ -840,30 +918,36 @@ if [ "$1" != "render" ];`,
           error.cause === primary,
         "Resumed-hook failure lost primary identity",
       );
+      await runtime().cleanup(resumed.workspace, resumed);
       await runtime().cleanup(state.workspace, state);
     } finally {
+      restoreProfiles();
       await f.close();
     }
   },
   async resumed_import_failure_does_not_skip_later_collector() {
     const f = await fixture(false, "success");
+    const restoreProfiles = activeStudentProfile();
     try {
-      const state = await renderMembers(f.w);
       const missing = join(f.root, "modules/fresh-missing.ts");
       const later = join(f.root, "modules/fresh-later.ts");
-      state.workspace.integrations.push(missing, later);
-      await Deno.writeTextFile(
-        join(state.sourceRoot, "modules/fresh-later.ts"),
+      f.w.integrations.push(missing, later);
+      await f.write(
+        "modules/fresh-missing.ts",
+        "export default {onFailure() {}};",
+      );
+      await f.write(
+        "modules/fresh-later.ts",
         `export default {async onFailure() {
         await Deno.writeTextFile(${
           JSON.stringify(join(f.retained, "later-collector.log"))
         }, "retained");
       }};`,
       );
-      const resumed = {
-        ...structuredClone(state),
-        failureIntegrations: [missing, later],
-      };
+      await declaredSelection(f);
+      const state = await renderMembers(f.w);
+      const resumed = await freshResumedCopy(state);
+      await Deno.remove(join(resumed.sourceRoot, "modules/fresh-missing.ts"));
       const { notifyFailure } = await failureApi();
       const errors = await notifyFailure(
         resumed,
@@ -871,7 +955,7 @@ if [ "$1" != "render" ];`,
         { phase: "publication", operation: "finalize" },
       );
       assert(
-        errors.length === 1,
+        errors.length === 1 && String(errors[0]).includes("fresh-missing.ts"),
         "Missing resumed module did not produce exactly one diagnostic error",
       );
       assert(
@@ -879,8 +963,10 @@ if [ "$1" != "render" ];`,
           "retained",
         "Import failure skipped a later configured collector",
       );
+      await runtime().cleanup(resumed.workspace, resumed);
       await runtime().cleanup(state.workspace, state);
     } finally {
+      restoreProfiles();
       await f.close();
     }
   },
@@ -1474,6 +1560,327 @@ if [ "$1" != "render" ];`,
       owned(state, f.root);
       await runtime().cleanup(state.workspace, state);
     } finally {
+      await f.close();
+    }
+  },
+  async whole_saved_selection_forgery_cannot_import_snapshot_module() {
+    const f = await fixture(true, "success");
+    const previousCwd = Deno.cwd();
+    const restoreProfiles = activeStudentProfile();
+    try {
+      await integration(
+        f,
+        `async onFailure() {
+        await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "legitimate-frozen-hook.log"))
+        },"called");
+      }`,
+      );
+      await f.write(
+        "modules/unconfigured.ts",
+        `await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "unconfigured-import.log"))
+        },"IMPORTED");
+        export default {async onFailure() {await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "unconfigured-hook.log"))
+        },"CALLED");}};`,
+      );
+      await declaredSelection(f);
+      const state = await renderMembers(f.w);
+      assert(
+        await exists(join(state.sourceRoot, "modules/unconfigured.ts")),
+        "Counterexample module was not copied into the real attempt Source",
+      );
+      const forged = structuredClone(state);
+      const unconfigured = join(f.root, "modules/unconfigured.ts");
+      forged.workspace.integrations = [unconfigured];
+      forged.failureIntegrations = [unconfigured];
+      await runtime().saveState(f.w, forged);
+      const ports = portsFor(f);
+      let primary: unknown;
+      let cleanupCalls = 0;
+      let publishCalls = 0;
+      const notify = ports.failure;
+      assert(
+        notify,
+        "Runtime did not provide its real failure notification port",
+      );
+      ports.failure = async (s, error, point) => {
+        primary = error;
+        return await notify(s, error, point);
+      };
+      const clean = ports.cleanup;
+      ports.cleanup = async (w, s, failed) => {
+        cleanupCalls++;
+        await clean(w, s, failed);
+      };
+      ports.publish = async () => {
+        publishCalls++;
+        throw new Error("Unexpected publication after workspace refusal");
+      };
+      Deno.chdir(f.root);
+      const error = await caught(() => finalize(ports));
+      const importMarker = await exists(
+        join(f.retained, "unconfigured-import.log"),
+      );
+      const hookMarker = await exists(
+        join(f.retained, "unconfigured-hook.log"),
+      );
+      const original = error instanceof AggregateError
+        ? error.errors[0]
+        : error;
+      const sourceRemoved = !await exists(state.sourceRoot);
+      await Deno.writeTextFile(
+        join(f.retained, "whole-selection-forgery.json"),
+        JSON.stringify(
+          {
+            importMarker,
+            hookMarker,
+            cleanupCalls,
+            publishCalls,
+            sourceRemoved,
+            primaryCaptured: primary !== undefined,
+            primaryRetained: original === primary,
+            primaryMessage: String(primary),
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+      assert(
+        primary instanceof Error &&
+          primary.message.includes("изменились после подготовки попытки"),
+        "Forged saved selection did not reach the actual workspace mismatch refusal",
+      );
+      assert(
+        original === primary &&
+          (!(error instanceof AggregateError) || error.cause === primary),
+        "Registration refusal replaced the original workspace mismatch Error",
+      );
+      assert(
+        cleanupCalls === 1 && publishCalls === 0 && sourceRemoved,
+        "Registration refusal skipped permitted cleanup or attempted publication",
+      );
+      assert(
+        !importMarker && !hookMarker,
+        "Forging both saved integration lists imported the otherwise-unconfigured snapshot module after workspace refusal",
+      );
+    } finally {
+      Deno.chdir(previousCwd);
+      restoreProfiles();
+      await f.close();
+    }
+  },
+  async legitimate_workspace_drift_uses_frozen_selection_not_current_module() {
+    const f = await fixture(true, "success");
+    const previousCwd = Deno.cwd();
+    const restoreProfiles = activeStudentProfile();
+    try {
+      await integration(
+        f,
+        `async onFailure(c:any) {
+        await Deno.copyFile(c.sourceRoot+"/member/index.qmd",${
+          JSON.stringify(join(f.retained, "drift-retained-source.qmd"))
+        });
+        await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "frozen-drift-context.json"))
+        },JSON.stringify(c));
+      }`,
+      );
+      await f.write(
+        "modules/current.ts",
+        `await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "current-module-import.log"))
+        },"IMPORTED");
+        export default {async onFailure() {await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "current-module-hook.log"))
+        },"CALLED");}};`,
+      );
+      await declaredSelection(f);
+      const state = await renderMembers(f.w);
+      await runtime().saveState(f.w, state);
+      const changed = structuredClone(f.w);
+      changed.integrations = [join(f.root, "modules/current.ts")];
+      const pub = changed.config["project-publish"] as Record<string, unknown>;
+      pub.integrations = ["modules/current.ts"];
+      await f.write("_quarto.yml", JSON.stringify(changed.config));
+      const ports = { ...runtime(), workspace: async () => changed };
+      let primary: unknown;
+      let cleanupCalls = 0;
+      const notify = ports.failure;
+      assert(
+        notify,
+        "Runtime did not provide its real failure notification port",
+      );
+      ports.failure = async (s, error, point) => {
+        primary = error;
+        return await notify(s, error, point);
+      };
+      const clean = ports.cleanup;
+      ports.cleanup = async (w, s, failed) => {
+        cleanupCalls++;
+        await clean(w, s, failed);
+      };
+      Deno.chdir(f.root);
+      const error = await caught(() => finalize(ports));
+      assert(
+        primary instanceof Error &&
+          primary.message.includes("изменились после подготовки попытки") &&
+          error === primary,
+        "Legitimate workspace drift lost its exact original refusal",
+      );
+      const c = JSON.parse(
+        await Deno.readTextFile(join(f.retained, "frozen-drift-context.json")),
+      );
+      assert(
+        c.failure.phase === "publication" &&
+          c.failure.operation === "workspace",
+        "Frozen callback did not receive the workspace drift context",
+      );
+      assert(
+        JSON.stringify(c.config["project-publish"].integrations) ===
+          JSON.stringify(["modules/diagnostics.ts"]),
+        "Current changed declaration replaced the genuinely frozen selection",
+      );
+      assert(
+        await Deno.readTextFile(
+          join(f.retained, "drift-retained-source.qmd"),
+        ) === "# Pure member\n",
+        "Frozen callback could not retain Source before cleanup",
+      );
+      assert(
+        !await exists(join(f.retained, "current-module-import.log")) &&
+          !await exists(join(f.retained, "current-module-hook.log")),
+        "Workspace drift imported the changed current configuration's module",
+      );
+      assert(
+        cleanupCalls === 1 && !await exists(state.sourceRoot),
+        "Legitimate workspace drift did not complete Source cleanup",
+      );
+    } finally {
+      Deno.chdir(previousCwd);
+      restoreProfiles();
+      await f.close();
+    }
+  },
+  async forged_saved_profile_cannot_authorize_another_frozen_selection() {
+    const f = await fixture(true, "success");
+    const previousCwd = Deno.cwd();
+    const restoreProfiles = activeStudentProfile();
+    try {
+      await integration(f, "onFailure() {}");
+      await f.write(
+        "modules/full.ts",
+        `await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "full-profile-import.log"))
+        },"IMPORTED");
+        export default {async onFailure() {await Deno.writeTextFile(${
+          JSON.stringify(join(f.retained, "full-profile-hook.log"))
+        },"CALLED");}};`,
+      );
+      await declaredSelection(f);
+      const fullConfig = structuredClone(f.w.config);
+      (fullConfig["project-publish"] as Record<string, unknown>).integrations =
+        ["modules/full.ts"];
+      await f.write("_quarto-full.yml", JSON.stringify(fullConfig));
+      await f.write("member/_quarto-full.yml", '{"metadata":{}}');
+      const cli = join(f.retained, "fake-quarto.sh");
+      const script = await Deno.readTextFile(cli);
+      await Deno.writeTextFile(
+        cli,
+        script.replace(
+          'cat "$PWD/_quarto.yml" || exit 92',
+          `printf 'inspect\\n' >> ${
+            JSON.stringify(join(f.retained, "profile-inspect.log"))
+          }
+selected=""
+for arg in "$@"; do
+  if [ "$selected" = "next" ]; then selected="$arg"; break; fi
+  if [ "$arg" = "--profile" ]; then selected="next"; fi
+done
+if [ "$selected" = "full" ]; then cat "$PWD/_quarto-full.yml" || exit 92
+else cat "$PWD/_quarto.yml" || exit 92; fi`,
+        ),
+      );
+      const state = await renderMembers(f.w);
+      assert(
+        Deno.env.get("QUARTO_PROFILE") === "student",
+        "Fixture changed the actual audience selector",
+      );
+      const forged = structuredClone(state);
+      forged.workspace.profiles = ["full"];
+      forged.workspace.config = fullConfig;
+      forged.workspace.integrations = [join(f.root, "modules/full.ts")];
+      forged.failureIntegrations = [join(f.root, "modules/full.ts")];
+      await runtime().saveState(f.w, forged);
+      const ports = portsFor(f);
+      let primary: unknown;
+      let cleanupCalls = 0;
+      const notify = ports.failure;
+      assert(notify, "Runtime did not provide failure notification");
+      ports.failure = async (s, error, point) => {
+        primary = error;
+        return await notify(s, error, point);
+      };
+      const clean = ports.cleanup;
+      ports.cleanup = async (w, s, failed) => {
+        cleanupCalls++;
+        await clean(w, s, failed);
+      };
+      Deno.chdir(f.root);
+      const error = await caught(() => finalize(ports));
+      const importMarker = await exists(
+        join(f.retained, "full-profile-import.log"),
+      );
+      const hookMarker = await exists(
+        join(f.retained, "full-profile-hook.log"),
+      );
+      const inspectCalls = await exists(join(f.retained, "profile-inspect.log"))
+        ? (await Deno.readTextFile(join(f.retained, "profile-inspect.log")))
+          .trim().split("\n").length
+        : 0;
+      const original = error instanceof AggregateError
+        ? error.errors[0]
+        : error;
+      await Deno.writeTextFile(
+        join(f.retained, "saved-selector-forgery.json"),
+        JSON.stringify(
+          {
+            actualProfile: Deno.env.get("QUARTO_PROFILE"),
+            savedProfiles: forged.workspace.profiles,
+            importMarker,
+            hookMarker,
+            inspectCalls,
+            cleanupCalls,
+            primaryRetained: original === primary,
+            sourceRemoved: !await exists(state.sourceRoot),
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+      assert(
+        primary instanceof Error &&
+          primary.message.includes("изменились после подготовки попытки") &&
+          original === primary &&
+          (!(error instanceof AggregateError) || error.cause === primary),
+        "Selector rejection replaced the original workspace refusal",
+      );
+      assert(
+        cleanupCalls === 1 && !await exists(state.sourceRoot),
+        "Selector rejection skipped permitted cleanup",
+      );
+      assert(
+        !importMarker && !hookMarker,
+        "Forged saved profiles authorized a different callback selected by an existing frozen profile",
+      );
+      assert(
+        inspectCalls === 0,
+        "Resumed authority inspected a profile chosen only by the forged saved state",
+      );
+    } finally {
+      Deno.chdir(previousCwd);
+      restoreProfiles();
       await f.close();
     }
   },

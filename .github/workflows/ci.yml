@@ -42,6 +42,7 @@ jobs:
           quarto run tests/stages.ts
           quarto run tests/managed-portal.ts
           quarto run tests/failure-hooks.ts
+          quarto run tests/failure-error-values.ts
           quarto run tests/native-failure-diagnostics.ts
       - name: Диагностика отказов Publisher
         if: always()

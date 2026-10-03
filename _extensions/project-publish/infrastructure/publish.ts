@@ -13,7 +13,13 @@ import { integrations } from "./integrations.ts";
 import { context, owned } from "./attempt.ts";
 import { unchangedPortal } from "./portal.ts";
 import { unchanged } from "../domain/attempt.ts";
-import { failureError, type FailurePoint, notifyFailure } from "./failure.ts";
+import {
+  failureError,
+  failureMessage,
+  type FailurePoint,
+  logFailure,
+  notifyFailure,
+} from "./failure.ts";
 export async function publish(
   w: Workspace,
   state: BuildState,
@@ -118,8 +124,9 @@ export async function publish(
           try {
             await Deno.remove(backup, { recursive: true });
           } catch (error) {
-            console.error(
-              `Публикация новый выпуск committed; очистка старого backup ${backup} отказала: ${error}`,
+            logFailure(
+              `Публикация новый выпуск committed; очистка старого backup ${backup} отказала`,
+              error,
             );
           }
         } else await Deno.remove(backup, { recursive: true });
@@ -137,9 +144,11 @@ export async function publish(
               try {
                 await rename(backup, w.output);
               } catch (rollback) {
-                recoveryMessage =
-                  `Публикация восстановление отказало; прежний выпуск сохранён в ${backup}: ${error}; ${rollback}`;
                 failures.push(rollback);
+                recoveryMessage =
+                  `Публикация восстановление отказало; прежний выпуск сохранён в ${backup}: ${
+                    failureMessage(error)
+                  }; ${failureMessage(rollback)}`;
               }
             }
           }
@@ -160,8 +169,9 @@ export async function publish(
         }
       } catch (cleanup) {
         failures.push(cleanup);
-        console.error(
-          `Публикация очистка private stage ${stage} отказала: ${cleanup}`,
+        logFailure(
+          `Публикация очистка private stage ${stage} отказала`,
+          cleanup,
         );
       }
       throw failureError(error, failures, recoveryMessage);

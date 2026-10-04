@@ -654,9 +654,11 @@ const cases: Record<
     await f.withEnv(() => rejects(() => workspace(f.root), "пересекаются"));
   },
 };
-const selected = Deno.args.includes("--case")
-  ? Deno.args[Deno.args.indexOf("--case") + 1]
-  : undefined;
+const selection = Deno.args.indexOf("--case"),
+  selected = selection >= 0 ? Deno.args[selection + 1] : undefined;
+if (selection >= 0 && (!selected || !Object.hasOwn(cases, selected))) {
+  throw new Error("Неизвестный managed portal case");
+}
 for (const [name, test] of Object.entries(cases)) {
   if (selected && selected !== name) continue;
   const f = await fixture();

@@ -28,6 +28,7 @@ export async function safeRender(
     ["render", ".", "--fail-if-warnings", ...profileArguments(profiles)],
     root,
     { QUARTO_PROJECT_OUTPUT_DIR: "", QUARTO_PROFILE: "" },
+    "forward",
   );
 }
 if (import.meta.main) {

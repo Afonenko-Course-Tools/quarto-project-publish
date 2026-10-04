@@ -62,6 +62,8 @@ project-publish:
 quarto run _extensions/Afonenko-Course-Tools/project-publish/entrypoints/render.ts --profile student
 ```
 
+Обёртка передаёт настоящие stdout и stderr native render в соответствующие потоки CLI по мере сборки. Перенаправление `> render.log 2>&1` сохраняет оба потока; успешная сборка с выводом только в stderr тоже оставляет непустой журнал. Вызовы `inspect` и `--version` остаются внутренним capture для разбора данных. Native warning и ненулевой exit по-прежнему приводят к отказу с исходной диагностикой и кодом дочерней команды в сообщении.
+
 Обёртка принимает только необязательный `--profile` с comma-separated именами и запрещает `--output-dir` и другие native overrides **до запуска render**. Обычный `quarto render --profile student` с декларативной private конфигурацией также допустим. Прямой stock вызов с публичным `--output-dir` не обеспечивает сохранность прежнего выпуска: Quarto очищает выбранный output раньше pre-render, поэтому отказ из hook уже опоздает. Symlink и каталоги storage/output в другой файловой системе отклоняются при preflight; используйте обёртку, чтобы проверить их до native cleanup.
 
 Координатор готовит принадлежащий попытке native profile `publish-portal` только в snapshot, проверяет actual render selection через `quarto inspect` и фиксирует SHA-256 control и подключённых config files. Native `inspect.files.config` определяет подключённые файлы; bundled `stdlib/yaml` читает в них только декларацию `profile`, чтобы отклонить зарезервированное имя, которое Quarto убирает из effective config. Собственного YAML merge, profile selection или glob parser нет. Авторский `_quarto-publish-portal.yml`/`.yaml`, включение этого имени в profile groups/default или его ручной выбор запрещены. Дополнительный profile действует только на portal child; owner audience и profiles участников сохраняются. Его control исключается из native resources. При широком `resources: ["**/*"]` авторские исходники/configs тоже могут быть выбраны Quarto: их разрешённость проверяет интеграция владельца ресурсов. Publisher не вводит учебную политику видимости.
@@ -144,6 +146,7 @@ CUE-определение текущей конфигурации находи�
 
 ```sh
 quarto run tests/schema.ts
+quarto run tests/process-cli.ts
 quarto run tests/profiles.ts
 quarto run tests/publication.ts
 quarto run tests/portal.ts
@@ -161,3 +164,5 @@ quarto run tests/native-failure-diagnostics.ts
 `tests/failure-hooks.ts` проверяет порядок диагностики и очистки, отдельные контексты, ошибки обработчиков и восстановление публикации с явно обозначенным тестовым CLI. `tests/native-failure-diagnostics.ts` устанавливает расширение и проверяет настоящие portal/member child отказы после Pandoc: точные входные bytes и JSON тела сохраняются до очистки, два прежних профиля сохраняются без изменений. Эти диагностические тесты не являются приёмкой Core или исходного учебного корпуса.
 
 `tests/failure-error-values.ts` проверяет строковый дескриптор и сохранение исходных причин при нестандартных JavaScript-ошибках, отказе rollback или логирования. Его CLI и состояния явно тестовые; настоящий Native не запускается.
+
+`tests/process-cli.ts` запускает настоящий CLI Publisher с явно тестовым native executable: stderr-only и оба потока при успехе, вывод до завершения child, warning, ненулевой exit и сохранение внутреннего JSON capture. Это проверка границы потоков и ошибок; настоящий native render проверяют остальные интеграционные тесты.

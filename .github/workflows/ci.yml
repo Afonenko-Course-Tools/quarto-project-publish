@@ -1,8 +1,8 @@
-name: Проверка публикации
+name: Native course-site
 on:
   pull_request:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,51 +12,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quarto: [release, pre-release]
+        quarto: [1.10.18, 1.11.5]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          path: quarto-project-publish
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Afonenko-Course-Tools/quarto-course
+          ref: 992759e12924a3117ac92163ec51d62d59bb3267
+          path: quarto-course-capture
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Afonenko-Course-Tools/quarto-reference-catalog
+          ref: b71536e0f749f3803bd03c14c957c5a348731bec
+          path: quarto-reference-catalog
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
-          tinytex: true
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
-          version: latest
-      - name: Шрифт native PDF
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fontconfig fonts-lmodern
-          fc-cache -f
-          fc-match --format '%{file}\n' 'Latin Modern Roman'
-          test "$(fc-match --format '%{family[0]}' 'Latin Modern Roman')" = 'Latin Modern Roman'
-      - name: Проверка профилей, PDF и составной публикации
+          version: v0.17.1
+      - name: Native installed composition and domains
+        working-directory: quarto-project-publish
         env:
-          PUBLISHER_FAILURE_TEST_OUTPUT: ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}
+          COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
+          COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
+          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
-          quarto run tests/schema.ts
-          quarto run tests/process-cli.ts
-          quarto run tests/process-trace.ts
-          quarto run tests/workspace-inspect.ts
-          quarto run tests/profiles.ts
-          quarto run tests/publication.ts
-          quarto run tests/portal.ts
-          quarto run tests/stages.ts
-          quarto run tests/managed-portal.ts
-          quarto run tests/failure-hooks.ts
-          quarto run tests/failure-error-values.ts
-          quarto run tests/native-failure-diagnostics.ts
-      - name: Диагностика отказов Publisher
+          quarto run tests/site-paths.ts
+          quarto run tests/site-profiles.ts
+          quarto run tests/site-collection.ts
+          quarto run tests/site-native.ts
+          quarto run tests/site-domains.ts
+          quarto run tests/site-formats.ts
+          quarto run tests/site-local.ts
+          python3 tests/site-preview.py "$COURSE_SITE_TEST_ROOT"
+      - name: Diagnostics
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}
+          name: course-site-${{ matrix.quarto }}
           path: |
-            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/*.json
-            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/*.log
-            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/retained-portal/**
-            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/retained-member/**
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
+            ${{ runner.temp }}/course-site-native/logs
+            ${{ runner.temp }}/course-site-native/trace.jsonl
+            ${{ runner.temp }}/course-site-domains/logs
+          if-no-files-found: ignore

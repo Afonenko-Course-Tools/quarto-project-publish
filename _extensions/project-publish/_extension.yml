@@ -1,6 +1,0 @@
-title: Составная публикация Quarto
-author: Анатолий Афоненко
-version: 1.0.0
-contributes:
-  metadata:
-    project-publish-runtime: true

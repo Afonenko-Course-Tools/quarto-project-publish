@@ -119,6 +119,14 @@ function qualify(value: any, prefix: string): any {
   return {
     ...value,
     source: `${prefix}/${value.source}`,
+    ...(value.resources
+      ? {
+        resources: {
+          ...value.resources,
+          source: `${prefix}/${value.resources.source}`,
+        },
+      }
+      : {}),
     ...(value.document
       ? {
         document: {
@@ -189,6 +197,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
   if (ws.config.course) {
     native.push({
       prefix: "root",
+      view: ws.config.course.view,
       run: await (await module("course-core", "infrastructure/native-run.ts"))
         .finishNativeRun(root),
     });
@@ -218,10 +227,11 @@ export async function post(root = Deno.cwd()): Promise<void> {
     if (config.course) {
       native.push({
         prefix: project.id,
+        view: ws.config.course ? ws.config.course.view : config.course.view,
         run: await (await module("course-core", "infrastructure/native-run.ts"))
           .loadNativeRun(project.path, {
             profiles: ws.profiles,
-            view: ws.config.course?.view,
+            view: ws.config.course ? ws.config.course.view : config.course.view,
             outputDirectory: record.outputDir,
           }),
       });
@@ -234,7 +244,14 @@ export async function post(root = Deno.cwd()): Promise<void> {
     }
   }
   if (native.length) {
-    const groups = new Map<string, { documents: any[]; adapters: any[] }>();
+    const groups = new Map<
+      string,
+      {
+        documents: any[];
+        adapters: any[];
+        view: "student" | "full" | undefined;
+      }
+    >();
     const sourceRoots: Record<string, string> = {};
     for (const item of native) {
       const emitted = new Set(
@@ -247,7 +264,13 @@ export async function post(root = Deno.cwd()): Promise<void> {
       }
       for (const document of item.run.documents) {
         const id = document.course.id;
-        const group = groups.get(id) || { documents: [], adapters: [] };
+        const group = groups.get(id) ||
+          { documents: [] as any[], adapters: [] as any[], view: item.view };
+        if (group.view !== item.view) {
+          throw new Error(
+            `course-site inconsistent configured audience for ${id}`,
+          );
+        }
         group.documents.push(qualify(document, item.prefix));
         sourceRoots[`${item.prefix}/${document.source}`] = item.run.projectRoot;
         groups.set(id, group);
@@ -284,7 +307,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
         group.documents.map((d: any) => d.source),
         group.documents,
         group.adapters,
-        { view: ws.config.course?.view, profiles: ws.profiles },
+        { view: group.view, profiles: ws.profiles },
       );
       await (await module("course-core", "infrastructure/validate.ts"))
         .validateRelease(release, root, group.adapters, sourceRoots);

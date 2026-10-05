@@ -66,16 +66,35 @@ reference-catalog: {namespace: ${id}}
   );
   await write(
     `${id}/index.qmd`,
-    `# Lesson ${id} {#sec-${id}}\n\n:::: {#exr-${id} course-role="independent-study" difficulty="introductory"}\nPUBLIC_${id}\n\n::: {#sol-${id}}\nPRIVATE_${id}\n:::\n::::\n\n${
+    `---\nassessment:\n  kind: lab\n---\n\n# Lesson ${id} {#sec-${id}}\n\n:::: {#exr-${id} course-role="independent-study" difficulty="introductory"}\nPUBLIC_${id}\n\n![Public figure](asset.svg)\n\n::: {#sol-${id}}\nPRIVATE_${id}\n:::\n::::\n\n${
       id === "part" ? "@second:sec-second" : "@part:sec-part"
-    }\n`,
+    }\n\n::: {.assessment-items}\n1. @exr-${id}\n:::\n`,
+  );
+}
+for (const id of ["part", "second"]) {
+  await write(
+    `${id}/asset.svg`,
+    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="green"/></svg>',
+  );
+}
+if (Deno.args[0] === "rootless") {
+  await write(
+    "_quarto.yml",
+    (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
+      "filters: [course-core, reference-catalog]",
+      "filters: [reference-catalog]",
+    ).replace("course: {id: portal}\n", ""),
   );
 }
 for (const id of ["", "part/", "second/"]) {
   for (const view of ["student", "full"]) {
     await write(
       `${id}_quarto-${view}.yml`,
-      `project:\n  output-dir: _site-${view}\ncourse:\n  view: ${view}\n`,
+      `project:\n  output-dir: _site-${view}\n${
+        Deno.args[0] === "rootless" && id === ""
+          ? ""
+          : `course:\n  view: ${view}\n`
+      }`,
     );
   }
 }
@@ -97,6 +116,13 @@ for (const cwd of [root, join(root, "part"), join(root, "second")]) {
     ], cwd);
   }
 }
+const runs = join(root, "_generated/course-site/runs");
+const previousRuns = new Set<string>();
+try {
+  for await (const dir of Deno.readDir(runs)) previousRuns.add(dir.name);
+} catch (error) {
+  if (!(error instanceof Deno.errors.NotFound)) throw error;
+}
 await run(["render", "--profile", "student"]);
 const html = await Deno.readTextFile(join(root, "_site-student/index.html"));
 assert(
@@ -113,9 +139,9 @@ assert(
   ),
   "root search missing mounted lesson",
 );
-const runs = join(root, "_generated/course-site/runs");
 let release: any;
 for await (const dir of Deno.readDir(runs)) {
+  if (previousRuns.has(dir.name)) continue;
   try {
     release = JSON.parse(
       await Deno.readTextFile(
@@ -138,6 +164,39 @@ assert(
     .includes("PRIVATE_"),
   "student mounted HTML leaked solution",
 );
+if (["resources", "rootless"].includes(Deno.args[0])) {
+  if (Deno.args[0] === "resources") {
+    const { buildBodies } = await import(
+      new URL(`file://${root}/_extensions/course-core/body-export/producer.ts`)
+        .href
+    );
+    const { publicPackage } = await buildBodies(release, { projectRoot: root });
+    assertEquals(publicPackage.resources.map((r: any) => r.target).sort(), [
+      "part/asset.svg",
+      "second/asset.svg",
+    ]);
+  }
+  if (Deno.args[0] === "rootless") {
+    await run(["render", "--profile", "full"]);
+    assert(
+      (await Deno.readTextFile(join(root, "_site-full/lessons/index.html")))
+        .includes("PRIVATE_part"),
+      "rootless full audience was lost",
+    );
+    await write(
+      "second/_quarto-student.yml",
+      "project:\n  output-dir: _site-student\ncourse:\n  view: full\n",
+    );
+    assert(
+      (await run(["render", "--profile", "student"], root, false)).includes(
+        "course.view",
+      ),
+      "mixed explicit component audience accepted",
+    );
+  }
+  console.log(`PASS composed ${Deno.args[0]} release`);
+  Deno.exit(0);
+}
 if (Deno.args[0] === "smoke") {
   console.log("PASS installed Core/QRC current domain smoke");
   Deno.exit(0);

@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: b71536e0f749f3803bd03c14c957c5a348731bec
+          ref: d92d20dea0f97cb09c8df80a3a62293479d5cc5f
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
@@ -48,6 +48,8 @@ jobs:
           quarto run tests/site-collection.ts
           quarto run tests/site-native.ts
           quarto run tests/site-domains.ts
+          quarto run tests/site-domains.ts resources
+          quarto run tests/site-domains.ts rootless
           quarto run tests/site-formats.ts
           quarto run tests/site-local.ts
           python3 tests/site-preview.py "$COURSE_SITE_TEST_ROOT"

@@ -69,7 +69,10 @@ export async function cleanOutput(root: string, output: string): Promise<void> {
   try {
     for (const file of await files(output)) {
       if (
-        /\.(qmd|md|ipynb|Rmd|ya?ml)$/i.test(file) ||
+        (/\.(qmd|md|ipynb|Rmd|ya?ml)$/i.test(file) &&
+          !/(?:^|\/)libs\/revealjs\/plugin\/[A-Za-z0-9._-]+\/plugin\.yml$/.test(
+            relative(output, file).replaceAll("\\", "/"),
+          )) ||
         file.split(/[\\/]/).some((p) =>
           [".git", ".quarto", "_freeze", "_extensions"].includes(p)
         )

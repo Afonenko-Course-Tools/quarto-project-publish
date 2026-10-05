@@ -67,6 +67,7 @@ await write(
 );
 await run(["add", repo, "--no-prompt"]);
 await run(["render"]);
+await run(["render"]);
 const chapter = await Deno.readTextFile(join(root, "_site/book/chapter.html"));
 assert(
   chapter.includes("Native Chapter") && chapter.includes("index.html"),

@@ -50,7 +50,9 @@ cache не могут пересекаться. Символические сс�
 Профили `_quarto-student.yml` и `_quarto-full.yml` задают **native**
 `project.output-dir`: в корне `_site-student` / `_site-full`, в частях
 `_output/student` / `_output/full`. При использовании Course каждый профиль также
-задаёт `course.view: student` / `full` в корне и частях. Расширение использует
+задаёт `course.view: student` / `full` в Course-проектах. Корень без Course metadata
+берёт ожидаемый view каждого домена из разрешённой конфигурации его частей;
+части одного `course.id` должны выбирать один view. Расширение использует
 `quarto inspect` для разрешённой конфигурации и передаёт выбранные профили в том же
 порядке. Пересекающиеся output разных audience отклоняются до удаления файлов.
 Default output также должен быть отдельным, если default не выбирает audience.
@@ -80,7 +82,8 @@ reference-catalog: {namespace: theory}
 Для QRC каждый namespace должен быть уникален. Root `reference-catalog` задаёт
 полную политику exports/imports сайта. Core группирует результаты по `course.id`.
 Части с общим course.id используют явную source identity `<project.id>/<source>`;
-главная — `root/<source>`. Exercise/Assessment IDs внутри общего курса уникальны.
+главная — `root/<source>`. Resource facts используют ту же source identity, сохраняя
+реальный filesystem base для Body exports. Exercise/Assessment IDs внутри общего курса уникальны.
 Разные форматы одного course.id не объединяются: Core отклоняет смешанный формат.
 Полные модели сохраняются локально в `_generated/course-site/runs/<id>/`, вне сайта.
 

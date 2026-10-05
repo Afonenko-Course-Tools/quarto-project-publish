@@ -150,16 +150,16 @@ export async function post(root = Deno.cwd()): Promise<void> {
   const state = statePath(root);
   if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
     const ws = await workspace(root);
+    const outputs = (Deno.env.has("QUARTO_PROJECT_OUTPUT_FILES") ||
+        Deno.env.get("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES"))
+      ? await publicOutputs(root, ws.output)
+      : [];
+    if (!outputs.length) return;
     if (ws.config.course) {
       await (await module("course-core", "infrastructure/native-run.ts"))
         .finishNativeRun(root);
     }
-    if (
-      ws.config["reference-catalog"] &&
-      (Deno.env.get("QUARTO_PROJECT_OUTPUT_FILES") ||
-        Deno.env.get("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES"))
-    ) {
-      const outputs = await publicOutputs(root, ws.output);
+    if (ws.config["reference-catalog"]) {
       const { publish } = await module(
         "reference-catalog",
         "infrastructure/publish.ts",

@@ -127,3 +127,5 @@ checkout `quarto-course-capture` и `quarto-reference-catalog`; пути мож�
 Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME` разделяется
 между версиями, но сохраняется между командами одного сценария.
 `COURSE_BUILD_TRACE` задаёт JSONL файл времени и exit codes inspect/render.
+
+Native local hooks with an empty public output list do no collection or release finalization. This lets Quarto serve an existing preview without claiming a new successful native render.

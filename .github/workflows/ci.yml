@@ -24,9 +24,37 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: latest
+      - name: Шрифт native PDF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fontconfig fonts-lmodern
+          fc-cache -f
+          fc-match --format '%{file}\n' 'Latin Modern Roman'
+          test "$(fc-match --format '%{family[0]}' 'Latin Modern Roman')" = 'Latin Modern Roman'
       - name: Проверка профилей, PDF и составной публикации
+        env:
+          PUBLISHER_FAILURE_TEST_OUTPUT: ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           quarto run tests/schema.ts
+          quarto run tests/process-cli.ts
           quarto run tests/profiles.ts
           quarto run tests/publication.ts
           quarto run tests/portal.ts
+          quarto run tests/stages.ts
+          quarto run tests/managed-portal.ts
+          quarto run tests/failure-hooks.ts
+          quarto run tests/failure-error-values.ts
+          quarto run tests/native-failure-diagnostics.ts
+      - name: Диагностика отказов Publisher
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/*.json
+            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/*.log
+            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/retained-portal/**
+            ${{ runner.temp }}/publisher-failure-diagnostics-${{ matrix.quarto }}-${{ github.run_id }}-${{ github.run_attempt }}/retained-member/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

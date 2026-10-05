@@ -11,8 +11,17 @@ import "struct"
 }
 #Publication: {
   home?: #Namespace
+  portal?: string & =~"^[A-Za-z0-9][A-Za-z0-9_.-]*\\.qmd$"
+  "output-dir"?: string & =~"^[A-Za-z_][A-Za-z0-9_-]*$"
   projects: {[#Namespace]: #Project} & struct.MinFields(1)
   integrations?: [...string & !=""]
+  if portal != _|_ {
+    home?: _|_
+    "output-dir": string
+  }
+  if portal == _|_ {
+    "output-dir"?: _|_
+  }
   if home != _|_ {
     projects: (home)!: {format: "html", mount?: _|_}
   }

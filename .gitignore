@@ -1,5 +1,5 @@
 .quarto/
-.project-publish/
+_generated/
 _site*/
 _book/
 node_modules/

@@ -24,6 +24,7 @@ async function readPrefix(
 const root = await Deno.makeTempDir({ prefix: "publisher-process-cli-" });
 const fake = join(root, "fake-quarto.sh");
 const prior = Deno.env.get("QUARTO");
+const priorTrace = Deno.env.get("COURSE_BUILD_TRACE");
 try {
   await Deno.mkdir(join(root, "member"));
   await Deno.writeTextFile(join(root, "member/_quarto.yml"), "format: html\n");
@@ -101,6 +102,9 @@ esac
       cwd: root,
       env: {
         QUARTO: fake,
+        COURSE_BUILD_TRACE: mode === "stderr"
+          ? root
+          : join(root, `${mode}-trace.jsonl`),
         FAKE_RENDER_MODE: mode,
         QUARTO_PROJECT_OUTPUT_DIR: "",
         QUARTO_PROFILE: "",
@@ -152,6 +156,21 @@ esac
           "Warning bytes were not forwarded",
         );
       }
+      if (mode !== "stderr") {
+        const trace = await Deno.readTextFile(
+          join(root, `${mode}-trace.jsonl`),
+        );
+        assert(
+          !trace.includes("NATIVE_") && !trace.includes("PRIVATE_"),
+          "Forward trace leaked output",
+        );
+        assert(
+          trace.trim().split("\n").some((line) =>
+            JSON.parse(line).kind === "render"
+          ),
+          "Forward render omitted trace",
+        );
+      }
       console.log("ok " + mode);
     } catch (error) {
       failures.push(mode + ": " + String(error));
@@ -169,6 +188,7 @@ esac
     cwd: root,
     env: {
       QUARTO: fake,
+      COURSE_BUILD_TRACE: join(root, "live-trace.jsonl"),
       FAKE_RENDER_MODE: "live",
       QUARTO_PROJECT_OUTPUT_DIR: "",
       QUARTO_PROFILE: "",
@@ -207,10 +227,17 @@ esac
     while (!(await errReader.read()).done) { /* drain */ }
     assert((await child.status).code === 0, "Live native render failed");
   }
-  console.log("ok live streams before native exit");
+  assert(
+    (await Deno.readTextFile(join(root, "live-trace.jsonl"))).trim().split("\n")
+      .some((line) => JSON.parse(line).kind === "render"),
+    "Live render omitted trace",
+  );
+  console.log("ok live streams before native exit with optional trace");
   assert(failures.length === 0, failures.join("\n"));
 } finally {
   if (prior === undefined) Deno.env.delete("QUARTO");
   else Deno.env.set("QUARTO", prior);
+  if (priorTrace === undefined) Deno.env.delete("COURSE_BUILD_TRACE");
+  else Deno.env.set("COURSE_BUILD_TRACE", priorTrace);
   await Deno.remove(root, { recursive: true });
 }

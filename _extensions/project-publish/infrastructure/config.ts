@@ -20,8 +20,20 @@ import {
 import type { Format } from "../domain/contract.ts";
 export async function workspace(root: string): Promise<Workspace> {
   const profiles = activeProfiles();
+  // One workspace has one root. Only the exact ordered profile selection can
+  // share an inspect; another workspace call always starts with current bytes.
+  const inspections = new Map<string, Promise<string>>();
+  const inspect = (selected: string[]): Promise<string> => {
+    const key = JSON.stringify(selected);
+    let result = inspections.get(key);
+    if (!result) {
+      result = quarto(["inspect", root, ...profileArguments(selected)], root);
+      inspections.set(key, result);
+    }
+    return result;
+  };
   const inspected = JSON.parse(
-    await quarto(["inspect", root, ...profileArguments(profiles)], root),
+    await inspect(profiles),
   );
   const config = inspected.config;
   const pub = config["project-publish"];
@@ -222,9 +234,7 @@ export async function workspace(root: string): Promise<Workspace> {
     if (match) outputProfiles.add(match[1]);
   }
   for (const profile of [...outputProfiles].sort()) {
-    const profileConfig =
-      JSON.parse(await quarto(["inspect", root, "--profile", profile], root))
-        .config;
+    const profileConfig = JSON.parse(await inspect([profile])).config;
     const name = profileConfig["project-publish"]?.portal !== undefined
       ? profileConfig["project-publish"]["output-dir"]
       : profileConfig.project?.["output-dir"] || "_site";

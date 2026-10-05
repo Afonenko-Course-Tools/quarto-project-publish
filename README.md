@@ -142,6 +142,16 @@ PDF-подпроект и печать из публичного Body — раз
 
 CUE-определение текущей конфигурации находится в `spec/publication.cue`; проверка `tests/schema.ts` сверяет его с допустимыми форматами TypeScript.
 
+В одном вызове `workspace` одинаковый native inspect с тем же упорядоченным
+набором профилей используется повторно. Отдельные pre/post вызовы читают
+конфигурацию заново; комбинированный набор профилей не заменяет отдельный профиль.
+
+Для измерения native вызовов задайте `COURSE_BUILD_TRACE` как абсолютный путь
+к JSONL-файлу. Publisher дописывает записи `inspect` и `render` с полями `kind`,
+`executable`, `cwd`, `args` (только target и `--profile`), `elapsedMs`, `exitCode`.
+Stdout, stderr и остальные аргументы не попадают в журнал. Отказ необязательного
+журнала не меняет результат команды или передачу её потоков.
+
 Интеграция экспортирует по умолчанию объект с одним или несколькими обработчиками `beforeRender(context)`, `metadata(context)`, `finalize(context)` и необязательным `onFailure(context)`. Договор определён интерфейсом `Integration` в `domain/model.ts`.
 
 Все обработчики получают `root`, `sourceRoot`, `attemptId`, `profiles`, `config`, `members`. `root` — исходный корень проекта; `sourceRoot` — отдельный снимок этой попытки. Каждый `members[].path` указывает в снимок. Профили и эффективная конфигурация фиксируются перед сборкой; каждому вызову передаются отдельные копии данных. Модули интеграций и их относительные импорты также загружаются из снимка. `metadata` участника дополнительно получает `namespace`, `format`, `output` — фактический абсолютный каталог результата текущего подпроекта, переданный его native render через `--output-dir`. Это не путь исходников и не итоговый каталог публикации. Metadata overlays хранятся в каталоге конкретной попытки `.project-publish/builds/<attemptId>/`, поэтому повторные сборки одной namespace не перезаписывают overlays друг друга; `finalize` — `stage`, `quarto` (версия Quarto).
@@ -165,6 +175,8 @@ CUE-определение текущей конфигурации находи�
 ```sh
 quarto run tests/schema.ts
 quarto run tests/process-cli.ts
+quarto run tests/process-trace.ts
+quarto run tests/workspace-inspect.ts
 quarto run tests/profiles.ts
 quarto run tests/publication.ts
 quarto run tests/portal.ts

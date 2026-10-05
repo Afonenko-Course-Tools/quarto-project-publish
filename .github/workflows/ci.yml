@@ -37,6 +37,8 @@ jobs:
         run: |
           quarto run tests/schema.ts
           quarto run tests/process-cli.ts
+          quarto run tests/process-trace.ts
+          quarto run tests/workspace-inspect.ts
           quarto run tests/profiles.ts
           quarto run tests/publication.ts
           quarto run tests/portal.ts

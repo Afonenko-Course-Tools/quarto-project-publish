@@ -6,17 +6,18 @@ Revealjs показывают native форматы, профили, общую 
 Демонстрация по умолчанию использует full; student исключает control.qmd через
 отдельный полный список book.chapters.
 
-Для локальной установки из checkout:
+Установка закреплённых выпусков штатным механизмом Quarto:
 
 ```sh
-quarto add ../.. --no-prompt
-quarto add ../../../quarto-reference-catalog --no-prompt
-(cd book && quarto add ../../../../quarto-reference-catalog --no-prompt)
-(cd materials && quarto add ../../../../quarto-reference-catalog --no-prompt)
-quarto render
+task install
+task render
 ```
 
-Для GitHub установки используйте точные теги и namespace paths, показанные Quarto.
+Taskfile устанавливает QRC в каждый native проект; ручная настройка путей не нужна.
 Готовый сайт выпускается как `composite-course.tar.gz`; его корень содержит
 index.html и reference-catalog.json. Внутренние ссылки остаются относительными.
 Невеб-форматы запускаются отдельно штатным `quarto render --to pdf`.
+
+`task render` записывает `_site/BUILD.json`: точная ревизия производителя,
+закреплённые зависимости и версия Quarto. Архив `composite-course.tar.gz` выпускается
+в отдельном неизменяемом Release `demo-20261007` из той же ревизии.

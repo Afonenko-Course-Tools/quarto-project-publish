@@ -2,8 +2,8 @@ project:
   type: website
   output-dir: _site
   render: [index.qmd]
-  pre-render: _extensions/course-site/entrypoints/pre.ts
-  post-render: _extensions/course-site/entrypoints/post.ts
+  pre-render: _extensions/Afonenko-Course-Tools/course-site/entrypoints/pre.ts
+  post-render: _extensions/Afonenko-Course-Tools/course-site/entrypoints/post.ts
 profile:
   default: full
 website:

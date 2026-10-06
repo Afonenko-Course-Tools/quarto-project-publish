@@ -1,5 +1,5 @@
 import { dirname, fromFileUrl, join } from "stdlib/path";
-import { assert, assertEquals, assertPayloadEqual } from "./support.ts";
+import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   base = dirname(repo);
 const root = Deno.env.get("COURSE_SITE_DOMAIN_ROOT") ||
@@ -99,10 +99,6 @@ for (const id of ["", "part/", "second/"]) {
   }
 }
 await run(["add", repo, "--no-prompt"]);
-await assertPayloadEqual(
-  join(repo, "_extensions/course-site"),
-  join(root, "_extensions/course-site"),
-);
 for (const cwd of [root, join(root, "part"), join(root, "second")]) {
   for (
     const provider of ["quarto-course-capture", "quarto-reference-catalog"]

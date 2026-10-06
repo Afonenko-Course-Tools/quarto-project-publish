@@ -21,13 +21,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: 27d7c437d386f5489c8a0a4c09ed1afeb07c7967
+          ref: v2.1.0
           path: quarto-course-capture
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 11538fe9ba084b42f0113685f0326b2bd817bab4
+          ref: v2.1.0
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
@@ -52,9 +52,9 @@ jobs:
           quarto run tests/site-domains.ts rootless
           quarto run tests/site-formats.ts
           quarto run tests/site-local.ts
-          python3 tests/site-preview.py "$COURSE_SITE_TEST_ROOT"
+          quarto run tests/site-preview.ts "$COURSE_SITE_TEST_ROOT"
           quarto run tests/site-domains.ts smoke
-          python3 tests/site-preview.py "$COURSE_SITE_DOMAIN_ROOT" --course
+          quarto run tests/site-preview.ts "$COURSE_SITE_DOMAIN_ROOT" --course
       - name: Diagnostics
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

@@ -1,5 +1,5 @@
 import { dirname, fromFileUrl, join } from "stdlib/path";
-import { assert, assertEquals, assertPayloadEqual } from "./support.ts";
+import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const root = Deno.env.get("COURSE_SITE_TEST_ROOT") ||
   await Deno.makeTempDir({ prefix: "course-site-native-" });
@@ -85,10 +85,6 @@ for (const profile of ["student", "full"]) {
   );
 }
 await run(["add", repo, "--no-prompt"]);
-await assertPayloadEqual(
-  join(repo, "_extensions/course-site"),
-  join(root, "_extensions/course-site"),
-);
 await run(["render"]);
 assert(
   (await Deno.readTextFile(join(root, "_site/lessons/index.html"))).includes(

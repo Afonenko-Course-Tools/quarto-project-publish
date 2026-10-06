@@ -3,7 +3,7 @@
 Расширение устанавливается из существующего репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish
+quarto add Afonenko-Course-Tools/quarto-project-publish@v3.0.1
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -123,9 +123,13 @@ quarto run tests/site-local.ts
 Domain suite устанавливает полные payloads через настоящий `quarto add` из соседних
 checkout `quarto-course-capture` и `quarto-reference-catalog`; пути можно задать через
 `COURSE_CORE_PROVIDER` и `QRC_PROVIDER`. Preview suite:
-`python3 tests/site-preview.py <fixture-path>` после site-native suite. Для выбора
+`quarto run tests/site-preview.ts <fixture-path>` после site-native suite. Для выбора
 Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME` разделяется
 между версиями, но сохраняется между командами одного сценария.
 `COURSE_BUILD_TRACE` задаёт JSONL файл времени и exit codes inspect/render.
 
 Native local hooks with an empty public output list do no collection or release finalization. This lets Quarto serve an existing preview without claiming a new successful native render.
+
+## Версии и обновление
+
+Релиз `v3.0.1` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.

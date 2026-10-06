@@ -1,0 +1,5 @@
+# Контрольная демонстрация {#sec-control}
+
+Эта отдельная глава входит только в полный список глав.
+
+[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/book/control.qmd)

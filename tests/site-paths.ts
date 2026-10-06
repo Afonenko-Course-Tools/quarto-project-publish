@@ -1,82 +1,61 @@
-import { assert, assertEquals, assertRejects } from "./support.ts";
-const modulePath = "../_extensions/course-site/infrastructure/config.ts";
-let api: any;
-try {
-  api = await import(modulePath);
-} catch { /* missing implementation is the initial RED */ }
-assert(api?.validateConfig, "course-site safe native configuration is missing");
+import { assertEquals, assertRejects } from "./support.ts";
+import { validateConfig } from "../_extensions/course-site/infrastructure/config.ts";
 const root = await Deno.makeTempDir();
 try {
-  await Deno.mkdir(`${root}/part`);
+  for (const path of ["a/slides", "b/slides", "part", "part/nested"]) {
+    await Deno.mkdir(`${root}/${path}`, { recursive: true });
+  }
   const base = {
     project: { type: "website", "output-dir": "_site" },
-    "course-site": {
-      projects: [{
-        id: "part",
-        path: "part",
-        format: "html",
-        mount: "parts/one",
-      }],
-    },
+    subprojects: ["./a/slides", "b/slides"],
   };
-  const result = await api.validateConfig(root, base, ["student"]);
-  assertEquals(result.projects[0].mount, "parts/one");
+  const result = await validateConfig(root, base, ["student"]);
+  assertEquals(result.projects.map((p) => p.mount), ["a/slides", "b/slides"]);
+  assertEquals(new Set(result.projects.map((p) => p.id)).size, 2);
   assertEquals(result.profiles, ["student"]);
-  for (const output of [".", "..", ".quarto/site", "_freeze/site", "part"]) {
+  for (const output of [".", "..", ".quarto/site", "_freeze/site", "a"]) {
     await assertRejects(() =>
-      api.validateConfig(root, {
+      validateConfig(root, {
         ...base,
         project: { ...base.project, "output-dir": output },
       }, [])
     );
   }
   for (
-    const patch of [{ path: "." }, { path: "../outside" }, {
-      mount: "../escape",
-    }, { mount: "" }]
+    const subprojects of [
+      ["."],
+      ["../outside"],
+      ["/tmp/outside"],
+      ["part", "./part"],
+      ["part", "part/nested"],
+      [{ path: "part" }],
+      [],
+    ]
   ) {
     await assertRejects(() =>
-      api.validateConfig(root, {
-        ...base,
-        "course-site": {
-          projects: [{ ...base["course-site"].projects[0], ...patch }],
-        },
-      }, [])
+      validateConfig(root, { ...base, subprojects }, [])
     );
   }
-  for (
-    const second of [{
-      id: "other",
-      path: "part",
-      mount: "other",
-      format: "html",
-    }, { id: "other", path: "part2", mount: "parts", format: "html" }]
-  ) {
-    await Deno.mkdir(`${root}/part2`, { recursive: true });
-    await assertRejects(() =>
-      api.validateConfig(root, {
-        ...base,
-        "course-site": { projects: [...base["course-site"].projects, second] },
-      }, [])
-    );
-  }
+  await assertRejects(() =>
+    validateConfig(root, {
+      ...base,
+      "course-site": {
+        projects: [{ id: "part", path: "part", format: "html", mount: "part" }],
+      },
+    }, [])
+  );
   await Deno.symlink(`${root}/part`, `${root}/linked`);
   await assertRejects(() =>
-    api.validateConfig(root, {
+    validateConfig(root, {
       ...base,
       project: { ...base.project, "output-dir": "linked/site" },
     }, [])
   );
   await assertRejects(() =>
-    api.validateConfig(root, {
-      ...base,
-      "course-site": {
-        projects: [{ ...base["course-site"].projects[0], path: "linked" }],
-      },
-    }, [])
+    validateConfig(root, { ...base, subprojects: ["linked"] }, [])
   );
   console.log(
-    "PASS native configuration containment, symlinks, overlaps and profiles",
+    "PASS normalized subproject paths, symlinks, overlaps, old syntax rejection and profiles",
   );
 } finally {
   await Deno.remove(root, { recursive: true });

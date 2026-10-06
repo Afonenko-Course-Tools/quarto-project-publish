@@ -1,0 +1,16 @@
+---
+title: Составной курс
+---
+
+# Нативные проекты
+
+Корень, книга и смешанный сайт сохраняют конфигурацию Quarto.
+Адрес результата совпадает с путём папки, а namespace QRC задаётся независимо.
+
+- @theory:sec-theory — глава книги.
+- @study:sec-notes — обычная HTML-страница.
+- @study:sec-slide — презентация в том же сайте.
+
+[Исходники примера](https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v4.0.0/examples/course)
+
+[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/index.qmd)

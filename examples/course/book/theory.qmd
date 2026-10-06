@@ -1,0 +1,11 @@
+# Теория {#sec-theory}
+
+Один источник, два профиля и нативная библиография [@quarto].
+
+::: {.content-visible when-profile="full"}
+Полный профиль демонстрации намеренно показывает комментарий.
+:::
+
+@study:sec-slide
+
+[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/book/theory.qmd)

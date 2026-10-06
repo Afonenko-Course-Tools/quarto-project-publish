@@ -21,8 +21,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: v2.1.0
-          path: quarto-course-capture
+          ref: v3.0.0
+          path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -45,7 +45,13 @@ jobs:
         run: |
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
+          quarto run tests/site-child-profiles.ts default
+          quarto run tests/site-child-profiles.ts group
+          quarto run tests/site-metadata-profiles.ts
+          quarto run tests/site-source-paths.ts
           quarto run tests/site-collection.ts
+          quarto run tests/site-effective-formats.ts
+          quarto run tests/site-web-selection.ts
           quarto run tests/site-native.ts
           quarto run tests/site-domains.ts
           quarto run tests/site-domains.ts resources

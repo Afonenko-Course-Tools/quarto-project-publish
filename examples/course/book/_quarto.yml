@@ -1,0 +1,14 @@
+project:
+  type: book
+  output-dir: _site
+  post-render:
+    - _extensions/Afonenko-Course-Tools/reference-catalog/entrypoints/post.ts
+    - ../_extensions/Afonenko-Course-Tools/course-site/entrypoints/collect.ts
+profile:
+  default: full
+book:
+  title: Теория
+format: html
+bibliography: ../references.bib
+filters: [reference-catalog]
+reference-catalog: {namespace: theory}

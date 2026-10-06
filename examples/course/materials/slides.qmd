@@ -1,0 +1,10 @@
+---
+title: Презентация
+format: revealjs
+---
+
+# Составной курс {#sec-slide}
+
+@theory:sec-theory и @study:sec-notes.
+
+[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/materials/slides.qmd)

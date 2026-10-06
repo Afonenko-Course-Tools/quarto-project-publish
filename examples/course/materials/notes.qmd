@@ -1,0 +1,10 @@
+---
+title: Конспект
+format: html
+---
+
+# Конспект {#sec-notes}
+
+@theory:sec-theory и @study:sec-slide.
+
+[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/materials/notes.qmd)

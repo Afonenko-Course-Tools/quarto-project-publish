@@ -36,10 +36,7 @@ format: html
 filters: [course-core, reference-catalog]
 course: {id: portal}
 reference-catalog: {namespace: portal}
-course-site:
-  projects:
-    - {id: part, path: part, format: html, mount: lessons}
-    - {id: second, path: second, format: html, mount: more}
+subprojects: [part, second]
 `,
 );
 await write(
@@ -68,7 +65,7 @@ reference-catalog: {namespace: ${id}}
     `${id}/index.qmd`,
     `---\nassessment:\n  kind: lab\n---\n\n# Lesson ${id} {#sec-${id}}\n\n:::: {#exr-${id} course-role="independent-study" difficulty="introductory"}\nPUBLIC_${id}\n\n![Public figure](asset.svg)\n\n::: {#sol-${id}}\nPRIVATE_${id}\n:::\n::::\n\n${
       id === "part" ? "@second:sec-second" : "@part:sec-part"
-    }\n\n::: {.assessment-items}\n1. @exr-${id}\n:::\n`,
+    }\n\n::: {.task-items}\n1. @exr-${id}\n:::\n`,
   );
 }
 for (const id of ["part", "second"]) {
@@ -107,7 +104,11 @@ for (const cwd of [root, join(root, "part"), join(root, "second")]) {
       "add",
       (provider === "quarto-course-capture"
         ? Deno.env.get("COURSE_CORE_PROVIDER")
-        : Deno.env.get("QRC_PROVIDER")) || join(base, provider),
+        : Deno.env.get("QRC_PROVIDER")) ||
+      join(
+        base,
+        provider === "quarto-course-capture" ? "quarto-course" : provider,
+      ),
       "--no-prompt",
     ], cwd);
   }
@@ -122,8 +123,8 @@ try {
 await run(["render", "--profile", "student"]);
 const html = await Deno.readTextFile(join(root, "_site-student/index.html"));
 assert(
-  html.includes("lessons/index.html#sec-part") &&
-    html.includes("more/index.html#sec-second"),
+  html.includes("part/index.html#sec-part") &&
+    html.includes("second/index.html#sec-second"),
   "full mounted links missing",
 );
 const search = JSON.parse(
@@ -131,32 +132,41 @@ const search = JSON.parse(
 );
 assert(
   search.some((entry: any) =>
-    entry.href.startsWith("lessons/") && entry.text.includes("PUBLIC_part")
+    entry.href.startsWith("part/") && entry.text.includes("PUBLIC_part")
   ),
   "root search missing mounted lesson",
 );
-let release: any;
+const releases: any[] = [];
 for await (const dir of Deno.readDir(runs)) {
   if (previousRuns.has(dir.name)) continue;
-  try {
-    release = JSON.parse(
-      await Deno.readTextFile(
-        join(runs, dir.name, "shared-course-release.json"),
-      ),
-    );
-  } catch {}
+  for await (const file of Deno.readDir(join(runs, dir.name))) {
+    if (file.name.endsWith("-release.json")) {
+      releases.push(
+        JSON.parse(await Deno.readTextFile(join(runs, dir.name, file.name))),
+      );
+    }
+  }
 }
-assertEquals(release.documents.map((d: any) => d.source), [
-  "part/index.qmd",
-  "second/index.qmd",
-]);
+const lessonReleases = releases.filter((r) => r.model.exercises.length);
+assertEquals(lessonReleases.length, 2);
+assertEquals(
+  lessonReleases.flatMap((r) => r.documents.map((d: any) => d.source)).sort(),
+  [
+    "subproject-part/index.qmd",
+    "subproject-second/index.qmd",
+  ],
+);
+const release = {
+  documents: lessonReleases.flatMap((r) => r.documents),
+  model: { exercises: lessonReleases.flatMap((r) => r.model.exercises) },
+};
 assertEquals(release.model.exercises.length, 2);
 assert(
   !JSON.stringify(release).includes("PRIVATE_"),
   "student full release leaked solution",
 );
 assert(
-  !(await Deno.readTextFile(join(root, "_site-student/lessons/index.html")))
+  !(await Deno.readTextFile(join(root, "_site-student/part/index.html")))
     .includes("PRIVATE_"),
   "student mounted HTML leaked solution",
 );
@@ -166,8 +176,27 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       new URL(`file://${root}/_extensions/course-core/body-export/producer.ts`)
         .href
     );
-    const { publicPackage } = await buildBodies(release, { projectRoot: root });
-    assertEquals(publicPackage.resources.map((r: any) => r.target).sort(), [
+    const resources: any[] = [];
+    for (const id of ["part", "second"]) {
+      const { publicPackage } = await buildBodies(release, {
+        projectRoot: root,
+        courseId: "shared-course",
+        work: `sec-${id}`,
+      });
+      assertEquals(publicPackage.works.map((work: any) => work.id), [
+        `sec-${id}`,
+      ]);
+      assertEquals(
+        publicPackage.questions.map((question: any) => question.id),
+        [`exr-${id}`],
+      );
+      assertEquals(
+        publicPackage.resources.map((resource: any) => resource.target),
+        [`${id}/asset.svg`],
+      );
+      resources.push(...publicPackage.resources);
+    }
+    assertEquals(resources.map((r: any) => r.target).sort(), [
       "part/asset.svg",
       "second/asset.svg",
     ]);
@@ -175,7 +204,7 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
   if (Deno.args[0] === "rootless") {
     await run(["render", "--profile", "full"]);
     assert(
-      (await Deno.readTextFile(join(root, "_site-full/lessons/index.html")))
+      (await Deno.readTextFile(join(root, "_site-full/part/index.html")))
         .includes("PRIVATE_part"),
       "rootless full audience was lost",
     );
@@ -220,13 +249,13 @@ assert(
 await write("part/_quarto.yml", partConfig);
 await run(["render", "--profile", "full"]);
 assert(
-  (await Deno.readTextFile(join(root, "_site-full/lessons/index.html")))
+  (await Deno.readTextFile(join(root, "_site-full/part/index.html")))
     .includes("PRIVATE_part"),
   "full lost current solution",
 );
 await run(["render", "--profile", "student"]);
 assert(
-  !(await Deno.readTextFile(join(root, "_site-student/lessons/index.html")))
+  !(await Deno.readTextFile(join(root, "_site-student/part/index.html")))
     .includes("PRIVATE_"),
   "student retry used full result",
 );

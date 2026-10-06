@@ -3,7 +3,7 @@
 Расширение устанавливается из существующего репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v3.0.1
+quarto add Afonenko-Course-Tools/quarto-project-publish@v4.0.0
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -25,10 +25,7 @@ project:
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
-course-site:
-  projects:
-    - {id: theory, path: theory, format: html, mount: theory}
-    - {id: slides, path: slides, format: revealjs, mount: slides}
+subprojects: [theory, slides]
 ```
 
 У каждой части есть собственный `_quarto.yml`, native `output-dir` и последний
@@ -43,24 +40,37 @@ project:
 format: html
 ```
 
-`id` является уникальным идентификатором части; `root` зарезервирован для главной.
-`path` и `mount` — относительные непересекающиеся пути. Исходники, output и native
-cache не могут пересекаться. Символические ссылки в этих путях запрещены.
+`subprojects` — непустой список относительных путей папок. Адрес части совпадает
+с её нормализованным путём: `a/slides` публикуется в `a/slides/`. `./tasks` и
+`tasks` обозначают одну часть и не могут входить в список вместе. Вложенные
+пересекающиеся проекты, symlink и пересечение источников/outputs запрещены.
+Прежняя конфигурация `course-site.projects`, `id`, `format` и `mount` удалена.
+Служебное имя части выводится из пути и не является экспортным ID задания.
 
 Профили `_quarto-student.yml` и `_quarto-full.yml` задают **native**
 `project.output-dir`: в корне `_site-student` / `_site-full`, в частях
 `_output/student` / `_output/full`. При использовании Course каждый профиль также
 задаёт `course.view: student` / `full` в Course-проектах. Корень без Course metadata
 берёт ожидаемый view каждого домена из разрешённой конфигурации его частей;
-части одного `course.id` должны выбирать один view. Расширение использует
+каждая часть выбирает собственную согласованную проекцию view. Расширение использует
 `quarto inspect` для разрешённой конфигурации и передаёт выбранные профили в том же
 порядке. Пересекающиеся output разных audience отклоняются до удаления файлов.
-Default output также должен быть отдельным, если default не выбирает audience.
+Если корень не выбирает профили, части сохраняют собственные native defaults,
+environment и группы. Точный `QUARTO_PROFILE` нативного post-render сохраняется
+в коллекции и ожиданиях Core, включая профили без YAML-файла. `files.config`
+не используется для определения профилей: обычные metadata-files могут иметь
+такое же имя. До cleanup проверяются разрешённые native student/full outputs:
+они должны быть непересекающимися. При неизвестном implicit audience выбранный
+output может точно совпадать с одной из этих проекций; частичное пересечение
+отклоняется. Явный audience или разрешённый course.view также проверяется
+против output другого audience.
+Все выбранные исходные документы проверяются на containment и symlink перед
+документным inspect, cleanup Publisher и рендером частей.
 
 ## Core и QRC
 
 Модули опциональны. Для курса установите `course-core` и укажите `filters:
-[course-core]`, `course.id`. Для ссылок установите `reference-catalog`, добавьте
+[course-core]`. Для явного экспорта course.id задаётся один раз в корне. Для ссылок установите `reference-catalog`, добавьте
 его фильтр и `reference-catalog.namespace`. Корневой course-site hook сам вызывает
 Core begin/finish и QRC full; дополнительные Core pre/post hooks в корне не нужны.
 В частях настройте:
@@ -75,25 +85,41 @@ project:
     - _extensions/reference-catalog/entrypoints/post.ts
     - ../_extensions/course-site/entrypoints/collect.ts
 filters: [course-core, reference-catalog]
-course: {id: theory-course}
+course: {view: full}
 reference-catalog: {namespace: theory}
 ```
 
 Для QRC каждый namespace должен быть уникален. Root `reference-catalog` задаёт
-полную политику exports/imports сайта. Core группирует результаты по `course.id`.
-Части с общим course.id используют явную source identity `<project.id>/<source>`;
-главная — `root/<source>`. Resource facts используют ту же source identity, сохраняя
-реальный filesystem base для Body exports. Exercise/Assessment IDs внутри общего курса уникальны.
-Разные форматы одного course.id не объединяются: Core отклоняет смешанный формат.
-Полные модели сохраняются локально в `_generated/course-site/runs/<id>/`, вне сайта.
+полную политику exports/imports сайта. Core проверяет результаты каждого native проекта.
+Каждая часть сохраняет самостоятельную область нативных ID и свой QRC namespace.
+`course.id` в корне обозначает логический курс для явного экспорта выбранного
+банка; путь публикации и namespace не заменяют эту идентичность. Полные
+модели самостоятельных частей сохраняются локально в
+`_generated/course-site/runs/<id>/`, вне сайта. Core не объединяет несвязанные
+задания разных частей в один экспортный банк.
 
 ## Native поведение и ошибки
 
-Полный native root render выполняет один `quarto render . --to <format>` каждой
-части в постоянном исходном каталоге. Затем монтирует её свежие outputs, ресурсы и
-search; QRC строго связывает текущие HTML и объединяет search. `.quarto`, `_freeze`
-и caches движков сохраняются. Текущий publishable output очищается перед сборкой.
-Сборки одного изменяемого проекта одновременно не поддерживаются.
+Полный native root render читает эффективный формат каждого выбранного документа
+через `quarto inspect` с теми же профилями. Website может сочетать HTML и Revealjs;
+front matter, directory metadata и пользовательские форматы сохраняют native смысл.
+Два веб-формата одного документа отклоняются с предложением выбрать профиль.
+HTML и PDF одной конфигурации не считаются двумя веб-форматами.
+
+Обычная часть рендерится один раз без общего `--to`. Если у документов также
+есть невеб-форматы и выбранный веб-формат первый, используется native
+`--to default`; книга с единственным веб-форматом может выбирать его через
+`--to`. Если website требует разных выбранных форматов и веб-формат не первый,
+сборщик рендерит выбранные документы native командами, каждый один раз, и
+сохраняет текущие outputs каждой команды. PDF и другие невеб-результаты не
+создаются в этой веб-сборке: их собирают отдельно штатным `quarto render --to pdf`
+или функциональным профилем. Часть только с одним невеб-форматом остаётся
+самостоятельным native маршрутом готовых файлов.
+
+Свежие outputs, ресурсы и search монтируются по путям папок; QRC строго связывает
+текущие HTML и объединяет search. `.quarto`, `_freeze` и кеши движков сохраняются.
+Текущий publishable output очищается перед сборкой. Сборки одного изменяемого
+проекта одновременно не поддерживаются.
 
 Компонентный selected render/preview остаётся локальным. У корня выбранная
 единственная `index.qmd` и первоначальный preview без output могут иметь native
@@ -113,15 +139,21 @@ records не используются; rollback не выполняется. Cor
 ```bash
 quarto run tests/site-paths.ts
 quarto run tests/site-profiles.ts
+quarto run tests/site-child-profiles.ts default
+quarto run tests/site-child-profiles.ts group
+quarto run tests/site-metadata-profiles.ts
+quarto run tests/site-source-paths.ts
 quarto run tests/site-collection.ts
 quarto run tests/site-native.ts
 quarto run tests/site-domains.ts
 quarto run tests/site-formats.ts
+quarto run tests/site-effective-formats.ts
+quarto run tests/site-web-selection.ts
 quarto run tests/site-local.ts
 ```
 
 Domain suite устанавливает полные payloads через настоящий `quarto add` из соседних
-checkout `quarto-course-capture` и `quarto-reference-catalog`; пути можно задать через
+checkout `quarto-course` и `quarto-reference-catalog`; пути можно задать через
 `COURSE_CORE_PROVIDER` и `QRC_PROVIDER`. Preview suite:
 `quarto run tests/site-preview.ts <fixture-path>` после site-native suite. Для выбора
 Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME` разделяется
@@ -132,4 +164,8 @@ Native local hooks with an empty public output list do no collection or release 
 
 ## Версии и обновление
 
-Релиз `v3.0.1` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
+Релиз `v4.0.0` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
+
+## Готовая демонстрация
+
+`examples/course` содержит один минимальный native курс: книгу, сайт с HTML/Revealjs, профили full/student и общий bibliography. Core необязателен; QRC включён явно. По умолчанию демонстрация full. Готовый результат выпускается asset `composite-course.tar.gz`; шаблон получает его по закреплённому Release URL, без автоматической пресборки.

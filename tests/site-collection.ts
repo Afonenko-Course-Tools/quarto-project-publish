@@ -25,12 +25,59 @@ try {
     [],
   );
   assertEquals(record.nativeOutputs, [`${root}/_site/index.html`]);
+  Deno.env.set("QUARTO_PROFILE", "web,content");
+  await collect();
+  const native = await readCollection(
+    `${root}/record.json`,
+    "one",
+    root,
+    `${root}/_site`,
+    ["web"],
+    true,
+  );
+  assertEquals(native.profiles, ["web", "content"]);
+  await assertRejects(() =>
+    readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"])
+  );
+  await Deno.writeTextFile(`${root}/_quarto-content.yml`, "format: html\n");
+  assertEquals(
+    (await readCollection(
+      `${root}/record.json`,
+      "one",
+      root,
+      `${root}/_site`,
+      ["web"],
+      true,
+    )).profiles,
+    ["web", "content"],
+  );
+  await assertRejects(() =>
+    readCollection(
+      `${root}/record.json`,
+      "one",
+      root,
+      `${root}/_site`,
+      ["student"],
+      true,
+    )
+  );
+  await Deno.remove(`${root}/_quarto-content.yml`);
+  Deno.env.delete("QUARTO_PROFILE");
+  await collect();
   await Deno.remove(`${root}/_site/index.html`);
   await assertRejects(() =>
     readCollection(`${root}/record.json`, "one", root, `${root}/_site`, [])
   );
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "../outside.html");
   await assertRejects(() => collect());
+  await Deno.mkdir(`${root}/_site/site_libs/revealjs/plugin/pdf-export`, {
+    recursive: true,
+  });
+  await Deno.writeTextFile(
+    `${root}/_site/site_libs/revealjs/plugin/pdf-export/plugin.yml`,
+    "name: pdf-export",
+  );
+  await cleanOutput(root, `${root}/_site`);
   await Deno.writeTextFile(`${root}/_site/source.qmd`, "author source");
   await assertRejects(() => cleanOutput(root, `${root}/_site`));
   assertEquals(

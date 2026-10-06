@@ -55,11 +55,15 @@ format: html
 каждая часть выбирает собственную согласованную проекцию view. Расширение использует
 `quarto inspect` для разрешённой конфигурации и передаёт выбранные профили в том же
 порядке. Пересекающиеся output разных audience отклоняются до удаления файлов.
-Default output также должен быть отдельным, если default не выбирает audience.
 Если корень не выбирает профили, части сохраняют собственные native defaults,
-environment и группы. Применённые profile files из `inspect` определяют выбранную
-audience для проверки outputs; точный `QUARTO_PROFILE` нативного post-render,
-включая профили без YAML-файла, сохраняется в коллекции и ожиданиях Core.
+environment и группы. Точный `QUARTO_PROFILE` нативного post-render сохраняется
+в коллекции и ожиданиях Core, включая профили без YAML-файла. `files.config`
+не используется для определения профилей: обычные metadata-files могут иметь
+такое же имя. До cleanup проверяются разрешённые native student/full outputs:
+они должны быть непересекающимися. При неизвестном implicit audience выбранный
+output может точно совпадать с одной из этих проекций; частичное пересечение
+отклоняется. Явный audience или разрешённый course.view также проверяется
+против output другого audience.
 Все выбранные исходные документы проверяются на containment и symlink перед
 документным inspect, cleanup Publisher и рендером частей.
 
@@ -137,6 +141,7 @@ quarto run tests/site-paths.ts
 quarto run tests/site-profiles.ts
 quarto run tests/site-child-profiles.ts default
 quarto run tests/site-child-profiles.ts group
+quarto run tests/site-metadata-profiles.ts
 quarto run tests/site-source-paths.ts
 quarto run tests/site-collection.ts
 quarto run tests/site-native.ts

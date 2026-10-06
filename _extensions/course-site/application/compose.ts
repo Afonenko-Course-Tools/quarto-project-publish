@@ -73,8 +73,9 @@ export async function pre(root = Deno.cwd()): Promise<void> {
     );
     await validateAudienceOutputs(
       project.path,
-      plan.configuredProfiles,
+      ws.profiles,
       output,
+      config.course?.view,
     );
     inspected.push({ project, config, output, plan });
   }
@@ -124,7 +125,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
           project.id,
           project.path,
           output,
-          plan.configuredProfiles,
+          ws.profiles,
           true,
         ),
       );

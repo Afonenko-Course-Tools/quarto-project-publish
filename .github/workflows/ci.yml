@@ -47,6 +47,7 @@ jobs:
           quarto run tests/site-profiles.ts
           quarto run tests/site-child-profiles.ts default
           quarto run tests/site-child-profiles.ts group
+          quarto run tests/site-metadata-profiles.ts
           quarto run tests/site-source-paths.ts
           quarto run tests/site-collection.ts
           quarto run tests/site-effective-formats.ts

@@ -40,13 +40,24 @@ try {
     readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"])
   );
   await Deno.writeTextFile(`${root}/_quarto-content.yml`, "format: html\n");
+  assertEquals(
+    (await readCollection(
+      `${root}/record.json`,
+      "one",
+      root,
+      `${root}/_site`,
+      ["web"],
+      true,
+    )).profiles,
+    ["web", "content"],
+  );
   await assertRejects(() =>
     readCollection(
       `${root}/record.json`,
       "one",
       root,
       `${root}/_site`,
-      ["web"],
+      ["student"],
       true,
     )
   );

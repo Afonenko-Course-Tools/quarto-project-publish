@@ -100,13 +100,15 @@ export async function validateAudienceOutputs(
   root: string,
   profiles: string[],
   selectedOutput: string,
+  view?: "student" | "full",
 ): Promise<void> {
-  const selectedAudience = profiles.find((profile) =>
-    profile === "student" || profile === "full"
-  );
+  const selectedAudience =
+    profiles.find((profile) => profile === "student" || profile === "full") ||
+    view;
   const alternatives = selectedAudience
     ? ["student", "full"].filter((profile) => profile !== selectedAudience)
     : ["student", "full"];
+  const alternateOutputs: string[] = [];
   for (const audience of alternatives) {
     let present = false;
     for (const suffix of ["yml", "yaml"]) {
@@ -118,7 +120,7 @@ export async function validateAudienceOutputs(
       }
     }
     if (!present) continue;
-    const selection = selectedAudience
+    const selection = selectedAudience && profiles.includes(selectedAudience)
       ? profiles.map((profile) =>
         profile === selectedAudience ? audience : profile
       )
@@ -128,7 +130,22 @@ export async function validateAudienceOutputs(
       root,
       alternate.project?.["output-dir"] || "_site",
     );
-    if (inside(output, selectedOutput) || inside(selectedOutput, output)) {
+    if (
+      alternateOutputs.some((other) =>
+        inside(output, other) || inside(other, output)
+      )
+    ) {
+      throw new Error("course-site student and full outputs overlap");
+    }
+    alternateOutputs.push(output);
+    // When native defaults/groups select an unknown audience, its output may
+    // equal one canonical projection. The pair must remain disjoint, and a
+    // partial overlap is never safe. Profile filenames do not prove activation:
+    // ordinary metadata-files can use exactly those names.
+    if (
+      (selectedAudience || output !== selectedOutput) &&
+      (inside(output, selectedOutput) || inside(selectedOutput, output))
+    ) {
       throw new Error(
         `course-site selected output overlaps ${audience} output: ${output}`,
       );
@@ -144,8 +161,6 @@ export interface DocumentFormat {
 }
 export interface DocumentPlan {
   config: any;
-  /** Explicit profiles and profiles with native applied configuration files. */
-  configuredProfiles: string[];
   documents: DocumentFormat[];
   /** undefined: native configuration; default: native first format; null: selected files. */
   renderTo?: string | null;
@@ -159,12 +174,6 @@ export async function inspectDocuments(
   project ??= JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
   );
-  // Quarto resolves defaults, environment selection and groups. Its public
-  // inspect list records applied profile files in reverse priority order.
-  const applied: string[] = project.files.config.map((path: string) =>
-    relative(root, path).match(/^_quarto-([\w][\w.-]*)\.ya?ml$/)?.[1]
-  ).filter(Boolean).reverse();
-  const configuredProfiles = [...new Set([...profiles, ...applied])];
   // Validate the entire selected list before inspecting any document or
   // cleaning output. Optional Core is not the source-path safety boundary.
   for (const input of project.files.input) {
@@ -217,5 +226,5 @@ export async function inspectDocuments(
     : project.config.project.type === "book" && formats.size === 1
     ? documents[0].format
     : null;
-  return { config: project.config, configuredProfiles, documents, renderTo };
+  return { config: project.config, documents, renderTo };
 }

@@ -26,6 +26,9 @@ try {
       `${root}/_site-shared`,
     )
   );
+  await assertRejects(() =>
+    config.validateAudienceOutputs(root, [], `${root}/_site`)
+  );
   await Deno.writeTextFile(
     `${root}/_quarto-full.yml`,
     "project:\n  output-dir: _site-full\n",
@@ -34,6 +37,10 @@ try {
     root,
     ["student"],
     `${root}/_site-shared`,
+  );
+  await config.validateAudienceOutputs(root, [], `${root}/_site-full`);
+  await assertRejects(() =>
+    config.validateAudienceOutputs(root, [], `${root}/_site-full/nested`)
   );
   console.log("PASS native inspect rejects audience output collisions");
 } finally {

@@ -1,4 +1,4 @@
-import { files, join, resolve, safePath, within } from "./files.ts";
+import { files, resolve, safePath, within } from "./files.ts";
 export interface Record {
   id: string;
   projectRoot: string;
@@ -57,6 +57,8 @@ export async function readCollection(
   projectRoot: string,
   outputDir: string,
   profiles: string[],
+  // Quarto's post-render environment is the authority for implicit child
+  // defaults/groups; only explicitly requested profiles are known beforehand.
   nativeProfileContext = false,
 ): Promise<Record> {
   const value = JSON.parse(await Deno.readTextFile(path));
@@ -76,25 +78,6 @@ export async function readCollection(
       ) !== JSON.stringify(profiles) ||
     !Array.isArray(value.nativeOutputs) || !Array.isArray(value.files)
   ) throw new Error("course-site current collection mismatch");
-  if (nativeProfileContext) {
-    // Content-only native defaults/groups need not have a profile YAML file.
-    // Preserve their actual QUARTO_PROFILE, but never accept an extra profile
-    // that could have changed the configuration inspected before cleanup.
-    for (
-      const profile of value.profiles.filter((p: string) =>
-        !profiles.includes(p)
-      )
-    ) {
-      for (const suffix of ["yml", "yaml"]) {
-        try {
-          await Deno.lstat(join(projectRoot, `_quarto-${profile}.${suffix}`));
-          throw new Error("course-site current collection mismatch");
-        } catch (error) {
-          if (!(error instanceof Deno.errors.NotFound)) throw error;
-        }
-      }
-    }
-  }
   for (const path of [...value.nativeOutputs, ...value.files]) {
     within(outputDir, path);
     await safePath(projectRoot, path);

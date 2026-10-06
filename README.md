@@ -56,6 +56,12 @@ format: html
 `quarto inspect` для разрешённой конфигурации и передаёт выбранные профили в том же
 порядке. Пересекающиеся output разных audience отклоняются до удаления файлов.
 Default output также должен быть отдельным, если default не выбирает audience.
+Если корень не выбирает профили, части сохраняют собственные native defaults,
+environment и группы. Применённые profile files из `inspect` определяют выбранную
+audience для проверки outputs; точный `QUARTO_PROFILE` нативного post-render,
+включая профили без YAML-файла, сохраняется в коллекции и ожиданиях Core.
+Все выбранные исходные документы проверяются на containment и symlink перед
+документным inspect, cleanup Publisher и рендером частей.
 
 ## Core и QRC
 
@@ -129,6 +135,9 @@ records не используются; rollback не выполняется. Cor
 ```bash
 quarto run tests/site-paths.ts
 quarto run tests/site-profiles.ts
+quarto run tests/site-child-profiles.ts default
+quarto run tests/site-child-profiles.ts group
+quarto run tests/site-source-paths.ts
 quarto run tests/site-collection.ts
 quarto run tests/site-native.ts
 quarto run tests/site-domains.ts

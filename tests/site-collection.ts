@@ -25,6 +25,34 @@ try {
     [],
   );
   assertEquals(record.nativeOutputs, [`${root}/_site/index.html`]);
+  Deno.env.set("QUARTO_PROFILE", "web,content");
+  await collect();
+  const native = await readCollection(
+    `${root}/record.json`,
+    "one",
+    root,
+    `${root}/_site`,
+    ["web"],
+    true,
+  );
+  assertEquals(native.profiles, ["web", "content"]);
+  await assertRejects(() =>
+    readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"])
+  );
+  await Deno.writeTextFile(`${root}/_quarto-content.yml`, "format: html\n");
+  await assertRejects(() =>
+    readCollection(
+      `${root}/record.json`,
+      "one",
+      root,
+      `${root}/_site`,
+      ["web"],
+      true,
+    )
+  );
+  await Deno.remove(`${root}/_quarto-content.yml`);
+  Deno.env.delete("QUARTO_PROFILE");
+  await collect();
   await Deno.remove(`${root}/_site/index.html`);
   await assertRejects(() =>
     readCollection(`${root}/record.json`, "one", root, `${root}/_site`, [])

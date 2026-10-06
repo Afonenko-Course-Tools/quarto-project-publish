@@ -71,7 +71,11 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       project.path,
       config.project["output-dir"],
     );
-    await validateAudienceOutputs(project.path, ws.profiles, output);
+    await validateAudienceOutputs(
+      project.path,
+      plan.configuredProfiles,
+      output,
+    );
     inspected.push({ project, config, output, plan });
   }
   for (const { project, output } of inspected) {
@@ -120,14 +124,15 @@ export async function pre(root = Deno.cwd()): Promise<void> {
           project.id,
           project.path,
           output,
-          ws.profiles,
+          plan.configuredProfiles,
+          true,
         ),
       );
       if (config.course) {
         const native =
           await (await module("course-core", "infrastructure/native-run.ts"))
             .loadNativeRun(project.path, {
-              profiles: ws.profiles,
+              profiles: collected[index].profiles,
               view: config.course.view,
               outputDirectory: output,
             });
@@ -144,12 +149,21 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       id: project.id,
       projectRoot: project.path,
       outputDir: output,
-      profiles: ws.profiles,
+      profiles: collected[0].profiles,
       nativeOutputs: [
         ...new Set(collected.flatMap((record) => record.nativeOutputs)),
       ],
       files: [...new Set(collected.flatMap((record) => record.files))],
     };
+    if (
+      collected.some((value) =>
+        JSON.stringify(value.profiles) !== JSON.stringify(record.profiles)
+      )
+    ) {
+      throw new Error(
+        "course-site inconsistent native profiles between document renders",
+      );
+    }
     records.push({
       project,
       config,
@@ -313,6 +327,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
         documents: any[];
         adapters: any[];
         view: "student" | "full" | undefined;
+        profiles: string[];
       }
     >();
     const sourceRoots: Record<string, string> = {};
@@ -329,7 +344,12 @@ export async function post(root = Deno.cwd()): Promise<void> {
         const id = document.course.id;
         const key = item.prefix + ":" + (id || "");
         const group = groups.get(key) ||
-          { documents: [] as any[], adapters: [] as any[], view: item.view };
+          {
+            documents: [] as any[],
+            adapters: [] as any[],
+            view: item.view,
+            profiles: item.run.profiles,
+          };
         if (group.view !== item.view) {
           throw new Error(
             `course-site inconsistent configured audience for ${id}`,
@@ -371,7 +391,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
         group.documents.map((d: any) => d.source),
         group.documents,
         group.adapters,
-        { view: group.view, profiles: ws.profiles },
+        { view: group.view, profiles: group.profiles },
       );
       await (await module("course-core", "infrastructure/validate.ts"))
         .validateRelease(release, root, group.adapters, sourceRoots);

@@ -57,14 +57,44 @@ export async function readCollection(
   projectRoot: string,
   outputDir: string,
   profiles: string[],
+  nativeProfileContext = false,
 ): Promise<Record> {
   const value = JSON.parse(await Deno.readTextFile(path));
   if (
     value.id !== id || value.projectRoot !== projectRoot ||
     value.outputDir !== outputDir ||
-    JSON.stringify(value.profiles) !== JSON.stringify(profiles) ||
+    !Array.isArray(value.profiles) ||
+    value.profiles.some((profile: any) =>
+      typeof profile !== "string" || !/^[\w][\w.-]*$/.test(profile)
+    ) || new Set(value.profiles).size !== value.profiles.length ||
+    JSON.stringify(
+        nativeProfileContext
+          ? value.profiles.filter((profile: string) =>
+            profiles.includes(profile)
+          )
+          : value.profiles,
+      ) !== JSON.stringify(profiles) ||
     !Array.isArray(value.nativeOutputs) || !Array.isArray(value.files)
   ) throw new Error("course-site current collection mismatch");
+  if (nativeProfileContext) {
+    // Content-only native defaults/groups need not have a profile YAML file.
+    // Preserve their actual QUARTO_PROFILE, but never accept an extra profile
+    // that could have changed the configuration inspected before cleanup.
+    for (
+      const profile of value.profiles.filter((p: string) =>
+        !profiles.includes(p)
+      )
+    ) {
+      for (const suffix of ["yml", "yaml"]) {
+        try {
+          await Deno.lstat(join(projectRoot, `_quarto-${profile}.${suffix}`));
+          throw new Error("course-site current collection mismatch");
+        } catch (error) {
+          if (!(error instanceof Deno.errors.NotFound)) throw error;
+        }
+      }
+    }
+  }
   for (const path of [...value.nativeOutputs, ...value.files]) {
     within(outputDir, path);
     await safePath(projectRoot, path);

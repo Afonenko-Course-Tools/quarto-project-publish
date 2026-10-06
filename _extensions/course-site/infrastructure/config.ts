@@ -144,6 +144,8 @@ export interface DocumentFormat {
 }
 export interface DocumentPlan {
   config: any;
+  /** Explicit profiles and profiles with native applied configuration files. */
+  configuredProfiles: string[];
   documents: DocumentFormat[];
   /** undefined: native configuration; default: native first format; null: selected files. */
   renderTo?: string | null;
@@ -157,6 +159,20 @@ export async function inspectDocuments(
   project ??= JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
   );
+  // Quarto resolves defaults, environment selection and groups. Its public
+  // inspect list records applied profile files in reverse priority order.
+  const applied: string[] = project.files.config.map((path: string) =>
+    relative(root, path).match(/^_quarto-([\w][\w.-]*)\.ya?ml$/)?.[1]
+  ).filter(Boolean).reverse();
+  const configuredProfiles = [...new Set([...profiles, ...applied])];
+  // Validate the entire selected list before inspecting any document or
+  // cleaning output. Optional Core is not the source-path safety boundary.
+  for (const input of project.files.input) {
+    await safePath(root, within(root, input));
+    if (!(await Deno.lstat(input)).isFile) {
+      throw new Error(`course-site selected source is not a file: ${input}`);
+    }
+  }
   const documents: DocumentFormat[] = [];
   let hasOtherFormats = false, firstSelected = true;
   for (const input of project.files.input) {
@@ -201,5 +217,5 @@ export async function inspectDocuments(
     : project.config.project.type === "book" && formats.size === 1
     ? documents[0].format
     : null;
-  return { config: project.config, documents, renderTo };
+  return { config: project.config, configuredProfiles, documents, renderTo };
 }

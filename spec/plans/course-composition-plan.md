@@ -39,3 +39,11 @@
 Локально прошли paths/profiles/collection/effective-formats, нативные book + mixed website HTML/Reveal, smoke current outputs/assets/search и PDF-first nested QRC circular links. В последнем тесте trace подтверждает ровно один body render каждого выбранного документа, PDF не создаётся. Cache для локальных проверок — writable XDG_CACHE_HOME. HTTP-тесты требуют разрешённых локальных sockets. Релиз и push здесь ещё не выполнялись.
 
 Демонстрационная группа examples/course проверена с установленной поставкой course-site4.0.0 и QRC2.2.0: root, book full3chapters, mixed HTML/Reveal2docs, общий bibliography, strict full QRC10links/6pages. Кандидат asset composite-course.tar.gz. Broad native-all, selected root local и Core/QRC domain smoke прошли; entrypoints прошли Deno typecheck, CUE и diff check. Финальный provenance/asset rebuild выполняется после merge на закреплённых зависимостях.
+
+### Исправления независимого ревью, 7 октября
+
+- [x] Native child profile.default/group больше не сравниваются с пустыми профилями корня: разрешённые profile files из публичного inspect используются для audience safety, точный post-render QUARTO_PROFILE — для коллекции, Core loading и assembleRelease. Дополнительные content-only профили без YAML сохраняются; неожиданный профиль с конфигурационным файлом отклоняется.
+- [x] Все selected files проверяются на lexical containment, symlink каждого компонента и обычный файл до первого документного inspect и cleanup Publisher. Список берётся из native project inspect, который сам читает Markdown для определения selected inputs; собственный project.render/Markdown parser не добавлен.
+- [x] Native regressions default full и group web/content с Core и без него воспроизвели ошибки до исправления; explicit external QMD symlink без Core воспроизвёл ошибочную успешную публикацию. После исправления regressions проходят; native collector сохраняет точные профили, финальный member release согласован с ними.
+
+Проверки этого исправления: paths, audience profiles, collection, child default/group, source paths, effective formats, PDF-first mixed selection, native smoke и повторный formats; entrypoint typecheck/CUE/diff check. CI включает новые regressions. Полная межрепозиторная матрица и повторное независимое ревью остаются у координатора перед merge/release; push здесь не выполнялся.

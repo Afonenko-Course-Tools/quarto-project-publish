@@ -176,8 +176,27 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       new URL(`file://${root}/_extensions/course-core/body-export/producer.ts`)
         .href
     );
-    const { publicPackage } = await buildBodies(release, { projectRoot: root });
-    assertEquals(publicPackage.resources.map((r: any) => r.target).sort(), [
+    const resources: any[] = [];
+    for (const id of ["part", "second"]) {
+      const { publicPackage } = await buildBodies(release, {
+        projectRoot: root,
+        courseId: "shared-course",
+        work: `sec-${id}`,
+      });
+      assertEquals(publicPackage.works.map((work: any) => work.id), [
+        `sec-${id}`,
+      ]);
+      assertEquals(
+        publicPackage.questions.map((question: any) => question.id),
+        [`exr-${id}`],
+      );
+      assertEquals(
+        publicPackage.resources.map((resource: any) => resource.target),
+        [`${id}/asset.svg`],
+      );
+      resources.push(...publicPackage.resources);
+    }
+    assertEquals(resources.map((r: any) => r.target).sort(), [
       "part/asset.svg",
       "second/asset.svg",
     ]);

@@ -30,10 +30,7 @@ await write(
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
-course-site:
-  projects:
-    - {id: book, path: book, format: html, mount: book}
-    - {id: slides, path: slides, format: revealjs, mount: slides}
+subprojects: [book, slides]
 `,
 );
 await write("index.qmd", "# Native formats\n");
@@ -54,16 +51,20 @@ await write("book/chapter.qmd", "# Native Chapter\n");
 await write(
   "slides/_quarto.yml",
   `project:
-  type: default
+  type: website
   output-dir: _slides
-  render: [talk.qmd]
+  render: [index.qmd, talk.qmd]
   post-render: ../_extensions/course-site/entrypoints/collect.ts
 format: revealjs
 `,
 );
 await write(
   "slides/talk.qmd",
-  "# Native Talk\n\n## Visible Slide\n\nSlide content\n",
+  "---\nformat: revealjs\n---\n# Native Talk\n\n## Visible Slide\n\nSlide content\n",
+);
+await write(
+  "slides/index.qmd",
+  "---\nformat: html\n---\n# Website HTML beside Reveal\n",
 );
 await run(["add", repo, "--no-prompt"]);
 await run(["render"]);
@@ -72,6 +73,14 @@ const chapter = await Deno.readTextFile(join(root, "_site/book/chapter.html"));
 assert(
   chapter.includes("Native Chapter") && chapter.includes("index.html"),
   "native book chapter/navigation missing",
+);
+const mixedHtml = await Deno.readTextFile(
+  join(root, "_site/slides/index.html"),
+);
+assert(
+  mixedHtml.includes("Website HTML beside Reveal") &&
+    !mixedHtml.includes("reveal.js"),
+  "document HTML front matter was forced to Reveal",
 );
 const talk = await Deno.readTextFile(join(root, "_site/slides/talk.html"));
 assert(

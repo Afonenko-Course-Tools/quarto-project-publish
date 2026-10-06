@@ -1,0 +1,14 @@
+project:
+  type: website
+  output-dir: _site
+  render: [index.qmd]
+  pre-render: _extensions/course-site/entrypoints/pre.ts
+  post-render: _extensions/course-site/entrypoints/post.ts
+profile:
+  default: full
+website:
+  title: Составной курс
+format: html
+filters: [reference-catalog]
+reference-catalog: {namespace: portal}
+subprojects: [book, materials]

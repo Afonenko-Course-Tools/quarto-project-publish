@@ -49,12 +49,10 @@ await write(
 format:
   html:
     theme: cosmo
-course-site:
-  projects:
-    - {id: part, path: part, format: html, mount: lessons}
+subprojects: [part]
 `,
 );
-await write("index.qmd", "# Root\n\n[Lesson](lessons/index.html)\n");
+await write("index.qmd", "# Root\n\n[Lesson](part/index.html)\n");
 await write(
   "part/_quarto.yml",
   `project:
@@ -87,13 +85,13 @@ for (const profile of ["student", "full"]) {
 await run(["add", repo, "--no-prompt"]);
 await run(["render"]);
 assert(
-  (await Deno.readTextFile(join(root, "_site/lessons/index.html"))).includes(
+  (await Deno.readTextFile(join(root, "_site/part/index.html"))).includes(
     "PUBLIC_PART",
   ),
   "missing mounted current HTML",
 );
 assertEquals(
-  await Deno.readTextFile(join(root, "_site/lessons/asset.txt")),
+  await Deno.readTextFile(join(root, "_site/part/asset.txt")),
   "CURRENT_ASSET",
 );
 let trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
@@ -101,7 +99,7 @@ let trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
 ).map((line) => JSON.parse(line));
 assertEquals(trace.filter((x) => x.kind === "render").length, 1);
 assert(
-  (await Deno.readTextFile(join(root, "_site/lessons/search.json"))).includes(
+  (await Deno.readTextFile(join(root, "_site/part/search.json"))).includes(
     "PUBLIC_PART",
   ),
   "missing fresh search",
@@ -118,7 +116,7 @@ await write("part/_output/default/stale.html", "OLD");
 await run(["render", "index.qmd"]);
 let missing = false;
 try {
-  await Deno.stat(join(root, "_site/lessons/stale.html"));
+  await Deno.stat(join(root, "_site/part/stale.html"));
 } catch {
   missing = true;
 }
@@ -126,12 +124,12 @@ assert(missing, "retained output entered fresh collection");
 for (const profile of ["student", "full", "student"]) {
   await run(["render", "--profile", profile]);
   const html = await Deno.readTextFile(
-    join(root, `_site-${profile}/lessons/index.html`),
+    join(root, `_site-${profile}/part/index.html`),
   );
   assertEquals(html.includes("PRIVATE_PART"), profile === "full");
 }
 assert(
-  (await Deno.readTextFile(join(root, "_site-full/lessons/index.html")))
+  (await Deno.readTextFile(join(root, "_site-full/part/index.html")))
     .includes("PRIVATE_PART"),
   "student deleted full output",
 );
@@ -166,7 +164,7 @@ await write(
 await run(["render"]);
 missing = false;
 try {
-  await Deno.stat(join(root, "_site/lessons/later.html"));
+  await Deno.stat(join(root, "_site/part/later.html"));
 } catch {
   missing = true;
 }
@@ -186,7 +184,7 @@ await write(
 );
 await run(["render"]);
 assert(
-  (await Deno.readTextFile(join(root, "_site/lessons/generated.html")))
+  (await Deno.readTextFile(join(root, "_site/part/generated.html")))
     .includes("Fresh generated input"),
   "author pre-hook generated input missing",
 );
@@ -194,7 +192,7 @@ const rootConfig = await Deno.readTextFile(join(root, "_quarto.yml"));
 await write("_quarto.yml", rootConfig + "\nprofile:\n  default: student\n");
 await run(["render"]);
 assert(
-  !(await Deno.readTextFile(join(root, "_site-student/lessons/index.html")))
+  !(await Deno.readTextFile(join(root, "_site-student/part/index.html")))
     .includes("PRIVATE_PART"),
   "default profile lost student audience",
 );

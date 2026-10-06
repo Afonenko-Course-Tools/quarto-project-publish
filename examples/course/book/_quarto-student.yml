@@ -1,0 +1,4 @@
+book:
+  chapters: [index.qmd, theory.qmd]
+project:
+  output-dir: _site-student

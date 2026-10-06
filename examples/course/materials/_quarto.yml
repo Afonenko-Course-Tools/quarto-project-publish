@@ -1,0 +1,13 @@
+project:
+  type: website
+  output-dir: _site
+  render: [notes.qmd, slides.qmd]
+  post-render:
+    - _extensions/reference-catalog/entrypoints/post.ts
+    - ../_extensions/course-site/entrypoints/collect.ts
+profile:
+  default: full
+format: html
+bibliography: ../references.bib
+filters: [reference-catalog]
+reference-catalog: {namespace: study}

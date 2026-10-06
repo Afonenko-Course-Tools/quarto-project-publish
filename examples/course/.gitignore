@@ -1,0 +1,4 @@
+_extensions/
+_site*/
+.quarto/
+_generated/

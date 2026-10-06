@@ -31,6 +31,14 @@ try {
   );
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "../outside.html");
   await assertRejects(() => collect());
+  await Deno.mkdir(`${root}/_site/site_libs/revealjs/plugin/pdf-export`, {
+    recursive: true,
+  });
+  await Deno.writeTextFile(
+    `${root}/_site/site_libs/revealjs/plugin/pdf-export/plugin.yml`,
+    "name: pdf-export",
+  );
+  await cleanOutput(root, `${root}/_site`);
   await Deno.writeTextFile(`${root}/_site/source.qmd`, "author source");
   await assertRejects(() => cleanOutput(root, `${root}/_site`));
   assertEquals(

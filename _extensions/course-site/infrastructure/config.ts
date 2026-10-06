@@ -3,6 +3,7 @@ import {
   isAbsolute,
   join,
   outputDirectory,
+  relative,
   resolve,
   safePath,
   within,
@@ -11,7 +12,6 @@ import { profileArguments, quarto } from "./process.ts";
 export interface Project {
   id: string;
   path: string;
-  format: string;
   mount: string;
 }
 export interface Workspace {
@@ -49,47 +49,42 @@ export async function validateConfig(
     root,
     config.project["output-dir"] || "_site",
   );
-  const raw = config["course-site"]?.projects;
-  if (!Array.isArray(raw) || !raw.length) {
-    throw new Error("course-site.projects must be a nonempty array");
+  if (config["course-site"] !== undefined) {
+    throw new Error(
+      "course-site configuration was replaced by root subprojects",
+    );
+  }
+  const raw = config.subprojects;
+  if (
+    !Array.isArray(raw) || !raw.length ||
+    raw.some((path) => typeof path !== "string" || !path)
+  ) {
+    throw new Error("subprojects must be a nonempty array of relative paths");
   }
   const projects: Project[] = [];
   for (const item of raw) {
-    if (
-      !item || typeof item.id !== "string" ||
-      !/^[A-Za-z][\w-]*$/.test(item.id) || typeof item.path !== "string" ||
-      typeof item.mount !== "string" || !item.mount ||
-      typeof item.format !== "string" || !/^[\w-]+$/.test(item.format)
-    ) throw new Error("course-site invalid project");
-    if (item.id === "root" || isAbsolute(item.path) || isAbsolute(item.mount)) {
-      throw new Error(
-        "course-site project paths must be relative; root id is reserved",
-      );
+    if (isAbsolute(item) || /^[a-z][a-z0-9+.-]*:/i.test(item)) {
+      throw new Error("subprojects paths must be relative");
     }
-    if (
-      Object.keys(item).some((k) =>
-        !["id", "path", "format", "mount"].includes(k)
-      )
-    ) throw new Error("course-site unknown project option");
-    const path = within(root, item.path), mount = within(output, item.mount);
+    const path = within(root, item);
+    const mount = relative(root, path).replaceAll("\\", "/");
     await safePath(root, path);
-    await safePath(root, mount);
+    await safePath(root, within(output, mount));
     if (
       !(await Deno.stat(path)).isDirectory || inside(output, path) ||
       inside(path, output)
-    ) throw new Error("course-site source/output overlap");
+    ) {
+      throw new Error("course-site source/output overlap");
+    }
     for (const prev of projects) {
-      if (
-        prev.id === item.id || inside(prev.path, path) ||
-        inside(path, prev.path) || inside(within(output, prev.mount), mount) ||
-        inside(mount, within(output, prev.mount))
-      ) throw new Error("course-site duplicate/overlapping projects or mounts");
+      if (inside(prev.path, path) || inside(path, prev.path)) {
+        throw new Error("course-site duplicate/overlapping subprojects");
+      }
     }
     projects.push({
-      id: item.id,
+      id: `subproject-${encodeURIComponent(mount)}`,
       path,
-      mount: item.mount,
-      format: item.format,
+      mount,
     });
   }
   return { root, output, projects, profiles, config };
@@ -139,4 +134,72 @@ export async function validateAudienceOutputs(
       );
     }
   }
+}
+
+export interface DocumentFormat {
+  source: string;
+  format: string;
+  baseFormat: string;
+  web: boolean;
+}
+export interface DocumentPlan {
+  config: any;
+  documents: DocumentFormat[];
+  /** undefined: native configuration; default: native first format; null: selected files. */
+  renderTo?: string | null;
+}
+/** Effective formats are native Quarto data, including directory metadata and profiles. */
+export async function inspectDocuments(
+  root: string,
+  profiles: string[],
+  project?: any,
+): Promise<DocumentPlan> {
+  project ??= JSON.parse(
+    await quarto(["inspect", root, ...profileArguments(profiles)], root),
+  );
+  const documents: DocumentFormat[] = [];
+  let hasOtherFormats = false, firstSelected = true;
+  for (const input of project.files.input) {
+    const document = JSON.parse(
+      await quarto(["inspect", input, ...profileArguments(profiles)], root),
+    );
+    const entries = Object.entries(document.formats) as [string, any][];
+    const web = entries.filter(([, value]) =>
+      value.render?.["output-ext"] === "html"
+    );
+    if (web.length > 1) {
+      throw new Error(
+        `course-site multiple web formats for ${input}; select one format in configuration or a profile`,
+      );
+    }
+    const selected = web.length
+      ? web[0]
+      : entries.length === 1
+      ? entries[0]
+      : undefined;
+    if (!selected) {
+      throw new Error(
+        `course-site requires one selected format for ${input}; use a format profile`,
+      );
+    }
+    const [format, value] = selected;
+    documents.push({
+      source: relative(root, input).replaceAll("\\", "/"),
+      format,
+      baseFormat: value.identifier?.["base-format"] || value.pandoc?.to ||
+        format,
+      web: web.length === 1,
+    });
+    hasOtherFormats ||= entries.length > 1;
+    firstSelected &&= entries[0][0] === format;
+  }
+  const formats = new Set(documents.map((d) => d.format));
+  const renderTo = !hasOtherFormats
+    ? undefined
+    : firstSelected
+    ? "default"
+    : project.config.project.type === "book" && formats.size === 1
+    ? documents[0].format
+    : null;
+  return { config: project.config, documents, renderTo };
 }

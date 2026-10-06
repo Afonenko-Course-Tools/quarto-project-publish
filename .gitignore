@@ -3,3 +3,7 @@ _generated/
 _site*/
 _book/
 node_modules/
+
+# Installed producer demo dependencies and Task cache.
+/examples/**/_extensions/
+**/.task/

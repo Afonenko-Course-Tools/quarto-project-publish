@@ -2,3 +2,6 @@ _extensions/
 _site*/
 .quarto/
 _generated/
+/.quarto/
+**/*.quarto_ipynb
+.task/

@@ -28,3 +28,14 @@ export function contextualize(error: unknown, context: DiagnosticContext): unkno
   }
   return error;
 }
+
+/** Only expected component/foreign tool errors are printed without a stack. */
+export async function runHook(action: () => Promise<unknown>): Promise<void> {
+  try { await action(); } catch (error) {
+    if (error instanceof Error && (error.name === "ExtensionDiagnostic" || error.name === "ExternalToolFailure")) {
+      console.error(error.message);
+      Deno.exit(1);
+    }
+    throw error;
+  }
+}

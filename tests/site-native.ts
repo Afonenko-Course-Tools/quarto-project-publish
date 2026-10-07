@@ -150,10 +150,10 @@ await write(
     "  post-render:\n    - ../_extensions/course-site/entrypoints/collect.ts\n    - fail.ts",
   ),
 );
-assert(
-  (await run(["render"], root, false)).includes("LATE_CHILD_FAILURE"),
-  "native failure lost later-hook diagnostics",
-);
+const failed = await run(["render"], root, false);
+assert(failed.includes("LATE_CHILD_FAILURE"), "native failure lost later-hook diagnostics");
+assertEquals(failed.split("Error: LATE_CHILD_FAILURE").length - 1, 1);
+try { await Deno.stat(join(root, "_generated/course-site/active.json")); throw new Error("failure retained active result"); } catch (error) { assert(error instanceof Deno.errors.NotFound, String(error)); }
 await write("part/_quarto.yml", original);
 await run(["render"]);
 await Deno.remove(join(root, "part/later.qmd"));

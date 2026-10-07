@@ -5,6 +5,7 @@ try {
   for (const path of ["a/slides", "b/slides", "part", "part/nested"]) {
     await Deno.mkdir(`${root}/${path}`, { recursive: true });
   }
+  await Deno.writeTextFile(`${root}/not-directory.qmd`, "# Source");
   const base = {
     project: { type: "website", "output-dir": "_site" },
     subprojects: ["./a/slides", "b/slides"],
@@ -13,6 +14,41 @@ try {
   assertEquals(result.projects.map((p) => p.mount), ["a/slides", "b/slides"]);
   assertEquals(new Set(result.projects.map((p) => p.id)).size, 2);
   assertEquals(result.profiles, ["student"]);
+  await assertRejects(
+    () => validateConfig(root, { ...base, subprojects: [] }, []),
+    "SITE.CONFIG_INVALID",
+    [root, "subprojects"],
+  );
+  await assertRejects(
+    () =>
+      validateConfig(
+        root,
+        { ...base, subprojects: ["part", "part/nested"] },
+        [],
+      ),
+    "SITE.SUBPROJECT_INVALID",
+    [root, "part", "subprojects"],
+  );
+  await assertRejects(
+    () =>
+      validateConfig(root, {
+        ...base,
+        project: { ...base.project, "output-dir": ".quarto/site" },
+      }, []),
+    "SITE.OUTPUT_OVERLAP",
+    [root, "output-dir"],
+  );
+  await assertRejects(
+    () =>
+      validateConfig(root, { ...base, subprojects: ["not-directory.qmd"] }, []),
+    "SITE.SUBPROJECT_INVALID",
+    [root, "not-directory.qmd", "subprojects"],
+  );
+  await assertRejects(
+    () => validateConfig(root, { ...base, subprojects: ["absent"] }, []),
+    "SITE.SUBPROJECT_INVALID",
+    [root, "absent", "subprojects"],
+  );
   for (const output of [".", "..", ".quarto/site", "_freeze/site", "a"]) {
     await assertRejects(() =>
       validateConfig(root, {

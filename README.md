@@ -3,7 +3,7 @@
 Расширение устанавливается из существующего репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v4.0.0
+quarto add Afonenko-Course-Tools/quarto-project-publish@v4.0.1
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -134,6 +134,27 @@ records не используются; rollback не выполняется. Cor
 ошибочной команды. `quarto publish --no-render` публикует уже имеющийся результат и
 не выполняет новую проверку.
 
+Для строгости предупреждений задайте штатный параметр каждого самостоятельного
+публичного проекта — корня, книги и материалов:
+
+```yaml
+fail-if-warnings: true
+```
+
+Общий файл с этой настройкой можно подключить через существующий `metadata-files`
+каждого проекта. Корневой `quarto render --fail-if-warnings` действует на свою
+команду: этот CLI-флаг не наследуется дочерними процессами scripts. Publisher
+использует native конфигурацию ребёнка. Если его `pandoc.log.warn` становится
+ошибкой, composition прекращается до монтирования и фиксации итогового результата.
+Политика JSON-экспорта Core остаётся самостоятельной.
+
+Собственные ошибки Publisher имеют устойчивый ID, русский смысл и доступные
+проект, документ, компонент, поле, связанные пути и действие автора.
+[Справочник диагностики](docs/diagnostics.md) принадлежит этому расширению.
+Внешний отказ Quarto сохраняет код завершения, stdout/stderr и исходную причину;
+при передаче потоков вывод появляется один раз. Ошибки Core/QRC сохраняют свои
+ID и причины. Неизвестная внутренняя ошибка сохраняет stack для отладки.
+
 ## Проверка
 
 ```bash
@@ -144,6 +165,9 @@ quarto run tests/site-child-profiles.ts group
 quarto run tests/site-metadata-profiles.ts
 quarto run tests/site-source-paths.ts
 quarto run tests/site-collection.ts
+quarto run tests/site-process.ts
+quarto run tests/site-siblings.ts
+quarto run tests/site-native.ts warnings
 quarto run tests/site-native.ts
 quarto run tests/site-domains.ts
 quarto run tests/site-formats.ts
@@ -160,11 +184,11 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 между версиями, но сохраняется между командами одного сценария.
 `COURSE_BUILD_TRACE` задаёт JSONL файл времени и exit codes inspect/render.
 
-Native local hooks with an empty public output list do no collection or release finalization. This lets Quarto serve an existing preview without claiming a new successful native render.
+Локальные hooks с пустым списком текущих результатов не собирают коллекцию и не завершают release. Так Quarto может обслуживать существующий preview, не объявляя новую успешную сборку.
 
 ## Версии и обновление
 
-Релиз `v4.0.0` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
+Релиз `v4.0.1` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
 
 ## Готовая демонстрация
 

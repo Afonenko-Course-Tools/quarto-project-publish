@@ -1,6 +1,6 @@
 # Минимальный составной курс
 
-Обязательные компоненты этого примера: course-site `v4.0.0` и QRC `v2.2.0`.
+Обязательные компоненты этого примера: course-site `v4.0.1` и QRC `v2.2.0`.
 Core не требуется для составной публикации. Одна книга и один сайт с HTML и
 Revealjs показывают native форматы, профили, общую bibliography и QRC.
 Демонстрация по умолчанию использует full; student исключает control.qmd через
@@ -20,4 +20,13 @@ index.html и reference-catalog.json. Внутренние ссылки оста
 
 `task render` записывает `_site/BUILD.json`: точная ревизия производителя,
 закреплённые зависимости и версия Quarto. Архив `composite-course.tar.gz` выпускается
-в отдельном неизменяемом Release `demo-20261007` из той же ревизии.
+в отдельном неизменяемом Release `demo-20261007-ru1` из той же ревизии.
+
+Каждый самостоятельный проект задаёт `lang: ru` и native
+`fail-if-warnings: true`. Корневой CLI-флаг строгости не наследуется дочерними
+scripts; для общей политики подключайте shared metadata-files в каждом проекте.
+HTML и книга используют native `repo-url`, `repo-branch`, `repo-subdir` и
+`repo-actions: [source]`. Ссылки на папки находятся в native navbar/sidebar,
+у Revealjs исходник доступен через native footer. Все ссылки закреплены на
+выбранном выпуске производителя; готовый HTML не переписывается.
+[Справочник ошибок Publisher](../../docs/diagnostics.md).

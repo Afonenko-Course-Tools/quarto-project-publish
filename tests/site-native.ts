@@ -83,6 +83,63 @@ for (const profile of ["student", "full"]) {
   );
 }
 await run(["add", repo, "--no-prompt"]);
+if (mode === "warnings") {
+  await write(
+    "part/warning.lua",
+    "function Pandoc(doc) pandoc.log.warn('NATIVE_WARNING_SENTINEL'); return doc end\n",
+  );
+  const child = await Deno.readTextFile(join(root, "part/_quarto.yml"));
+  await write("part/_quarto.yml", child + "\nfilters: [warning.lua]\n");
+  const inherited = await run(["render", "--fail-if-warnings"]);
+  assert(
+    inherited.includes("NATIVE_WARNING_SENTINEL"),
+    "child warning missing",
+  );
+  assert(
+    (await Deno.readTextFile(join(root, "_site/part/index.html"))).includes(
+      "PUBLIC_PART",
+    ),
+  );
+  let calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
+    "\n",
+  ).map((line) => JSON.parse(line)).filter((row) => row.kind === "render");
+  assertEquals(calls.length, 1);
+  assert(
+    !calls[0].args.includes("--fail-if-warnings"),
+    "root flag unexpectedly forwarded",
+  );
+  await write(
+    "part/_quarto.yml",
+    child + "\nfilters: [warning.lua]\nfail-if-warnings: true\n",
+  );
+  const strict = await run(["render"], root, false);
+  assert(
+    strict.includes("NATIVE_WARNING_SENTINEL"),
+    "strict child warning missing",
+  );
+  calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
+    "\n",
+  ).map((line) => JSON.parse(line)).filter((row) => row.kind === "render");
+  assertEquals(calls.length, 2);
+  assert(calls[1].exitCode !== 0, "strict warning child succeeded");
+  for (
+    const path of [
+      "_generated/course-site/active.json",
+      "_site/part/index.html",
+    ]
+  ) {
+    try {
+      await Deno.stat(join(root, path));
+      throw new Error(`failed composition exposed ${path}`);
+    } catch (error) {
+      assert(error instanceof Deno.errors.NotFound, String(error));
+    }
+  }
+  console.log(
+    "PASS root warning flag stays local; native child warning strictness aborts composition",
+  );
+  Deno.exit(0);
+}
 await run(["render"]);
 assert(
   (await Deno.readTextFile(join(root, "_site/part/index.html"))).includes(
@@ -151,9 +208,17 @@ await write(
   ),
 );
 const failed = await run(["render"], root, false);
-assert(failed.includes("LATE_CHILD_FAILURE"), "native failure lost later-hook diagnostics");
+assert(
+  failed.includes("LATE_CHILD_FAILURE"),
+  "native failure lost later-hook diagnostics",
+);
 assertEquals(failed.split("Error: LATE_CHILD_FAILURE").length - 1, 1);
-try { await Deno.stat(join(root, "_generated/course-site/active.json")); throw new Error("failure retained active result"); } catch (error) { assert(error instanceof Deno.errors.NotFound, String(error)); }
+try {
+  await Deno.stat(join(root, "_generated/course-site/active.json"));
+  throw new Error("failure retained active result");
+} catch (error) {
+  assert(error instanceof Deno.errors.NotFound, String(error));
+}
 await write("part/_quarto.yml", original);
 await run(["render"]);
 await Deno.remove(join(root, "part/later.qmd"));

@@ -1,10 +1,11 @@
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
-const root = Deno.env.get("COURSE_SITE_TEST_ROOT") ||
+const mode = Deno.args[0] || "all";
+const root =
+  (mode === "warnings" ? undefined : Deno.env.get("COURSE_SITE_TEST_ROOT")) ||
   await Deno.makeTempDir({ prefix: "course-site-native-" });
 const quarto = Deno.env.get("QUARTO") || "quarto";
-const mode = Deno.args[0] || "all";
 async function write(name: string, text: string) {
   const path = join(root, name);
   await Deno.mkdir(dirname(path), { recursive: true });

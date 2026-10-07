@@ -59,3 +59,90 @@
 ### Проверка CI-контракта Core 3, 7 октября
 
 Сбой BODY.WORK_REQUIRED в site-domains resources подтверждён на чистой поставке: тест передавал два works producer без выбора. Проверка обновлена на явные sec-part/sec-second и courseId, по одному work/question/resource в каждом пакете; runtime Publisher не менялся. Буквальная последовательность всех 18 команд CI прошла локально целиком с exit 0 на Quarto1.11.5 за ~553с (9мин13с). Чистый layout содержит только Publisher4224cd2+исправление теста, Coreaa91437 (v3.0.0 source), QRCv2.1.0, без provider overrides. SHA256 установленного Core producer в root/part/second совпадает с источником aa91437. Пройдены full native/domain/resources/rootless, formats/local и оба preview. GitHub matrix1.10.18/1.11.5 требует повторного запуска после push координатором; локальная проверка не объявляет её зелёной.
+
+
+### Выпуск и проверка 7 октября
+
+PR 8 слит после полной локальной 18-командной native CI-матрицы (553 с) и обеих
+успешных CI-проверок 1.10.18/1.11.5. Неизменяемый v4.0.0 опубликован из
+1f5c0f3890b71c98fa500933e322e2d5cf4b7df0; компактный bundle установлен штатным
+Quarto, draft assets скачаны и побайтно проверены до публикации. Независимая
+ready-демонстрация demo-20261007 построена из того же чистого SHA на точных
+релизных зависимостях;8 HTML/135 локальных ссылок проверены. BUILD и RELEASE
+receipts сохранены в local-evidence/implementation-2026-10-06. Следующий шаг
+потребителя — локальная финальная проверка документации и курса; Publisher
+больше не требует изменений для этой миграции.
+
+## План рефакторинга диагностики 7 октября 2026
+
+**Цель:** ошибки составной сборки показывают компонент, путь, причину и действие,
+сохраняя ID и исходный вывод зависимостей. **Архитектура:** entrypoints →
+inspect/validate → child render/collection → copy → optional Core/QRC.
+**Основание:** [общий план](../../../specs/course-change-plan.md#исследование-и-план-рефакторинга-7-октября-2026).
+**Средства:** текущие Deno/Quarto, без общего error runtime. Для выполнения —
+subagent-driven-development либо executing-plans по выбранному способу.
+База main `1f5c0f3`; signatures pre/post/collect и optional sibling API сохраняются.
+
+### S1 Ошибки configuration/path/current-result
+
+Создать: `_extensions/course-site/infrastructure/diagnostics.ts` с локальной
+`diagnostic(code, message, context?, cause?) → Error & {code:string}`.
+Изменить: `config.ts`, `files.ts`, `collection.ts`, `application/compose.ts`.
+Новые ID нынешних неименованных guards: `SITE.CONFIG_INVALID`,
+`SITE.SUBPROJECT_INVALID`, `SITE.OUTPUT_OVERLAP`, `SITE.FORMAT_AMBIGUOUS`,
+`SITE.COLLECTION_INVALID`, `SITE.CURRENT_RESULT_MISSING`, `SITE.SIBLING_MISSING`.
+
+- [ ] Дополнить tests/site-paths.ts, site-source-paths.ts, site-effective-formats.ts,
+  site-collection.ts: ожидаемый ID, project/input/output и поле; валидный вариант
+  сохраняет текущие outputs. Symlink/overlap отклоняются до cleanup.
+- [ ] Перевести сообщения существующих guards и передать доступный контекст;
+  не менять path/format/profile предикаты или порядок операций.
+- [ ] В module(name,path) отличить отсутствующий sibling от ошибки исполнения
+  существующего модуля: сохранить cause, не объявлять любую ошибку отсутствием
+  пакета. Ошибки Core/QRC не получать новый SITE ID вместо своего исходного ID.
+- [ ] Каждый названный test выполнить как `quarto run tests/<имя>.ts`;
+  ожидается PASS. Проверка изменений и отдельный коммит.
+
+### S2 Однократный внешний вывод и hook boundary
+
+Изменить: `infrastructure/process.ts`, `entrypoints/pre.ts`, `post.ts`, `collect.ts`;
+tests: `tests/site-native.ts`, `site-domains.ts`.
+`quarto(args,cwd,env={},forward=false) → Promise<string>` сохраняется.
+Внутренний external failure хранит tool/exitCode/stdout/stderr и факт forwarding.
+
+- [ ] Зафиксировать native child nonzero с различимыми stdout/stderr/ID:
+  потоки сохранены, текст не повторяется при forward true, итоговая сборка
+  не завершается успешно и не выдаёт старый результат за новый.
+- [ ] Оформить узкую границу ожидаемых ошибок hook; неизвестные ошибки сохраняют
+  stack. Не добавлять subprocess library или парсер stderr; public trace fields
+  args/cwd/elapsedMs/exitCode остаются прежними.
+- [ ] Выполнить native/domain проверки и существующие profile/web-selection
+  regressions, без дополнительных child renders. Проверка изменений и коммит.
+
+### S3 Штатная строгость самостоятельных публичных проектов
+
+Изменить: README, примеры конфигурации; проверка: `tests/site-native.ts`.
+Не добавлять course-site warning option, CLI forwarding engine или regex.
+
+- [ ] Зафиксировать два сценария: корневой CLI `--fail-if-warnings` сам по себе
+  не наследуется child process; native `fail-if-warnings: true` ребёнка с
+  pandoc.log.warn даёт nonzero и прекращает composition до итогового результата.
+- [ ] Объяснить автору native настройку каждого самостоятельного публичного
+  проекта либо существующий shared metadata-files; root flag не обещает общей
+  политики всех scripts. Не менять глобальную строгость CI инструментов.
+- [ ] Проверить оба сценария на 1.10.18/1.11.5; installed Core source export
+  сохраняет собственную JSON policy. Проверка изменений и коммит документации/регрессии.
+
+### S4 Русский справочник и финальная матрица
+
+Создать: `docs/diagnostics.md`; изменить: README, активные spec/руководства,
+examples/course root/book/materials `_quarto.yml` и пояснения.
+
+- [ ] Справочник содержит ID, доступный контекст и действие автора без invalid
+  QMD. У самостоятельных demo-проектов задать lang ru; source и folder links
+  используют native параметры выбранного выпуска, без переписывания HTML.
+- [ ] Выполнить существующую CI-матрицу на обеих версиях с сохранёнными
+  dependencies; standalone Publisher без Core/QRC и optional combined путь
+  продолжают работать. Отрицательные fixtures остаются tests.
+- [ ] Проверка изменений, PR и выпуск изменённого инструмента из проверенного merged SHA;
+  новый demo release и pinned consumer выполняются по общему плану групп.

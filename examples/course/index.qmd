@@ -10,7 +10,3 @@ title: Составной курс
 - @theory:sec-theory — глава книги.
 - @study:sec-notes — обычная HTML-страница.
 - @study:sec-slide — презентация в том же сайте.
-
-[Исходники примера](https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v4.0.0/examples/course)
-
-[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/index.qmd)

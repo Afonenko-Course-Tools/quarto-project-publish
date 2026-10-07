@@ -1,9 +1,9 @@
 package composition
 
-// Root authoring contract; native project configuration remains Quarto's.
+// Авторский контракт корня; native конфигурацией проекта управляет Quarto.
 #Composition: {
   subprojects: [string & !="", ...string & !=""]
   "course-site"?: _|_
   ...
-  // Normalized duplicates, path containment and overlaps are filesystem checks.
+  // Нормализованные повторы, границы путей и пересечения проверяются по файловой системе.
 }

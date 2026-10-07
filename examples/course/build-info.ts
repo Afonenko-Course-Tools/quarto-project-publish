@@ -11,7 +11,7 @@ const version = new Deno.Command("quarto", {
   stdout: "piped",
   stderr: "null",
 }).outputSync();
-if (!version.success) throw new Error("Cannot record Quarto version");
+if (!version.success) throw new Error("Не удалось записать версию Quarto");
 Deno.writeTextFileSync(
   "_site/BUILD.json",
   JSON.stringify(

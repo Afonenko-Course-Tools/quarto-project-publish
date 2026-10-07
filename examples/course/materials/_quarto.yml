@@ -1,3 +1,5 @@
+lang: ru
+fail-if-warnings: true
 project:
   type: website
   output-dir: _site
@@ -11,3 +13,12 @@ format: html
 bibliography: ../references.bib
 filters: [reference-catalog]
 reference-catalog: {namespace: study}
+website:
+  repo-url: https://github.com/Afonenko-Course-Tools/quarto-project-publish
+  repo-branch: v4.0.0
+  repo-subdir: examples/course/materials
+  repo-actions: [source]
+  navbar:
+    right:
+      - text: Исходники проекта
+        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v4.0.0/examples/course/materials

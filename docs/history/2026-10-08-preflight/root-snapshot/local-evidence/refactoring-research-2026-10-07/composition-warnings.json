@@ -1,0 +1,50 @@
+[
+  {
+    "quarto": "1.10.18",
+    "mode": "root-cli-only",
+    "exit": 0,
+    "root_html": true,
+    "child_html": true,
+    "seconds": 13.85,
+    "probe_lines": [
+      "[WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning"
+    ]
+  },
+  {
+    "quarto": "1.10.18",
+    "mode": "native-child-setting",
+    "exit": 1,
+    "root_html": false,
+    "child_html": false,
+    "seconds": 8.11,
+    "probe_lines": [
+      "[WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning",
+      "[WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning"
+    ]
+  },
+  {
+    "quarto": "1.11.5",
+    "mode": "root-cli-only",
+    "exit": 0,
+    "root_html": true,
+    "child_html": true,
+    "seconds": 13.47,
+    "probe_lines": [
+      "[WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning"
+    ]
+  },
+  {
+    "quarto": "1.11.5",
+    "mode": "native-child-setting",
+    "exit": 1,
+    "root_html": false,
+    "child_html": false,
+    "seconds": 8.72,
+    "probe_lines": [
+      "[WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning",
+      "ERROR: [WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning",
+      "[WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning",
+      "ERROR: [WARNING] Scripting warning at warning.lua line 1 column 1: [PROBE.CHILD_WARNING] native child warning"
+    ]
+  }
+]

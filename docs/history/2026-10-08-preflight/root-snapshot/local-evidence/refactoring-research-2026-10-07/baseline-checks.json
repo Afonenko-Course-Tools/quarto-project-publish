@@ -1,0 +1,26 @@
+[
+  {
+    "check": "native-release (Quarto 1.11.5)",
+    "status": "fulfilled",
+    "exit_code": 0,
+    "output": "PASS current explicit release and page-scoped topics\nPASS release refusal: missing current document\nPASS release refusal: extra current document\nPASS release refusal: duplicate result\nPASS release refusal: duplicate expected source\nPASS release refusal: empty coverage\nPASS release refusal: mismatched source envelope\nPASS release refusal: mixed views\nPASS release refusal: mixed active profiles\nPASS release refusal: invalid active profile value\nPASS release refusal: mixed course domains\nPASS release refusal: duplicate Exercise IDs\nPASS release refusal: duplicate Assessment IDs\nPASS release refusal: unknown target\nPASS release refusal: unknown cross-document member\nPASS explicit cross-document membership and selected targets\n"
+  },
+  {
+    "check": "canonical-model",
+    "status": "fulfilled",
+    "exit_code": 0,
+    "output": "PASS native optional identity/metadata, explicit invalid values and source provenance\n"
+  },
+  {
+    "check": "vocabulary sync",
+    "status": "fulfilled",
+    "exit_code": 0,
+    "output": "Словари Lua, TypeScript и CUE согласованы.\n"
+  },
+  {
+    "check": "navigation-model",
+    "status": "fulfilled",
+    "exit_code": 0,
+    "output": "npm notice run test:navigation-model\nnpm notice run node --test tests/navigation-model.cjs\n✔ tests/navigation-model.cjs (77.236335ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 88.462896\n"
+  }
+]

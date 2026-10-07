@@ -1,0 +1,74 @@
+[
+  {
+    "quarto": "1.10.18",
+    "kind": "html-default",
+    "exit": 0,
+    "source_link_count": 0,
+    "embedded_source_modal": true,
+    "code_tools_button": true,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.10.18",
+    "kind": "html-repo",
+    "exit": 0,
+    "source_link_count": 1,
+    "embedded_source_modal": false,
+    "code_tools_button": true,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.10.18",
+    "kind": "html-current-double",
+    "exit": 0,
+    "source_link_count": 2,
+    "embedded_source_modal": false,
+    "code_tools_button": true,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.10.18",
+    "kind": "reveal-code-tools",
+    "exit": 0,
+    "source_link_count": 0,
+    "embedded_source_modal": false,
+    "code_tools_button": false,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.11.5",
+    "kind": "html-default",
+    "exit": 0,
+    "source_link_count": 0,
+    "embedded_source_modal": true,
+    "code_tools_button": true,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.11.5",
+    "kind": "html-repo",
+    "exit": 0,
+    "source_link_count": 1,
+    "embedded_source_modal": false,
+    "code_tools_button": true,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.11.5",
+    "kind": "html-current-double",
+    "exit": 0,
+    "source_link_count": 2,
+    "embedded_source_modal": false,
+    "code_tools_button": true,
+    "html_lang_ru": true
+  },
+  {
+    "quarto": "1.11.5",
+    "kind": "reveal-code-tools",
+    "exit": 0,
+    "source_link_count": 0,
+    "embedded_source_modal": false,
+    "code_tools_button": false,
+    "html_lang_ru": true
+  }
+]

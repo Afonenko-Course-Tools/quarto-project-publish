@@ -13,6 +13,14 @@ try {
   await Deno.chmod(fake, 0o755);
   Deno.env.set("QUARTO", fake);
   try {
+    await quarto(null as unknown as string[], root);
+    throw new Error("expected invalid internal argument");
+  } catch (error) {
+    assert(error instanceof Error);
+    assertEquals(error.name, "TypeError");
+    assert(error.stack?.includes("process.ts"), "lost internal stack");
+  }
+  try {
     await quarto(["render", "."], root);
     throw new Error("expected child failure");
   } catch (error) {

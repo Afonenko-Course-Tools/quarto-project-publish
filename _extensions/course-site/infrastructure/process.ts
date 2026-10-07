@@ -18,6 +18,9 @@ export async function quarto(
       stderr: "piped",
     }).output();
   } catch (cause) {
+    if (!Object.values(Deno.errors).some((kind) => cause instanceof kind)) {
+      throw cause;
+    }
     const error = new Error(
       `course-site: не удалось запустить Quarto в ${cwd}`,
       { cause },

@@ -69,7 +69,11 @@ try {
     `${root}/index.qmd`,
     "---\nformat:\n  html: default\n  revealjs: default\n---\n# Ambiguous\n",
   );
-  await assertRejects(() => api.inspectDocuments(root, []), "SITE.FORMAT_AMBIGUOUS", [root, "index.qmd", "format"]);
+  await assertRejects(
+    () => api.inspectDocuments(root, []),
+    "SITE.FORMAT_AMBIGUOUS",
+    [root, "index.qmd", "format"],
+  );
   console.log(
     "PASS effective per-document formats, profiles, HTML+PDF and web ambiguity",
   );

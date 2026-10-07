@@ -37,7 +37,8 @@ try {
   const text = new TextDecoder().decode(result.stdout) +
     new TextDecoder().decode(result.stderr);
   assert(
-    !result.success && text.includes("SITE.SUBPROJECT_INVALID") && text.includes("index.qmd") && text.includes("input"),
+    !result.success && text.includes("SITE.SUBPROJECT_INVALID") &&
+      text.includes("index.qmd") && text.includes("input"),
     `external QMD was not rejected: ${text}`,
   );
   assertEquals(

@@ -9,16 +9,27 @@ export async function quarto(
 ): Promise<string> {
   const start = performance.now();
   let result: Deno.CommandOutput;
-  try { result = await new Deno.Command(executable(), {
-    args,
-    cwd,
-    env,
-    stdout: "piped",
-    stderr: "piped",
-  }).output(); } catch (cause) {
-    const error = new Error(`course-site: не удалось запустить Quarto в ${cwd}`, {cause});
+  try {
+    result = await new Deno.Command(executable(), {
+      args,
+      cwd,
+      env,
+      stdout: "piped",
+      stderr: "piped",
+    }).output();
+  } catch (cause) {
+    const error = new Error(
+      `course-site: не удалось запустить Quarto в ${cwd}`,
+      { cause },
+    );
     error.name = "ExternalToolFailure";
-    throw Object.assign(error, {tool: "quarto", exitCode: null, stdout: "", stderr: "", forwarded: false});
+    throw Object.assign(error, {
+      tool: "quarto",
+      exitCode: null,
+      stdout: "",
+      stderr: "",
+      forwarded: false,
+    });
   }
   const out = new TextDecoder().decode(result.stdout),
     err = new TextDecoder().decode(result.stderr);
@@ -42,11 +53,21 @@ export async function quarto(
   }
   if (!result.success) {
     const error = new Error(
-      `course-site: Quarto ${args[0]} завершился с кодом ${result.code} (проект: ${cwd})${forward ? "" : `\n${out}${err}`}`,
+      `course-site: Quarto ${
+        args[0]
+      } завершился с кодом ${result.code} (проект: ${cwd})${
+        forward ? "" : `\n${out}${err}`
+      }`,
       { cause: result },
     );
     error.name = "ExternalToolFailure";
-    throw Object.assign(error, {tool: "quarto", exitCode: result.code, stdout: out, stderr: err, forwarded: forward});
+    throw Object.assign(error, {
+      tool: "quarto",
+      exitCode: result.code,
+      stdout: out,
+      stderr: err,
+      forwarded: forward,
+    });
   }
   return out;
 }

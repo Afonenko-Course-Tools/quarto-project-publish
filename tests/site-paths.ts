@@ -5,6 +5,7 @@ try {
   for (const path of ["a/slides", "b/slides", "part", "part/nested"]) {
     await Deno.mkdir(`${root}/${path}`, { recursive: true });
   }
+  await Deno.writeTextFile(`${root}/not-directory.qmd`, "# Source");
   const base = {
     project: { type: "website", "output-dir": "_site" },
     subprojects: ["./a/slides", "b/slides"],
@@ -36,6 +37,17 @@ try {
       }, []),
     "SITE.OUTPUT_OVERLAP",
     [root, "output-dir"],
+  );
+  await assertRejects(
+    () =>
+      validateConfig(root, { ...base, subprojects: ["not-directory.qmd"] }, []),
+    "SITE.SUBPROJECT_INVALID",
+    [root, "not-directory.qmd", "subprojects"],
+  );
+  await assertRejects(
+    () => validateConfig(root, { ...base, subprojects: ["absent"] }, []),
+    "SITE.SUBPROJECT_INVALID",
+    [root, "absent", "subprojects"],
   );
   for (const output of [".", "..", ".quarto/site", "_freeze/site", "a"]) {
     await assertRejects(() =>

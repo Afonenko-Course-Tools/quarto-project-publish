@@ -129,10 +129,38 @@ export async function validateConfig(
         related: [{ source: item }],
       });
     }
-    if (
-      !(await Deno.stat(path)).isDirectory || inside(output, path) ||
-      inside(path, output)
-    ) {
+    let stat: Deno.FileInfo;
+    try {
+      stat = await Deno.stat(path);
+    } catch (cause) {
+      if (!(cause instanceof Deno.errors.NotFound)) throw cause;
+      throw diagnostic(
+        "SITE.SUBPROJECT_INVALID",
+        "Папка компонента отсутствует",
+        {
+          source: root,
+          id: `subproject-${encodeURIComponent(mount)}`,
+          field: "subprojects",
+          related: [{ source: path }],
+          hint: "Укажите существующую папку самостоятельного проекта.",
+        },
+        cause,
+      );
+    }
+    if (!stat.isDirectory) {
+      throw diagnostic(
+        "SITE.SUBPROJECT_INVALID",
+        "Компонент должен быть папкой",
+        {
+          source: root,
+          id: `subproject-${encodeURIComponent(mount)}`,
+          field: "subprojects",
+          related: [{ source: path }],
+          hint: "Укажите папку с собственной конфигурацией Quarto.",
+        },
+      );
+    }
+    if (inside(output, path) || inside(path, output)) {
       throw diagnostic(
         "SITE.OUTPUT_OVERLAP",
         "Источники компонента и каталог результата пересекаются",

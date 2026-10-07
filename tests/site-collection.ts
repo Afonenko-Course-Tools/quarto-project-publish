@@ -37,7 +37,8 @@ try {
   );
   assertEquals(native.profiles, ["web", "content"]);
   await assertRejects(() =>
-    readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"])
+    readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"]),
+    "SITE.COLLECTION_INVALID", [root, "one", "profiles"]
   );
   await Deno.writeTextFile(`${root}/_quarto-content.yml`, "format: html\n");
   assertEquals(
@@ -66,7 +67,8 @@ try {
   await collect();
   await Deno.remove(`${root}/_site/index.html`);
   await assertRejects(() =>
-    readCollection(`${root}/record.json`, "one", root, `${root}/_site`, [])
+    readCollection(`${root}/record.json`, "one", root, `${root}/_site`, []),
+    "SITE.CURRENT_RESULT_MISSING", [root, "one", "index.html"]
   );
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "../outside.html");
   await assertRejects(() => collect());

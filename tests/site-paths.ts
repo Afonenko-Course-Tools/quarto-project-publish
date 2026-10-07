@@ -13,6 +13,9 @@ try {
   assertEquals(result.projects.map((p) => p.mount), ["a/slides", "b/slides"]);
   assertEquals(new Set(result.projects.map((p) => p.id)).size, 2);
   assertEquals(result.profiles, ["student"]);
+  await assertRejects(() => validateConfig(root, { ...base, subprojects: [] }, []), "SITE.CONFIG_INVALID", [root, "subprojects"]);
+  await assertRejects(() => validateConfig(root, { ...base, subprojects: ["part", "part/nested"] }, []), "SITE.SUBPROJECT_INVALID", [root, "part", "subprojects"]);
+  await assertRejects(() => validateConfig(root, { ...base, project: { ...base.project, "output-dir": ".quarto/site" } }, []), "SITE.OUTPUT_OVERLAP", [root, "output-dir"]);
   for (const output of [".", "..", ".quarto/site", "_freeze/site", "a"]) {
     await assertRejects(() =>
       validateConfig(root, {

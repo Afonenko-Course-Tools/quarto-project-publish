@@ -20,9 +20,10 @@
 ## Внешняя команда и граница hook
 
 Собственный обычный Error имеет `name: ExtensionDiagnostic` и `code`.
-Внешний отказ имеет `name: ExternalToolFailure`, `tool: quarto`, `exitCode`,
+Внешний отказ имеет `name: ExternalToolFailure`, `tool` с фактическим исполняемым файлом команды, `exitCode`,
 `stdout`, `stderr`, `forwarded` и `cause`. Для неудачного запуска `exitCode`
-равен null, а исходная ошибка запуска сохранена в cause. Publisher не разбирает
+равен null, а исходная ошибка запуска сохранена в cause и один раз показана
+в сообщении hook вместе с исполняемым файлом. Publisher не разбирает
 stderr и не присваивает ему смысловой SITE ID. Trace сохраняет прежние
 `args`, `cwd`, `elapsedMs`, `exitCode`.
 

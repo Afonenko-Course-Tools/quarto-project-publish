@@ -8,9 +8,10 @@ export async function quarto(
   forward = false,
 ): Promise<string> {
   const start = performance.now();
+  const tool = executable();
   let result: Deno.CommandOutput;
   try {
-    result = await new Deno.Command(executable(), {
+    result = await new Deno.Command(tool, {
       args,
       cwd,
       env,
@@ -22,12 +23,14 @@ export async function quarto(
       throw cause;
     }
     const error = new Error(
-      `course-site: не удалось запустить Quarto в ${cwd}`,
+      `course-site: не удалось запустить ${tool} в ${cwd}\n${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
       { cause },
     );
     error.name = "ExternalToolFailure";
     throw Object.assign(error, {
-      tool: "quarto",
+      tool,
       exitCode: null,
       stdout: "",
       stderr: "",
@@ -65,7 +68,7 @@ export async function quarto(
     );
     error.name = "ExternalToolFailure";
     throw Object.assign(error, {
-      tool: "quarto",
+      tool,
       exitCode: result.code,
       stdout: out,
       stderr: err,

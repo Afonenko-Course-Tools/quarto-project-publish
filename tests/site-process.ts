@@ -5,6 +5,74 @@ const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const root = await Deno.makeTempDir({ prefix: "course-site-process-" });
 const actualQuarto = Deno.env.get("QUARTO") || "quarto";
 try {
+  const missing = "/nonexistent/final-review-quarto";
+  Deno.env.set("QUARTO", missing);
+  let startupFailure:
+    | Error & {
+      tool: string;
+      exitCode: number | null;
+      stdout: string;
+      stderr: string;
+      forwarded: boolean;
+    }
+    | undefined;
+  try {
+    await quarto(["inspect", root], root);
+  } catch (error) {
+    assert(error instanceof Error);
+    startupFailure = error as typeof startupFailure;
+  }
+  assert(startupFailure, "missing executable did not fail");
+  assert(
+    startupFailure.cause instanceof Deno.errors.NotFound,
+    "lost operational NotFound cause",
+  );
+  const startup = join(root, "startup.ts");
+  await Deno.writeTextFile(
+    startup,
+    `import {quarto} from ${
+      JSON.stringify(
+        `file://${repo}/_extensions/course-site/infrastructure/process.ts`,
+      )
+    };
+import {runHook} from ${
+      JSON.stringify(
+        `file://${repo}/_extensions/course-site/infrastructure/diagnostics.ts`,
+      )
+    };
+await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
+      JSON.stringify(root)
+    }));
+`,
+  );
+  const startupResult = await new Deno.Command(actualQuarto, {
+    args: ["run", startup],
+    env: { QUARTO: missing },
+    stdout: "piped",
+    stderr: "piped",
+  }).output();
+  const startupText = new TextDecoder().decode(startupResult.stdout) +
+    new TextDecoder().decode(startupResult.stderr);
+  assert(!startupResult.success, "startup hook succeeded");
+  assert(
+    startupText.includes(missing),
+    `configured executable lost at runHook boundary: ${startupText}`,
+  );
+  assertEquals(startupText.split(startupFailure.cause.message).length - 1, 1);
+  assertEquals(startupFailure.name, "ExternalToolFailure");
+  assertEquals(startupFailure.tool, missing);
+  assertEquals(startupFailure.exitCode, null);
+  assertEquals(startupFailure.stdout, "");
+  assertEquals(startupFailure.stderr, "");
+  assertEquals(startupFailure.forwarded, false);
+  assert(
+    !startupText.includes("SITE."),
+    "startup failure received semantic SITE ID",
+  );
+  assert(
+    !startupText.includes("at runHook"),
+    `expected failure leaked wrapper stack: ${startupText}`,
+  );
   const fake = join(root, "fake-quarto");
   await Deno.writeTextFile(
     fake,
@@ -33,7 +101,7 @@ try {
       forwarded: boolean;
     };
     assertEquals(failure.name, "ExternalToolFailure");
-    assertEquals(failure.tool, "quarto");
+    assertEquals(failure.tool, fake);
     assertEquals(failure.exitCode, 23);
     assertEquals(failure.stdout, "CHILD_STDOUT_SENTINEL\n");
     assertEquals(failure.stderr, "CHILD_STDERR_SENTINEL FOREIGN.ID\n");
@@ -91,7 +159,7 @@ try {
     text,
   );
   console.log(
-    "PASS native exit/streams/cause retained, single forwarded output, unknown stack",
+    "PASS startup hook retains executable/OS cause once; native exit/streams/cause retained, single forwarded output, unknown stack",
   );
 } finally {
   Deno.env.set("QUARTO", actualQuarto);

@@ -21,13 +21,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: v3.0.0
+          ref: v3.0.2
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: v2.1.0
+          ref: 4a636e11f88e29a40d81d8b05ead6ef2e7cb2e82 # checked coordinated 2.2.1 candidate
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
@@ -52,6 +52,9 @@ jobs:
           quarto run tests/site-collection.ts
           quarto run tests/site-effective-formats.ts
           quarto run tests/site-web-selection.ts
+          quarto run tests/site-process.ts
+          quarto run tests/site-siblings.ts
+          quarto run tests/site-native.ts warnings
           quarto run tests/site-native.ts
           quarto run tests/site-domains.ts
           quarto run tests/site-domains.ts resources

@@ -7,5 +7,3 @@
 :::
 
 @study:sec-slide
-
-[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v4.0.0/examples/course/book/theory.qmd)

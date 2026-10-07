@@ -3,7 +3,7 @@
 Расширение устанавливается из существующего репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v4.0.0
+quarto add Afonenko-Course-Tools/quarto-project-publish@v4.0.1
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -188,7 +188,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Релиз `v4.0.0` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
+Релиз `v4.0.1` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
 
 ## Готовая демонстрация
 

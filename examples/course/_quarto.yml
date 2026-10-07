@@ -10,14 +10,14 @@ profile:
   default: full
 website:
   repo-url: https://github.com/Afonenko-Course-Tools/quarto-project-publish
-  repo-branch: v4.0.0
+  repo-branch: demo-20261007-ru1
   repo-subdir: examples/course/
   repo-actions: [source]
   title: Составной курс
   navbar:
     right:
       - text: Исходники проекта
-        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v4.0.0/examples/course/
+        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/demo-20261007-ru1/examples/course/
 format: html
 filters: [reference-catalog]
 reference-catalog: {namespace: portal}

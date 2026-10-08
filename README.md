@@ -1,9 +1,14 @@
 # course-site: составной сайт из native проектов Quarto
 
+Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
+Версия данного ref определяется descriptor; контракт и документация выпуска
+читаются из того же тега, что и код. Изменения main после выпущенного тега —
+**unreleased**. Минимум — Quarto 1.11.5; при использовании Core требуется CUE 0.17.1.
+
 Расширение устанавливается из существующего репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v4.0.1
+quarto add Afonenko-Course-Tools/quarto-project-publish@v5.0.0
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -18,6 +23,8 @@ quarto publish gh-pages --profile student
 Корневой `_quarto.yml`:
 
 ```yaml
+lang: ru
+fail-if-warnings: true
 project:
   type: website
   output-dir: _site
@@ -32,6 +39,8 @@ subprojects: [theory, slides]
 post-render hook `../_extensions/course-site/entrypoints/collect.ts`. Например:
 
 ```yaml
+lang: ru
+fail-if-warnings: true
 project:
   type: website
   output-dir: _output/default
@@ -70,12 +79,17 @@ output может точно совпадать с одной из этих пр
 ## Core и QRC
 
 Модули опциональны. Для курса установите `course-core` и укажите `filters:
-[course-core]`. Для явного экспорта course.id задаётся один раз в корне. Для ссылок установите `reference-catalog`, добавьте
+[course-core]`. Для явного экспорта `course.id` задаётся один раз в корне
+логического курса. В выбранной native книге банк включается отдельно через
+`exercise-bank: true`; имя папки и `course.id` его не включают. Для ссылок
+установите `reference-catalog`, добавьте
 его фильтр и `reference-catalog.namespace`. Корневой course-site hook сам вызывает
 Core begin/finish и QRC full; дополнительные Core pre/post hooks в корне не нужны.
 В частях настройте:
 
 ```yaml
+lang: ru
+fail-if-warnings: true
 project:
   type: website
   output-dir: _output/default
@@ -188,7 +202,10 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Релиз `v4.0.1` соответствует версии в `_extension.yml`. Устанавливайте явный тег, как в команде выше, и сохраняйте установленные файлы `_extensions` в Git курса. Для обновления установите следующий опубликованный тег через `quarto add`, проверьте diff и выполните проверки курса. Опубликованные теги неизменяемы: исправления получают новую версию и новый тег.
+Версия определяется descriptor того же Git ref. Устанавливайте точный тег
+из команды выше; документация и код выбранного выпуска читаются из одного ref.
+Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
+теги неизменяемы: исправления получают новую версию и новый тег.
 
 ## Готовая демонстрация
 

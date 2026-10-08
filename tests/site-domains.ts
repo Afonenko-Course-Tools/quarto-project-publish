@@ -41,13 +41,13 @@ subprojects: [part, second]
 );
 await write(
   "index.qmd",
-  "# Portal {#sec-home}\n\n@part:sec-part and @second:sec-second\n",
+  "# Portal {#sec-home}\n\n@part:sec-part and @second:sec-second\n\n::: {#exr-native}\nORDINARY_QUARTO_CONDITION\n:::\n\n::: {#sol-native}\nORDINARY_QUARTO_SOLUTION\n:::\n",
 );
 for (const id of ["part", "second"]) {
   await write(
     `${id}/_quarto.yml`,
     `project:
-  type: website
+  type: book
   output-dir: _site
   render: [index.qmd]
   pre-render: _extensions/course-core/entrypoints/pre.ts
@@ -55,20 +55,31 @@ for (const id of ["part", "second"]) {
     - _extensions/course-core/entrypoints/post.ts
     - _extensions/reference-catalog/entrypoints/post.ts
     - ../_extensions/course-site/entrypoints/collect.ts
+book:
+  title: Bank ${id}
+  chapters: [index.qmd]
 format: html
 filters: [course-core, reference-catalog]
 course: {id: shared-course}
+exercise-bank: true
+exercise-statement-visibility: open
 reference-catalog: {namespace: ${id}}
 `,
   );
   await write(
     `${id}/index.qmd`,
-    `---\nassessment:\n  kind: lab\n---\n\n# Lesson ${id} {#sec-${id}}\n\n:::: {#exr-${id} course-role="independent-study" difficulty="introductory"}\nPUBLIC_${id}\n\n![Public figure](asset.svg)\n\n::: {#sol-${id}}\nPRIVATE_${id}\n:::\n::::\n\n${
+    `---\nassessment:\n  kind: lab\n---\n\n# Lesson ${id} {#sec-${id}}\n\n:::: {#exr-${id} course-role="independent-study" difficulty="introductory" time="10"}\nPUBLIC_${id}\n\n![Public figure](asset.svg)\n\n::: {#sol-${id}}\nPRIVATE_${id}\n\n![Closed solution figure](solution.svg)\n:::\n::::\n\n::: {#exr-restricted-${id} difficulty="advanced" time="25" statement-visibility="restricted"}\nRESTRICTED_CONDITION_${id}\n\n![Restricted figure](restricted.svg)\n:::\n\n::: {#sol-restricted-${id}}\nRESTRICTED_SOLUTION_${id}\n:::\n\n${
       id === "part" ? "@second:sec-second" : "@part:sec-part"
-    }\n\n::: {.task-items}\n1. @exr-${id}\n:::\n`,
+    }\n\n::: {.assessment-preview}\nWORK_PREVIEW_${id}\n:::\n\n::: {.task-items stage="homework"}\n1. [@exr-${id}]{work-mode="pair"}\n2. [@exr-restricted-${id}]{requirement="optional"}\n:::\n`,
   );
 }
 for (const id of ["part", "second"]) {
+  for (const asset of ["restricted", "solution"]) {
+    await write(
+      `${id}/${asset}.svg`,
+      `<svg xmlns="http://www.w3.org/2000/svg"><text>${asset.toUpperCase()}_RESOURCE_${id}</text></svg>`,
+    );
+  }
   await write(
     `${id}/asset.svg`,
     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="green"/></svg>',
@@ -127,6 +138,11 @@ assert(
     html.includes("second/index.html#sec-second"),
   "full mounted links missing",
 );
+assert(
+  html.includes("ORDINARY_QUARTO_CONDITION") &&
+    html.includes("ORDINARY_QUARTO_SOLUTION"),
+  "ordinary native Quarto outside bank changed",
+);
 const search = JSON.parse(
   await Deno.readTextFile(join(root, "_site-student/search.json")),
 );
@@ -136,6 +152,38 @@ assert(
   ),
   "root search missing mounted lesson",
 );
+for (const id of ["part", "second"]) {
+  const mounted = await Deno.readTextFile(
+    join(root, `_site-student/${id}/index.html`),
+  );
+  assert(
+    mounted.includes(`WORK_PREVIEW_${id}`),
+    "student work preview missing",
+  );
+  assert(
+    !mounted.match(/RESTRICTED_|PRIVATE_|exr-restricted/),
+    "student mounted page leaked closed declaration or assignment",
+  );
+  const catalog = await Deno.readTextFile(
+    join(root, "_site-student/reference-catalog.json"),
+  );
+  assert(
+    !catalog.includes("exr-restricted"),
+    "student catalog exposed restricted target",
+  );
+  assert(
+    !JSON.stringify(search).match(/RESTRICTED_|PRIVATE_|exr-restricted/),
+    "student composed search leaked closed content",
+  );
+  for (const asset of ["restricted", "solution"]) {
+    try {
+      await Deno.stat(join(root, `_site-student/${id}/${asset}.svg`));
+      throw new Error(`student mounted closed resource: ${id}/${asset}.svg`);
+    } catch (error) {
+      assert(error instanceof Deno.errors.NotFound, String(error));
+    }
+  }
+}
 const releases: any[] = [];
 for await (const dir of Deno.readDir(runs)) {
   if (previousRuns.has(dir.name)) continue;
@@ -166,10 +214,58 @@ assert(
   "student full release leaked solution",
 );
 assert(
+  !JSON.stringify(release).includes("RESTRICTED_") &&
+    release.documents.every((doc: any) =>
+      !JSON.stringify({
+        exercises: doc.exercises,
+        assessment: doc.assessment,
+        body: doc.body,
+      }).includes("exr-restricted")
+    ),
+  "student projected release leaked restricted exercise or assignment",
+);
+assert(
   !(await Deno.readTextFile(join(root, "_site-student/part/index.html")))
     .includes("PRIVATE_"),
   "student mounted HTML leaked solution",
 );
+async function assertFullProjection() {
+  for (const id of ["part", "second"]) {
+    const page = await Deno.readTextFile(
+      join(root, `_site-full/${id}/index.html`),
+    );
+    assert(
+      page.includes(`PRIVATE_${id}`) &&
+        page.includes(`RESTRICTED_CONDITION_${id}`) &&
+        page.includes(`RESTRICTED_SOLUTION_${id}`),
+      "full lost current closed content",
+    );
+    assert(
+      page.includes(`exr-restricted-${id}`),
+      "full lost restricted assignment",
+    );
+    const catalog = await Deno.readTextFile(
+      join(root, "_site-full/reference-catalog.json"),
+    );
+    assert(
+      catalog.includes(`exr-restricted-${id}`),
+      "full lost restricted QRC target",
+    );
+    for (const asset of ["restricted", "solution"]) {
+      assert(
+        (await Deno.readTextFile(join(root, `_site-full/${id}/${asset}.svg`)))
+          .includes(`${asset.toUpperCase()}_RESOURCE_${id}`),
+        "full lost current closed resource",
+      );
+    }
+  }
+  assert(
+    (await Deno.readTextFile(join(root, "_site-full/search.json"))).includes(
+      "RESTRICTED_CONDITION_",
+    ),
+    "full composed search lost restricted condition",
+  );
+}
 if (["resources", "rootless"].includes(Deno.args[0])) {
   if (Deno.args[0] === "resources") {
     const { buildBodies } = await import(
@@ -191,6 +287,20 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
         [`exr-${id}`],
       );
       assertEquals(
+        Object.entries(
+          publicPackage.works[0].assignments[`shared-course/exr-${id}`],
+        ).sort(),
+        Object.entries({
+          stage: "homework",
+          requirement: "required",
+          workMode: "pair",
+        }).sort(),
+      );
+      assert(
+        !JSON.stringify(publicPackage).includes("WORK_PREVIEW_"),
+        "Body export included website preview",
+      );
+      assertEquals(
         publicPackage.resources.map((resource: any) => resource.target),
         [`${id}/asset.svg`],
       );
@@ -200,9 +310,62 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       "part/asset.svg",
       "second/asset.svg",
     ]);
+    await run(["render", "--profile", "full"]);
+    await assertFullProjection();
+    const { collectExport } = await import(
+      new URL(`file://${root}/_extensions/course-core/body-export/collect.ts`)
+        .href
+    );
+    for (const id of ["part", "second"]) {
+      const selected = await collectExport(root, {
+        book: id,
+        work: `sec-${id}`,
+      });
+      const { publicPackage } = await buildBodies(selected.result, {
+        projectRoot: selected.projectRoot,
+        courseId: selected.courseId,
+        work: selected.work,
+      });
+      assertEquals(publicPackage.questions.map((q: any) => q.id), [
+        `exr-${id}`,
+        `exr-restricted-${id}`,
+      ]);
+      assertEquals(
+        publicPackage.resources.map((resource: any) => resource.target).sort(),
+        ["asset.svg", "restricted.svg"],
+      );
+      assert(
+        JSON.stringify(publicPackage.questions[1].condition).includes(
+          `RESTRICTED_CONDITION_${id}`,
+        ),
+        "selected participant export lost restricted condition",
+      );
+      assertEquals(
+        publicPackage.questions[1].statementVisibility,
+        "restricted",
+      );
+      assertEquals(
+        Object.entries(
+          publicPackage.works[0]
+            .assignments[`${selected.courseId}/exr-restricted-${id}`],
+        ).sort(),
+        Object.entries({
+          stage: "homework",
+          requirement: "optional",
+          workMode: "individual",
+        }).sort(),
+      );
+      assert(
+        !JSON.stringify(publicPackage).match(
+          /PRIVATE_|RESTRICTED_SOLUTION_|WORK_PREVIEW_|closedKey/,
+        ),
+        "participant export leaked solution or preview",
+      );
+    }
   }
   if (Deno.args[0] === "rootless") {
     await run(["render", "--profile", "full"]);
+    await assertFullProjection();
     assert(
       (await Deno.readTextFile(join(root, "_site-full/part/index.html")))
         .includes("PRIVATE_part"),
@@ -240,14 +403,30 @@ await write(
     "",
   ).replace("    - _extensions/course-core/entrypoints/post.ts\n", ""),
 );
-assert(
-  (await run(["render", "--profile", "student"], root, false)).includes(
-    "native-run.json",
-  ),
-  "missing Core collector failed for an unrelated reason",
+const missingCollectorOutput = await run(
+  ["render", "--profile", "student"], root, false,
 );
+assert(
+  missingCollectorOutput.includes("NATIVE.RUN_NOT_CURRENT") &&
+    missingCollectorOutput.includes(`источник=${join(root, "part")}`) &&
+    missingCollectorOutput.includes("поле=native-run"),
+  `missing Core collector failed for an unrelated reason: ${missingCollectorOutput}`,
+);
+for (const path of [
+  "part/_generated/course-spec/native-run.json",
+  "_site-student/index.html",
+  "_site-student/part/index.html",
+]) {
+  try {
+    await Deno.stat(join(root, path));
+    throw new Error(`missing Core collector published current output: ${path}`);
+  } catch (error) {
+    assert(error instanceof Deno.errors.NotFound, String(error));
+  }
+}
 await write("part/_quarto.yml", partConfig);
 await run(["render", "--profile", "full"]);
+await assertFullProjection();
 assert(
   (await Deno.readTextFile(join(root, "_site-full/part/index.html")))
     .includes("PRIVATE_part"),

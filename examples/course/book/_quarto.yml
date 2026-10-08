@@ -10,7 +10,7 @@ profile:
   default: full
 book:
   repo-url: https://github.com/Afonenko-Course-Tools/quarto-project-publish
-  repo-branch: demo-20261007-ru1
+  repo-branch: v5.0.0
   repo-subdir: examples/course/book
   repo-actions: [source]
   title: Теория
@@ -18,7 +18,7 @@ book:
     tools:
       - icon: github
         text: Исходники проекта
-        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/demo-20261007-ru1/examples/course/book
+        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v5.0.0/examples/course/book
 format: html
 bibliography: ../references.bib
 filters: [reference-catalog]

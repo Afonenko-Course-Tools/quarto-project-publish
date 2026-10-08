@@ -36,3 +36,23 @@ Quarto определяет отказ native команды. Успешный s
 Strict warnings задаются штатным `fail-if-warnings` каждого публичного child
 проекта. Подробные ID и действия — [диагностика](../docs/diagnostics.md),
 подключение и команды — [README](../README.md).
+
+## Банк и выбранная проекция
+
+Область канонических задач включает native `exercise-bank: true` и эффективную
+политику `exercise-statement-visibility: open|restricted`. У каждого `#exr-*`
+свои обязательные difficulty/time; вне области остаётся обычный Quarto.
+Страницы работ могут находиться вне банка. В выбранной книге сохраняется одна
+экспортная идентичность; Publisher не объединяет самостоятельные проекты.
+
+Student outputs не содержат restricted условий и их ссылок назначений, решений
+обычных open задач, закрытых ключей и заметок преподавателя. Mounted resources,
+HTML, search и каталоги QRC следуют той же текущей проекции. Full использует
+свой отдельный output. Native `repo-actions: [source]` ведёт к GitHub; source modal
+и копирование raw QMD с закрытыми телами в student output не включаются.
+
+У каждого публичного native проекта явно заданы `lang: ru` и
+`fail-if-warnings: true`. Корневой CLI-флаг строгости не наследуется дочерними
+scripts. Source JSON pass Core сохраняет самостоятельную политику предупреждений.
+[Демонстрация](../examples/course/README.md) показывает Publisher/QRC без Core;
+канонический банк для этого обычного native курса не требуется.

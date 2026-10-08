@@ -61,5 +61,18 @@ Owner plans до origin update и из опубликованного origin/mai
 run/outputs; независимые ID/QRC адреса; owner containment до cleanup; закрытые
 тела/ресурсы не включаются в публичный payload; внешний exit/tool/потоки/cause
 сохраняются; общей runtime/report/registry надстройки нет. Их нормативные
-владельцы связаны из текущего spec index. Новые bank/assignments поля остаются
-accepted-next до реализации Core/потребителей.
+владельцы связаны из текущего spec index. Это описание фиксирует историческое
+состояние подготовки; актуальные правила
+банка/assignments теперь находятся в текущих контрактах Core и владельца.
+
+## Подготовка авторства 8 октября
+
+Переходный `docs/authoring-next.md` перенесён в действующие тематические документы.
+Точные исходные bytes сохранены в Git: commit `d8bf688ebf33433dba236bb9761284a21f5a2899`,
+blob `33adced2c72c8501ae2ab7ba6f5f3e569ca7cc5c`. Восстановление без изменения рабочего дерева:
+
+```sh
+git show d8bf688ebf33433dba236bb9761284a21f5a2899:docs/authoring-next.md
+```
+
+[Исходная подготовка](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/d8bf688ebf33433dba236bb9761284a21f5a2899/docs/authoring-next.md) остаётся историей этого владельца.

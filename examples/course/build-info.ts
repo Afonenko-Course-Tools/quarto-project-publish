@@ -22,8 +22,8 @@ Deno.writeTextFileSync(
         run(["status", "--porcelain"]).length > 0,
       dependencies: {
         ...{
-          "quarto-project-publish": "v4.0.1",
-          "quarto-reference-catalog": "v2.2.1",
+          "quarto-project-publish": "v5.0.0",
+          "quarto-reference-catalog": "v3.0.0",
         },
         quarto: new TextDecoder().decode(version.stdout).trim(),
       },

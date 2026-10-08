@@ -13,6 +13,7 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 
 | Документ | type | component | status |
 | --- | --- | --- | --- |
+| [Подготовка авторства](../docs/authoring-next.md) | authoring-guide | publisher | accepted-next |
 | [Контракт Publisher](contract.md) | contract | publisher | current |
 | [Структура subprojects](subprojects.cue) | contract/schema | publisher | current |
 | [Диагностика](../docs/diagnostics.md) | reference | publisher | current |

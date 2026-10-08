@@ -84,3 +84,27 @@ Root и пользовательские worktrees не удалялись. Те
 Следующий шаг ждёт новый текущий Core contract/Body; новые поля не заявлены
 поддерживаемыми данным preflight. Merge в shared main, push, CI, release и
 публикация не выполнялись.
+
+
+## Подготовка документации пункта 6 — 8 октября 2026
+
+Документационный исполнитель работает по принятым Core решениям; модель не
+менялась. Добавлена [подготовка авторства](../authoring-next.md) `accepted-next`,
+ссылки из README и индекса. Существующие current API/контракты не объявлены
+мигрированными до проверки runtime. Примеры на этой ветке предназначены для
+следующей модели; native ordinary Quarto сохранён вне bank opt-in.
+
+- Свежая проверка: `git diff --check`; 26 локальных Markdown-ссылок
+  README/spec/docs/плана/README примеров существуют; 10 авторских YAML
+  файлов успешно прочитаны. Проверка исключает generated/dependency деревья.
+- Активные примеры не содержат старых kinds exam/handout, solution `for`,
+  fixture sentinel/literal текста и Quarto 1.10.x. Русский lang сохраняется,
+  публичные native проекты задают `fail-if-warnings: true`.
+- Машинные descriptors/workflows и runtime/tests не изменялись этим исполнителем.
+  Старые выпущенные dependency/demo/source pins сохранены как baseline;
+  **новые release pins ожидают решения о версиях и фактических Releases**.
+
+Full dependent suites/CI/render против меняющегося Core здесь не запускались.
+Следующий runtime исполнитель выполняет команды выше, проверяет текущие
+student/full outputs и выбранный экспорт, после чего документальная подготовка
+переносится в current README/контракт. Merge/push/release/публикация не выполнены.

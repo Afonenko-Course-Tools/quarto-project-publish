@@ -403,12 +403,27 @@ await write(
     "",
   ).replace("    - _extensions/course-core/entrypoints/post.ts\n", ""),
 );
-assert(
-  (await run(["render", "--profile", "student"], root, false)).includes(
-    "native-run.json",
-  ),
-  "missing Core collector failed for an unrelated reason",
+const missingCollectorOutput = await run(
+  ["render", "--profile", "student"], root, false,
 );
+assert(
+  missingCollectorOutput.includes("NATIVE.RUN_NOT_CURRENT") &&
+    missingCollectorOutput.includes(`источник=${join(root, "part")}`) &&
+    missingCollectorOutput.includes("поле=native-run"),
+  `missing Core collector failed for an unrelated reason: ${missingCollectorOutput}`,
+);
+for (const path of [
+  "part/_generated/course-spec/native-run.json",
+  "_site-student/index.html",
+  "_site-student/part/index.html",
+]) {
+  try {
+    await Deno.stat(join(root, path));
+    throw new Error(`missing Core collector published current output: ${path}`);
+  } catch (error) {
+    assert(error instanceof Deno.errors.NotFound, String(error));
+  }
+}
 await write("part/_quarto.yml", partConfig);
 await run(["render", "--profile", "full"]);
 await assertFullProjection();

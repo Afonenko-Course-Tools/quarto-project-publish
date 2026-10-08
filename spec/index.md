@@ -17,7 +17,7 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 | [Структура subprojects](subprojects.cue) | contract/schema | publisher | current |
 | [Диагностика](../docs/diagnostics.md) | reference | publisher | current |
 | [Авторская модель Core](../../quarto-course/spec/index.md) | specification/index | course-core | current |
-| [План владельца](../docs/plans/2026-10-08-implementation.md) | plan | publisher | in-progress |
+| [Результат реализации](../docs/releases/2026-10-08-implementation.md) | implementation-report | publisher | historical |
 | [Карта сохранённой истории](../docs/history-index.md) | history-index | publisher | current |
 
 Publisher владеет `subprojects`, размещением native outputs, collection/ownership и границей native child процесса. Quarto владеет metadata/profiles/форматами; Core владеет учебной моделью и отбором; QRC — адресами каталога.

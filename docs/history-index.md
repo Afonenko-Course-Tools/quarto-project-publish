@@ -7,8 +7,8 @@ status: current
 # Карта сохранённой истории
 
 Предмет переноса: Композиция/subprojects/current outputs, ownership и native child profiles.
-Действующие правила находятся в [индексе спецификаций](../spec/index.md), будущие
-изменения — в [плане владельца](plans/2026-10-08-implementation.md). Старые snapshots,
+Действующие правила находятся в [индексе спецификаций](../spec/index.md),
+проверенный результат — в [отчёте реализации](releases/2026-10-08-implementation.md). Старые snapshots,
 plans/probes удалены только из active tree после проверки Git сохранения и
 координации; корневые исходники и пользовательские worktrees не изменены.
 

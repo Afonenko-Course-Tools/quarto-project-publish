@@ -47,7 +47,7 @@ for (const id of ["part", "second"]) {
   await write(
     `${id}/_quarto.yml`,
     `project:
-  type: website
+  type: book
   output-dir: _site
   render: [index.qmd]
   pre-render: _extensions/course-core/entrypoints/pre.ts
@@ -55,6 +55,9 @@ for (const id of ["part", "second"]) {
     - _extensions/course-core/entrypoints/post.ts
     - _extensions/reference-catalog/entrypoints/post.ts
     - ../_extensions/course-site/entrypoints/collect.ts
+book:
+  title: Bank ${id}
+  chapters: [index.qmd]
 format: html
 filters: [course-core, reference-catalog]
 course: {id: shared-course}
@@ -307,37 +310,29 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       "part/asset.svg",
       "second/asset.svg",
     ]);
-    const studentRuns = new Set<string>();
-    for await (const dir of Deno.readDir(runs)) studentRuns.add(dir.name);
     await run(["render", "--profile", "full"]);
     await assertFullProjection();
-    const fullDocuments: any[] = [];
-    for await (const dir of Deno.readDir(runs)) {
-      if (studentRuns.has(dir.name)) continue;
-      for await (const file of Deno.readDir(join(runs, dir.name))) {
-        if (!file.name.endsWith("-release.json")) continue;
-        const current = JSON.parse(
-          await Deno.readTextFile(join(runs, dir.name, file.name)),
-        );
-        fullDocuments.push(...current.documents);
-      }
-    }
+    const { collectExport } = await import(
+      new URL(`file://${root}/_extensions/course-core/body-export/collect.ts`)
+        .href
+    );
     for (const id of ["part", "second"]) {
-      const { publicPackage } = await buildBodies(
-        { documents: fullDocuments },
-        {
-          projectRoot: root,
-          courseId: "shared-course",
-          work: `sec-${id}`,
-        },
-      );
+      const selected = await collectExport(root, {
+        book: id,
+        work: `sec-${id}`,
+      });
+      const { publicPackage } = await buildBodies(selected.result, {
+        projectRoot: selected.projectRoot,
+        courseId: selected.courseId,
+        work: selected.work,
+      });
       assertEquals(publicPackage.questions.map((q: any) => q.id), [
         `exr-${id}`,
         `exr-restricted-${id}`,
       ]);
       assertEquals(
         publicPackage.resources.map((resource: any) => resource.target).sort(),
-        [`${id}/asset.svg`, `${id}/restricted.svg`],
+        ["asset.svg", "restricted.svg"],
       );
       assert(
         JSON.stringify(publicPackage.questions[1].condition).includes(
@@ -352,7 +347,7 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       assertEquals(
         Object.entries(
           publicPackage.works[0]
-            .assignments[`shared-course/exr-restricted-${id}`],
+            .assignments[`${selected.courseId}/exr-restricted-${id}`],
         ).sort(),
         Object.entries({
           stage: "homework",

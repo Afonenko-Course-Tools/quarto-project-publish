@@ -1,0 +1,10 @@
+{
+  "composite-course.tar.gz": {
+    "sha256": "713620d92f6a6baafcf118ec0a0b6c0be95e801a84ae14fcbdca1aa4f94314c5",
+    "bytes": 3441003
+  },
+  "RELEASE.json": {
+    "sha256": "4dc18eb05cd9d77da155fc75b385b7e305a696cd0c1390bd63f1ba18f9859e57",
+    "bytes": 53391
+  }
+}

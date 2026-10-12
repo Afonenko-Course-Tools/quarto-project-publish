@@ -7,7 +7,6 @@ export async function quarto(
   env: Record<string, string> = {},
   forward = false,
 ): Promise<string> {
-  const start = performance.now();
   const tool = executable();
   let result: Deno.CommandOutput;
   try {
@@ -42,20 +41,6 @@ export async function quarto(
   if (forward) {
     await Deno.stdout.write(result.stdout);
     await Deno.stderr.write(result.stderr);
-  }
-  const trace = Deno.env.get("COURSE_BUILD_TRACE");
-  if (trace) {
-    await Deno.writeTextFile(
-      trace,
-      JSON.stringify({
-        kind: args[0],
-        args,
-        cwd,
-        elapsedMs: performance.now() - start,
-        exitCode: result.code,
-      }) + "\n",
-      { append: true },
-    );
   }
   if (!result.success) {
     const error = new Error(

@@ -36,6 +36,9 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: v0.17.1
+      - name: Проверка режима off без доступа к часам
+        working-directory: quarto-project-publish
+        run: quarto run tests/performance.ts
       - name: Native installed composition and domains
         working-directory: quarto-project-publish
         env:

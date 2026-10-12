@@ -1,3 +1,4 @@
+import {commandProbe} from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
@@ -6,6 +7,7 @@ const root =
   (mode === "warnings" ? undefined : Deno.env.get("COURSE_SITE_TEST_ROOT")) ||
   await Deno.makeTempDir({ prefix: "course-site-native-" });
 const quarto = Deno.env.get("QUARTO") || "quarto";
+const probe=await commandProbe(root,quarto,join(root,"trace.jsonl"));
 async function write(name: string, text: string) {
   const path = join(root, name);
   await Deno.mkdir(dirname(path), { recursive: true });
@@ -21,8 +23,7 @@ async function run(
     args,
     cwd,
     env: {
-      QUARTO: quarto,
-      COURSE_BUILD_TRACE: join(root, "trace.jsonl"),
+      QUARTO: probe,
       ...env,
     },
     stdout: "piped",

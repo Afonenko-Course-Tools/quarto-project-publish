@@ -1,3 +1,5 @@
+import {createMetrics as __createMetrics} from "../observability/bridge.ts";
+const __metrics=__createMetrics("course-site");
 import { diagnostic } from "../infrastructure/diagnostics.ts";
 import {
   cleanOutput,
@@ -514,3 +516,8 @@ export async function post(root = Deno.cwd()): Promise<void> {
     }),
   );
 }
+
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+pre=__metrics.wrapAsync({id:"course-site.application.compose.pre",kind:"phase"},pre);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+post=__metrics.wrapAsync({id:"course-site.application.compose.post",kind:"phase"},post);

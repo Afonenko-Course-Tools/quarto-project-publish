@@ -1,3 +1,5 @@
+import {createMetrics as __createMetrics} from "../observability/bridge.ts";
+const __metrics=__createMetrics("course-site");
 export function executable(): string {
   return Deno.env.get("QUARTO") || "quarto";
 }
@@ -65,3 +67,10 @@ export async function quarto(
 export function profileArguments(profiles: string[]): string[] {
   return profiles.length ? ["--profile", profiles.join(",")] : [];
 }
+
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+executable=__metrics.wrapSync({id:"course-site.infrastructure.process.executable",kind:"command"},executable);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+quarto=__metrics.wrapAsync({id:"course-site.infrastructure.process.quarto",kind:"command"},quarto);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+profileArguments=__metrics.wrapSync({id:"course-site.infrastructure.process.profileArguments",kind:"command"},profileArguments);

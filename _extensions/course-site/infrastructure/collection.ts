@@ -1,3 +1,5 @@
+import {createMetrics as __createMetrics} from "../observability/bridge.ts";
+const __metrics=__createMetrics("course-site");
 import { diagnostic } from "./diagnostics.ts";
 import { files, resolve, safePath, within } from "./files.ts";
 export interface Record {
@@ -194,3 +196,10 @@ export async function readCollection(
   }
   return value;
 }
+
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+publicOutputs=__metrics.wrapAsync({id:"course-site.infrastructure.collection.publicOutputs",kind:"io"},publicOutputs);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+collect=__metrics.wrapAsync({id:"course-site.infrastructure.collection.collect",kind:"io"},collect);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+readCollection=__metrics.wrapAsync({id:"course-site.infrastructure.collection.readCollection",kind:"io"},readCollection);

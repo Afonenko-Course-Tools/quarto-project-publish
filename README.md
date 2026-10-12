@@ -196,7 +196,7 @@ checkout `quarto-course` и `quarto-reference-catalog`; пути можно за
 `quarto run tests/site-preview.ts <fixture-path>` после site-native suite. Для выбора
 Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME` разделяется
 между версиями, но сохраняется между командами одного сценария.
-`COURSE_BUILD_TRACE` задаёт JSONL файл времени и exit codes inspect/render.
+
 
 Локальные hooks с пустым списком текущих результатов не собирают коллекцию и не завершают release. Так Quarto может обслуживать существующий preview, не объявляя новую успешную сборку.
 
@@ -210,3 +210,16 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 ## Готовая демонстрация
 
 `examples/course` содержит один минимальный native курс: книгу, сайт с HTML/Revealjs, профили full/student и общий bibliography. Core необязателен; QRC включён явно. По умолчанию демонстрация full. Готовый результат выпускается asset `composite-course.tar.gz`; шаблон получает его по закреплённому Release URL, без автоматической пресборки.
+
+## Метрики производительности
+
+Значимые операции и явные обходы AST размечены локальным фасадом ABI 1.
+В обычной сборке (`off`, по умолчанию) фабрики возвращают исходные функции:
+агент, hooks, часы телеметрии и журналы не загружаются. Расширение самодостаточно.
+Сбор метрик включается launcher проекта `quarto-course-performance`; установка
+`COURSE_PERF_MODE` сама по себе агент не загружает и не обеспечивает валидные данные.
+TypeScript использует wall time, Lua — CPU процесса; шкалы анализируются раздельно.
+Counters обходов не являются числом посещённых AST-узлов.
+
+Прежний `COURSE_BUILD_TRACE` удалён; для новых измерений используются фасады ABI 1.
+Копии `observability/bridge.ts` и `bridge.lua` синхронизируются из проекта Performance.

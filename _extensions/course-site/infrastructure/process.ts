@@ -15,7 +15,7 @@ export async function quarto(
     result = await new Deno.Command(tool, {
       args,
       cwd,
-      env,
+      env: __metrics.childEnv(env),
       stdout: "piped",
       stderr: "piped",
     }).output();

@@ -46,6 +46,7 @@ jobs:
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
+          quarto run tests/performance-context.ts
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
           quarto run tests/site-child-profiles.ts default

@@ -36,6 +36,19 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: v0.17.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26.10.0'
+      - name: Зависимости браузерной проверки
+        working-directory: quarto-project-publish
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Проверка навигации в браузере
+        working-directory: quarto-project-publish
+        env:
+          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
+        run: npm run test:browser
       - name: Проверка режима off без доступа к часам
         working-directory: quarto-project-publish
         run: quarto run tests/performance.ts

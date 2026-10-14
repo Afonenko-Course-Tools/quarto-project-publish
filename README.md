@@ -240,9 +240,9 @@ Publisher вычисляет адреса полной композиции по
 Точные границы: [контракт](spec/contract.md). Нейтральная browser-проверка:
 
 ```bash
-CODEX_PRIMARY_RUNTIME_NODE_MODULES=/path/to/node_modules \
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
-node tests/site-navigation.browser.cjs
+npm ci
+npx playwright install --with-deps chromium
+npm run test:browser
 ```
 
 `COURSE_CORE_PROVIDER` задаёт checkout с поставляемым `course-navigation`;
@@ -255,3 +255,10 @@ native navigation anchors внутри базы `course-navigation.course-url` �
 `website.site-url` корня к текущему сайту. Обычные ссылки в содержимом и GitHub
 repo-actions сохраняются. Верхнеуровневые `repo-*` для Reveal и native
 `website`/`book` с теми же YAML anchors задают единый авторский контекст.
+
+Browser CI использует Node 26.10.0, Playwright 1.62.1 из собственного lockfile
+и закреплённый этой версией Chromium. Для локального готового браузера можно
+задать `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; `CODEX_PRIMARY_RUNTIME_NODE_MODULES`
+остаётся необязательным способом выбрать установленный набор Node packages.
+Проверка включает directory URL реальной презентации (`deck/`) с query/fragment
+и сохранением исходной вкладки, наряду с отрицательными сценариями.

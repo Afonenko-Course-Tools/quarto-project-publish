@@ -62,7 +62,9 @@ if(base){
 const targets=${JSON.stringify(targets).replaceAll("<", "\\u003c")}.map(path=>new URL(path,document.baseURI));
 for(const link of document.querySelectorAll('a[href]')){
  const url=new URL(link.href,document.baseURI);
- if(targets.some(target=>target.origin===url.origin&&target.pathname===url.pathname)){
+ if(targets.some(target=>target.origin===url.origin&&(
+  target.pathname===url.pathname || target.pathname.endsWith('/index.html')&&target.pathname.slice(0,-'index.html'.length)===url.pathname
+ ))){
   link.target='_blank'; link.rel=[...new Set([...link.rel.split(/\\s+/).filter(Boolean),'noopener','noreferrer'])].join(' ');
  }
 }

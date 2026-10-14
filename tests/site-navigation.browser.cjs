@@ -29,12 +29,12 @@ website:
   repo-branch: 0123456789abcdef
   repo-actions: [source, issue]
 `);
-write('index.qmd', '# Содержание\n\n[Доклад](units/slides/chapters/special.html#first)\n\n[Теория](theory/index.html)\n\n[Страница](route.qmd)\n');
+write('index.qmd', '# Содержание\n\n[Доклад](units/slides/chapters/special.html#first)\n\n[Теория](theory/index.html)\n\n[Страница](route.qmd)\n\n[Доклад по каталогу](deck/)\n\n[Доклад с параметрами](deck/?view=1#second)\n\n[Другой сайт](https://neutral.example/course/deck/)\n\n[Каталог теории](theory/)\n');
 write('route.qmd', '# Обычная страница\n\n[Доклад](units/slides/chapters/special.html)\n\n::: {.reveal}\nОбычный HTML-блок.\n:::\n');
 write(`${child}/_quarto.yml`, `project:
   type: website
   output-dir: _output
-  render: [index.qmd, chapters/talk.qmd]
+  render: [index.qmd, chapters/talk.qmd, chapters/summary.qmd]
   post-render: ../../_extensions/course-site/entrypoints/collect.ts
 format:
   revealjs:
@@ -57,8 +57,9 @@ course-navigation:
     - {text: Все материалы, href: /index.html, scope: project}
     - {text: Теория, href: /theory/index.html, scope: course}
 `);
-write(`${child}/index.qmd`, '---\nformat: html\n---\n\n# Материалы\n\n[Доклад](chapters/special.html#first)\n\n[Обычная ссылка](https://example.org/)\n');
+write(`${child}/index.qmd`, '---\nformat: html\n---\n\n# Материалы\n\n[Доклад](chapters/special.html#first)\n\n[Обычная ссылка](https://example.org/)\n\n[Краткий доклад](chapters/)\n\n[Краткий доклад с параметрами](chapters/?view=1#second)\n');
 write(`${child}/chapters/talk.qmd`, '---\ntitle: Доклад\noutput-file: special.html\n---\n\n## Первый {#first}\n\nСодержание.\n\n## Второй\n\nВывод.\n');
+write(`${child}/chapters/summary.qmd`, '---\ntitle: Краткий доклад\noutput-file: index.html\n---\n\n## Первый\n\nСодержание.\n\n## Второй {#second}\n\nВывод.\n');
 write('theory/_quarto.yml', 'project:\n  type: book\n  output-dir: _output\n  post-render: ../_extensions/course-site/entrypoints/collect.ts\nformat: html\nlang: ru\nbook:\n  title: Теория\n  chapters: [index.qmd]\n  navbar:\n    left:\n      - {text: Курс, href: https://neutral.example/course/index.html}\n      - {text: Теория, href: https://neutral.example/course/theory/index.html}\n  repo-url: https://github.com/neutral/learning\n  repo-branch: 0123456789abcdef\n  repo-subdir: theory\n  repo-actions: [source, issue]\n');
 write('deck/_quarto.yml', 'project:\n  type: default\n  output-dir: _output\n  render: [index.qmd]\n  post-render: ../_extensions/course-site/entrypoints/collect.ts\nformat: revealjs\nlang: ru\n');
 write('deck/index.qmd','## Первый\n\n[Продолжение](#second)\n\n## Второй {#second}\n\nВывод.\n');
@@ -88,6 +89,20 @@ const server = http.createServer((req,res) => {
       assert.equal(await page.getByRole('link',{name:'Доклад',exact:true}).getAttribute('target'),'_blank','Общий индекс открывает реальную Reveal-презентацию в новой вкладке');
       assert.equal(await page.getByRole('link',{name:'Теория',exact:true}).last().getAttribute('target'),null);
       assert.equal(await page.getByRole('link',{name:'Страница',exact:true}).getAttribute('target'),null,'HTML-класс reveal не превращает обычную страницу в презентацию');
+      assert.equal(await page.getByRole('link',{name:'Другой сайт',exact:true}).getAttribute('target'),null,'Другой origin не совпадает с локальным Reveal output');
+      assert.equal(await page.getByRole('link',{name:'Каталог теории',exact:true}).last().getAttribute('target'),null,'HTML каталог не становится презентацией');
+      for (const [name, href] of [['Доклад по каталогу',`${base}/deck/`],['Доклад с параметрами',`${base}/deck/?view=1#second`]]) {
+        const link = page.getByRole('link',{name,exact:true});
+        assert.equal(await link.getAttribute('target'),'_blank','URL каталога реального Reveal открывается отдельно');
+        assert.equal(await link.evaluate(a=>a.href),href,'Query и fragment авторской ссылки сохраняются');
+        const rel = (await link.getAttribute('rel')).split(/\s+/);
+        assert.ok(rel.includes('noopener') && rel.includes('noreferrer'));
+        const nextTab = page.waitForEvent('popup'); await link.click();
+        const presentation = await nextTab; await presentation.waitForFunction(()=>window.Reveal?.isReady());
+        assert.equal(page.url(),`${base}/index.html`,'HTML индекс остаётся открытым');
+        assert.equal(new URL(presentation.url()).search,new URL(href).search);
+        await presentation.close();
+      }
       const popup=page.waitForEvent('popup'); await page.getByRole('link',{name:'Доклад',exact:true}).click();
       const deck=await popup; await deck.waitForSelector('.course-nav-counter');
       await deck.locator('.course-nav-controls [data-action=next]').click();
@@ -120,6 +135,15 @@ const server = http.createServer((req,res) => {
       await page.goto(`${standalone}/index.html`);
       assert.equal(await page.getByRole('link',{name:'Доклад',exact:true}).getAttribute('target'),'_blank');
       assert.equal(await page.getByRole('link',{name:'Обычная ссылка',exact:true}).getAttribute('target'),null);
+      for (const [name, suffix] of [['Краткий доклад','chapters/'],['Краткий доклад с параметрами','chapters/?view=1#second']]) {
+        const link = page.getByRole('link',{name,exact:true});
+        assert.equal(await link.getAttribute('target'),'_blank','Standalone индекс распознаёт URL каталога Reveal');
+        assert.equal(await link.evaluate(a=>a.href),`${standalone}/${suffix}`);
+        const nextTab = page.waitForEvent('popup'); await link.click();
+        const presentation = await nextTab; await presentation.waitForFunction(()=>window.Reveal?.isReady());
+        assert.equal(page.url(),`${standalone}/index.html`);
+        await presentation.close();
+      }
       await page.goto(`${standalone}/chapters/special.html`); await page.waitForSelector('.course-nav-counter');
       assert.equal(await page.getByRole('link',{name:'Курс',exact:true}).first().getAttribute('href'),'https://neutral.example/course/index.html');
       assert.equal(await page.getByRole('link',{name:'Все материалы',exact:true}).first().getAttribute('href'),'../index.html');

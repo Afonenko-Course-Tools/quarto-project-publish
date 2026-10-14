@@ -24,5 +24,6 @@ Publisher владеет `subprojects`, размещением native outputs, c
 
 Версия пакета определяется [descriptor](../_extensions/course-site/_extension.yml) того же Git ref.
 Quarto 1.11.5 и CUE 0.17.1 согласованы с текущими правилами Core.
-Изменения main после выпущенного тега — **unreleased**.
+Текущий ref — кандидат **5.1.0**, статус **unpublished**. Изменения после
+выпущенного тега имеют статус **unreleased**.
 Документация установленного выпуска читается из того же immutable tag, что и код.

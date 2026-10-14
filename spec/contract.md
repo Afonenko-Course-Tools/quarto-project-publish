@@ -6,6 +6,9 @@ status: current
 
 # Контракт Publisher
 
+Текущий ref: кандидат **5.1.0**, статус **unpublished**; версия пакета задаётся
+`_extensions/course-site/_extension.yml`.
+
 Корень native проекта объявляет непустой `subprojects: [paths]`; структура задаётся
 [subprojects.cue](subprojects.cue). Каждый путь относительный и обозначает папку
 самостоятельного проекта. Размещение готовой части повторяет нормализованный путь.

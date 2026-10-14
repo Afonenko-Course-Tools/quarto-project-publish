@@ -223,3 +223,35 @@ Counters обходов не являются числом посещённых 
 
 Прежний `COURSE_BUILD_TRACE` удалён; для новых измерений используются фасады ABI 1.
 Копии `observability/bridge.ts` и `bridge.lua` синхронизируются из проекта Performance.
+
+## Постоянная навигация и входы из индексов
+
+Для Reveal подключите независимые filter/plugin `course-navigation` и задайте
+`course-navigation.links` в native проектной конфигурации. URL-пути `href`
+начинаются с `/`; `scope: project` ведёт в свою часть, `scope: course` — в общий
+сайт. При самостоятельной сборке общий публичный корень задан через
+`course-navigation.course-url`, совпадающий с `website.site-url` общего сайта.
+Publisher вычисляет адреса полной композиции по текущим outputs.
+
+Штатные `index.html` открывают реальные презентации текущей native сборки в
+новой вкладке. Отдельный список целей не нужен. В standalone это обеспечивает
+существующий `collect.ts`, подключённый последним post-render hook; metadata
+репозитория остаются авторскими и используются native HTML source/issue actions.
+Точные границы: [контракт](spec/contract.md). Нейтральная browser-проверка:
+
+```bash
+CODEX_PRIMARY_RUNTIME_NODE_MODULES=/path/to/node_modules \
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium \
+node tests/site-navigation.browser.cjs
+```
+
+`COURSE_CORE_PROVIDER` задаёт checkout с поставляемым `course-navigation`;
+fixture устанавливает пакеты целиком, использует локальный HTTP и проверяет
+student/full, composition/standalone, source/issue и сохранение индекса.
+
+Native HTML navbar/sidebar могут использовать абсолютные общие course href.
+В standalone они сохраняются; в полной композиции Publisher переводит только
+native navigation anchors внутри базы `course-navigation.course-url` либо
+`website.site-url` корня к текущему сайту. Обычные ссылки в содержимом и GitHub
+repo-actions сохраняются. Верхнеуровневые `repo-*` для Reveal и native
+`website`/`book` с теми же YAML anchors задают единый авторский контекст.

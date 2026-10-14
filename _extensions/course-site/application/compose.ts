@@ -1,5 +1,6 @@
 import {createMetrics as __createMetrics} from "../observability/bridge.ts";
 const __metrics=__createMetrics("course-site");
+import { addressNavigation } from "../infrastructure/navigation.ts";
 import { diagnostic } from "../infrastructure/diagnostics.ts";
 import {
   cleanOutput,
@@ -297,6 +298,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
         outputs,
       });
     }
+    await addressNavigation(ws.output, outputs);
     return;
   }
   const { ws, records, run } = JSON.parse(await Deno.readTextFile(state));
@@ -507,6 +509,10 @@ export async function post(root = Deno.cwd()): Promise<void> {
       searchIndexes,
     });
   }
+  await addressNavigation(
+    ws.output, outputs, true,
+    ws.config["course-navigation"]?.["course-url"] || ws.config.website?.["site-url"],
+  );
   await Deno.writeTextFile(
     join(run, "composition.json"),
     JSON.stringify({

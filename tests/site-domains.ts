@@ -33,6 +33,10 @@ await write(
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
+website:
+  site-url: https://example.test/course/
+profile:
+  default: full
 filters: [course-core, reference-catalog]
 course: {id: portal}
 reference-catalog: {namespace: portal}
@@ -288,7 +292,9 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       );
       assertEquals(
         Object.entries(
-          publicPackage.works[0].assignments[`shared-course/exr-${id}`],
+          publicPackage.works[0].slots.find((slot: any) =>
+            slot.candidates.includes(`shared-course/exr-${id}`)
+          ).assignment,
         ).sort(),
         Object.entries({
           stage: "homework",
@@ -325,6 +331,7 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
         projectRoot: selected.projectRoot,
         courseId: selected.courseId,
         work: selected.work,
+        bodyReferences: selected.bodyReferences,
       });
       assertEquals(publicPackage.questions.map((q: any) => q.id), [
         `exr-${id}`,
@@ -346,8 +353,9 @@ if (["resources", "rootless"].includes(Deno.args[0])) {
       );
       assertEquals(
         Object.entries(
-          publicPackage.works[0]
-            .assignments[`${selected.courseId}/exr-restricted-${id}`],
+          publicPackage.works[0].slots.find((slot: any) =>
+            slot.candidates.includes(`${selected.courseId}/exr-restricted-${id}`)
+          ).assignment,
         ).sort(),
         Object.entries({
           stage: "homework",

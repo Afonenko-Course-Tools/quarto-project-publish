@@ -41,12 +41,15 @@ jobs:
           node-version: '26.10.0'
       - name: Зависимости браузерной проверки
         working-directory: quarto-project-publish
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
         run: |
           npm ci
           npx playwright install --with-deps chromium
       - name: Проверка навигации в браузере
         working-directory: quarto-project-publish
         env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: npm run test:browser
       - name: Проверка режима off без доступа к часам

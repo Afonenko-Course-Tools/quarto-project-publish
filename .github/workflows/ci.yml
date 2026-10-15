@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: 02ead9cd7d906a47acf99a1f012b316ae1dedfa0 # Core 7.0.0: кандидат, unpublished
+          ref: 1d2429065e66d1dc856637e863c901fe9148af04 # Core 7.0.0: кандидат, unpublished
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

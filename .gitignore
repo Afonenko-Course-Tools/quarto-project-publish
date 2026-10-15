@@ -7,3 +7,6 @@ node_modules/
 # Installed producer demo dependencies and Task cache.
 /examples/**/_extensions/
 **/.task/
+
+# Quarto управляет встроенным Deno; локальная проверка не закрепляет его зависимости.
+/deno.lock

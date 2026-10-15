@@ -1,3 +1,6 @@
+import {createMetrics as __createMetrics} from "../observability/bridge.ts";
+const __metrics=__createMetrics("course-site");
+import { addressNavigation } from "../infrastructure/navigation.ts";
 import { diagnostic } from "../infrastructure/diagnostics.ts";
 import {
   cleanOutput,
@@ -295,6 +298,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
         outputs,
       });
     }
+    await addressNavigation(ws.output, outputs);
     return;
   }
   const { ws, records, run } = JSON.parse(await Deno.readTextFile(state));
@@ -505,6 +509,10 @@ export async function post(root = Deno.cwd()): Promise<void> {
       searchIndexes,
     });
   }
+  await addressNavigation(
+    ws.output, outputs, true,
+    ws.config["course-navigation"]?.["course-url"] || ws.config.website?.["site-url"],
+  );
   await Deno.writeTextFile(
     join(run, "composition.json"),
     JSON.stringify({
@@ -514,3 +522,8 @@ export async function post(root = Deno.cwd()): Promise<void> {
     }),
   );
 }
+
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+pre=__metrics.wrapAsync({id:"course-site.application.compose.pre",kind:"phase"},pre);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+post=__metrics.wrapAsync({id:"course-site.application.compose.post",kind:"phase"},post);

@@ -1,3 +1,4 @@
+import {commandProbe} from "./command-probe.ts";
 /** Installed existing/clean root and component previews, with and without Core. */
 import { join, resolve } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -11,6 +12,7 @@ const root = resolve(positional[0]);
 const course = Deno.args.includes("--course");
 const quarto = Deno.env.get("QUARTO") || "quarto";
 const trace = join(root, "preview-trace.jsonl");
+const probe=await commandProbe(root,quarto,trace);
 
 async function renders(): Promise<number> {
   let text: string;
@@ -66,7 +68,7 @@ async function preview(cwd: string, clean = false): Promise<void> {
   const child = new Deno.Command("setsid", {
     args: ["--wait", ...args],
     cwd,
-    env: { COURSE_BUILD_TRACE: trace, QUARTO: quarto },
+    env: { QUARTO: probe },
     stdout: "piped",
     stderr: "piped",
   }).spawn();

@@ -1,8 +1,10 @@
+import {commandProbe} from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const root = await Deno.makeTempDir({ prefix: "course-site-source-paths-" });
 const external = await Deno.makeTempFile({ suffix: ".qmd" });
+const probe=await commandProbe(root,Deno.env.get("QUARTO")||"quarto",join(root,"trace.jsonl"));
 async function write(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), text);
@@ -11,7 +13,7 @@ async function run(args: string[]) {
   return await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
     args,
     cwd: root,
-    env: { QUARTO_PROFILE: "", COURSE_BUILD_TRACE: join(root, "trace.jsonl") },
+    env: { QUARTO_PROFILE: "", QUARTO: probe },
     stdout: "piped",
     stderr: "piped",
   }).output();

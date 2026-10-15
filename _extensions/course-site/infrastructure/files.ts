@@ -1,3 +1,5 @@
+import {createMetrics as __createMetrics} from "../observability/bridge.ts";
+const __metrics=__createMetrics("course-site");
 import { contextualize, diagnostic } from "./diagnostics.ts";
 import {
   dirname,
@@ -196,3 +198,18 @@ export async function copyFiles(
     await Deno.copyFile(path, target);
   }
 }
+
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+inside=__metrics.wrapSync({id:"course-site.infrastructure.files.inside",kind:"io"},inside);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+within=__metrics.wrapSync({id:"course-site.infrastructure.files.within",kind:"io"},within);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+safePath=__metrics.wrapAsync({id:"course-site.infrastructure.files.safePath",kind:"io"},safePath);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+files=__metrics.wrapAsync({id:"course-site.infrastructure.files.files",kind:"io"},files);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+outputDirectory=__metrics.wrapAsync({id:"course-site.infrastructure.files.outputDirectory",kind:"io"},outputDirectory);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+cleanOutput=__metrics.wrapAsync({id:"course-site.infrastructure.files.cleanOutput",kind:"io"},cleanOutput);
+// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
+copyFiles=__metrics.wrapAsync({id:"course-site.infrastructure.files.copyFiles",kind:"io"},copyFiles);

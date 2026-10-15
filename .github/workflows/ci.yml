@@ -21,13 +21,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: v4.0.0
+          ref: 1d2429065e66d1dc856637e863c901fe9148af04 # Core 7.0.0: кандидат, unpublished
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: v2.2.1
+          ref: 3d05092d0bb3dd0062b49745a6d0d172000dec66 # QRC 3.1.0: кандидат, unpublished
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
@@ -36,6 +36,25 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: v0.17.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26.10.0'
+      - name: Зависимости браузерной проверки
+        working-directory: quarto-project-publish
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Проверка навигации в браузере
+        working-directory: quarto-project-publish
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
+          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
+        run: npm run test:browser
+      - name: Проверка режима off без доступа к часам
+        working-directory: quarto-project-publish
+        run: quarto run tests/performance.ts
       - name: Native installed composition and domains
         working-directory: quarto-project-publish
         env:
@@ -43,6 +62,7 @@ jobs:
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
+          quarto run tests/performance-context.ts
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
           quarto run tests/site-child-profiles.ts default

@@ -1,11 +1,14 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Версия данного ref определяется descriptor; контракт и документация выпуска
-читаются из того же тега, что и код. Изменения main после выпущенного тега —
-**unreleased**. Минимум — Quarto 1.11.5; при использовании Core требуется CUE 0.17.1.
+Текущий ref готовится как кандидат **5.1.0**, статус **unpublished**. Версия
+определяется descriptor; код и документация опубликованного выпуска читаются
+из одного immutable tag. Минимум — Quarto 1.11.5; при использовании Core
+требуется CUE 0.17.1. Проверка кандидата устанавливает расширение штатным
+`quarto add` из согласованного checkout производителя.
 
-Расширение устанавливается из существующего репозитория `quarto-project-publish`:
+Опубликованный выпуск 5.0.0 устанавливается из существующего
+репозитория `quarto-project-publish`:
 
 ```bash
 quarto add Afonenko-Course-Tools/quarto-project-publish@v5.0.0
@@ -196,17 +199,72 @@ checkout `quarto-course` и `quarto-reference-catalog`; пути можно за
 `quarto run tests/site-preview.ts <fixture-path>` после site-native suite. Для выбора
 Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME` разделяется
 между версиями, но сохраняется между командами одного сценария.
-`COURSE_BUILD_TRACE` задаёт JSONL файл времени и exit codes inspect/render.
+
 
 Локальные hooks с пустым списком текущих результатов не собирают коллекцию и не завершают release. Так Quarto может обслуживать существующий preview, не объявляя новую успешную сборку.
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Устанавливайте точный тег
-из команды выше; документация и код выбранного выпуска читаются из одного ref.
+Версия определяется descriptor того же Git ref. Кандидат 5.1.0 имеет статус
+unpublished; его проверяют из checkout производителя с закреплённым SHA. Команда с тегом выше
+относится к опубликованному 5.0.0. После выпуска 5.1.0 используйте его фактически
+опубликованный точный тег; документация и код выбранного выпуска читаются из
+одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
 теги неизменяемы: исправления получают новую версию и новый тег.
 
 ## Готовая демонстрация
 
 `examples/course` содержит один минимальный native курс: книгу, сайт с HTML/Revealjs, профили full/student и общий bibliography. Core необязателен; QRC включён явно. По умолчанию демонстрация full. Готовый результат выпускается asset `composite-course.tar.gz`; шаблон получает его по закреплённому Release URL, без автоматической пресборки.
+
+## Метрики производительности
+
+Значимые операции и явные обходы AST размечены локальным фасадом ABI 1.
+В обычной сборке (`off`, по умолчанию) фабрики возвращают исходные функции:
+агент, hooks, часы телеметрии и журналы не загружаются. Расширение самодостаточно.
+Сбор метрик включается launcher проекта `quarto-course-performance`; установка
+`COURSE_PERF_MODE` сама по себе агент не загружает и не обеспечивает валидные данные.
+TypeScript использует wall time, Lua — CPU процесса; шкалы анализируются раздельно.
+Counters обходов не являются числом посещённых AST-узлов.
+
+Прежний `COURSE_BUILD_TRACE` удалён; для новых измерений используются фасады ABI 1.
+Копии `observability/bridge.ts` и `bridge.lua` синхронизируются из проекта Performance.
+
+## Постоянная навигация и входы из индексов
+
+Для Reveal подключите независимые filter/plugin `course-navigation` и задайте
+`course-navigation.links` в native проектной конфигурации. URL-пути `href`
+начинаются с `/`; `scope: project` ведёт в свою часть, `scope: course` — в общий
+сайт. При самостоятельной сборке общий публичный корень задан через
+`course-navigation.course-url`, совпадающий с `website.site-url` общего сайта.
+Publisher вычисляет адреса полной композиции по текущим outputs.
+
+Штатные `index.html` открывают реальные презентации текущей native сборки в
+новой вкладке. Отдельный список целей не нужен. В standalone это обеспечивает
+существующий `collect.ts`, подключённый последним post-render hook; metadata
+репозитория остаются авторскими и используются native HTML source/issue actions.
+Точные границы: [контракт](spec/contract.md). Нейтральная browser-проверка:
+
+```bash
+npm ci
+npx playwright install --with-deps chromium
+npm run test:browser
+```
+
+`COURSE_CORE_PROVIDER` задаёт checkout с поставляемым `course-navigation`;
+fixture устанавливает пакеты целиком, использует локальный HTTP и проверяет
+student/full, composition/standalone, source/issue и сохранение индекса.
+
+Native HTML navbar/sidebar могут использовать абсолютные общие course href.
+В standalone они сохраняются; в полной композиции Publisher переводит только
+native navigation anchors внутри базы `course-navigation.course-url` либо
+`website.site-url` корня к текущему сайту. Обычные ссылки в содержимом и GitHub
+repo-actions сохраняются. Верхнеуровневые `repo-*` для Reveal и native
+`website`/`book` с теми же YAML anchors задают единый авторский контекст.
+
+Browser CI использует Node 26.10.0, Playwright 1.62.1 из собственного lockfile
+и закреплённый этой версией Chromium. Для локального готового браузера можно
+задать `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`; `CODEX_PRIMARY_RUNTIME_NODE_MODULES`
+остаётся необязательным способом выбрать установленный набор Node packages.
+Проверка включает directory URL реальной презентации (`deck/`) с query/fragment
+и сохранением исходной вкладки, наряду с отрицательными сценариями.

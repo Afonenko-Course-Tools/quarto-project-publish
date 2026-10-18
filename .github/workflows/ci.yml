@@ -21,13 +21,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: 1d2429065e66d1dc856637e863c901fe9148af04 # Core 7.0.0: кандидат, unpublished
+          ref: e93bc3aa5c5f747e647d42ed6c0f65c127920184 # Core 7.3.0: опубликованный выпуск
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 3d05092d0bb3dd0062b49745a6d0d172000dec66 # QRC 3.1.0: кандидат, unpublished
+          ref: 3df2110e9f525f03f3ecb4926b5d55718e955c4c # QRC 3.1.0: опубликованный выпуск
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b

@@ -135,11 +135,14 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       );
     }
   }
-  await cleanOutput(root, ws.output);
+  await cleanOutput(root, ws.output, [
+    ...ws.resources || [],
+    ...inspected.flatMap(({ plan }) => plan.resources || []),
+  ]);
   await beginCore(root, ws.config);
   const records = [];
   for (const { project, config, output, plan } of inspected) {
-    await cleanOutput(project.path, output);
+    await cleanOutput(project.path, output, plan.resources);
     if (config.course) {
       const completion = join(
         project.path,

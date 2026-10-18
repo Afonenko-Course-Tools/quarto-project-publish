@@ -123,12 +123,31 @@ export async function outputDirectory(
   }
   return output;
 }
-export async function cleanOutput(root: string, output: string): Promise<void> {
+export async function cleanOutput(
+  root: string,
+  output: string,
+  resources: string[] = [],
+): Promise<void> {
   await outputDirectory(root, output);
+  const copiedResources = new Set<string>();
+  for (const resource of resources) {
+    const source = resolve(root, resource);
+    if (!inside(root, source) || inside(output, source)) continue;
+    await safePath(root, source);
+    try {
+      if ((await Deno.lstat(source)).isFile &&
+          !/\.(qmd|ipynb|rmd|ya?ml)$/i.test(source)) {
+        copiedResources.add(join(output, relative(root, source)));
+      }
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error;
+    }
+  }
   try {
     for (const file of await files(output)) {
       if (
         (/\.(qmd|md|ipynb|Rmd|ya?ml)$/i.test(file) &&
+          !copiedResources.has(file) &&
           !/(?:^|\/)(?:site_)?libs\/revealjs\/plugin\/[A-Za-z0-9._-]+\/plugin\.yml$/
             .test(
               relative(output, file).replaceAll("\\", "/"),

@@ -260,6 +260,12 @@ function qualify(value: any, prefix: string): any {
       }
       : {}),
     ...(value.exercises ? { exercises: value.exercises.map(topic) } : {}),
+    ...(value.projects
+      ? { projects: value.projects.map((project: any) => ({
+        ...project,
+        source: `${prefix}/${project.source}`,
+      })) }
+      : {}),
     ...(value.body?.publicExercises
       ? {
         body: {

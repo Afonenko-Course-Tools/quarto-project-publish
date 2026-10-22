@@ -6,7 +6,7 @@ status: current
 
 # Контракт Publisher
 
-Текущий ref: выпуск **5.1.1**; версия пакета задаётся
+Текущий ref: **5.1.2**; версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
 Корень native проекта объявляет непустой `subprojects: [paths]`; структура задаётся
@@ -33,6 +33,14 @@ namespace/current outputs/search. Publisher не вводит общий экс�
 и не переопределяет public resource policy Core. Правила учебной модели принадлежат
 [Core](../../quarto-course/spec/index.md), адресация —
 [QRC](../../quarto-reference-catalog/docs/contract.md).
+
+При композиции источник документа и `projects[].source` получают один префикс
+из текущей области Site. Каждый source берётся из своего исходного факта;
+противоречие не исправляется подстановкой источника документа. Исходные captures
+не изменяются. `projectRoot` и `common-files.source` остаются owner-relative;
+check paths и `common-files.target` сохраняют исходную область проекта/partition.
+ID и materialization declarations сохраняются. Core equality/duplicate/private
+guards продолжают действовать; повторная композиция использует свежие owner facts.
 
 Quarto определяет отказ native команды. Успешный stderr сам по себе не является
 ошибкой; собственные и foreign ошибки сохраняют ID, оба потока и cause.

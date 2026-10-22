@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: e93bc3aa5c5f747e647d42ed6c0f65c127920184 # Core 7.3.0: опубликованный выпуск
+          ref: 2850ea28bbf09ac49731d9675fa7f65efcce9c55 # Core 8.2.1: опубликованный выпуск
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -60,9 +60,12 @@ jobs:
         env:
           COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
+          COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
           quarto run tests/performance-context.ts
+          quarto run tests/site-project-source.ts
+          quarto run tests/site-project-native.ts
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
           quarto run tests/site-child-profiles.ts default
@@ -93,4 +96,5 @@ jobs:
             ${{ runner.temp }}/course-site-native/logs
             ${{ runner.temp }}/course-site-native/trace.jsonl
             ${{ runner.temp }}/course-site-domains/logs
+            ${{ runner.temp }}/course-site-project/logs
           if-no-files-found: ignore

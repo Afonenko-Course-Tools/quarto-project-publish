@@ -53,7 +53,7 @@ export async function stageConditions(input:ConditionsInput,modules:ConditionsMo
  const root=resolve(input.siteRoot), before=new Map<string,string>();
  async function read(path:string){const f=await regular(root,path),b=await Deno.readFile(f),h=await digest(b);const old=before.get(path);if(old&&old!==h)refuse('Input drift: '+path);before.set(path,h);return b;}
  const catalog=JSON.parse(decoder.decode(await read(input.catalogFile)));const links=modules.createBodyLinks({catalog,baseUrl:input.baseUrl});const base=new URL(input.baseUrl);if(!['https:','http:'].includes(base.protocol)||!base.pathname.endsWith('/'))refuse('Публичная база');
- const pandoc=Deno.env.get('QUARTO_PANDOC')||join(dirname(Deno.env.get('QUARTO')||'/opt/quarto/bin/quarto'),'tools',Deno.build.arch==='x86_64'?'x86_64':'aarch64','pandoc');
+ const pandoc=Deno.env.get('QUARTO_PANDOC')||join(Deno.env.get('QUARTO_BIN_PATH')||dirname(Deno.env.get('QUARTO')||'/opt/quarto/bin/quarto'),'tools',Deno.build.arch==='x86_64'?'x86_64':'aarch64','pandoc');
  const python=Deno.env.get('QUARTO_PYTHON')||'python3';
  const filter=join(dirname(fileURLToPath(import.meta.url)),'qrc-transport.lua');
  const toolPaths=[pandoc,filter,await regular(dirname(fileURLToPath(import.meta.url)), 'conditions.ts')];

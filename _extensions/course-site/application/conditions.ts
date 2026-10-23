@@ -77,6 +77,8 @@ export async function stageConditions(input:ConditionsInput,modules:ConditionsMo
    if(count!==1)refuse('Неоднозначная/отсутствующая target anchor '+key);
    const result=links.resolve(key,style,source);const href=new URL(result.href);if(href.origin!==base.origin||!href.pathname.startsWith(base.pathname))refuse('Чужой URL '+key);resolved.push({key,style,...result});return result;
   }});
+  // HTML title остаётся в head; standalone writer не добавляет его в body.
+  if(ast.meta.title){ast.meta.pagetitle=ast.meta.title;delete ast.meta.title;}
   const transformed=await command(pandoc,['--from=json','--to=html5','--standalone','--wrap=none'],new TextEncoder().encode(JSON.stringify(ast)));
   if(/data-qrc-(?:ref|deferred)=/.test(decoder.decode(transformed)))refuse('Остались deferred transport');
   const oldIndex=await digest(index.bytes);index.bytes=transformed;

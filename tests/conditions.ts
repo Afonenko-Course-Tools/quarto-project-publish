@@ -20,6 +20,14 @@ try {
  if(!text.includes('href="https://example.org/course/theory.html#sec-one"')||text.includes('data-qrc-deferred'))throw Error('Отложенная ссылка conditions ZIP не стала статическим href');
  if(!text.includes('своя подпись')||!text.includes('https://example.org/ordinary')||!text.includes('lang="ru"')||!text.includes('<title>Условие</title>'))throw Error('Потеряна подпись/обычная ссылка');
  console.log('PASS deferred/custom/ordinary/binary');
+ if(text.includes('id="title-block-header"'))throw Error('Writer добавил body title header');
+ const pandoc=Deno.env.get('QUARTO_PANDOC')||'/opt/quarto/bin/tools/x86_64/pandoc';
+ const nativeText=async(value:string,format:string)=>{const c=new Deno.Command(pandoc,{args:['-f','html','-t',format,'--wrap=none'],stdin:'piped',stdout:'piped',stderr:'piped'}).spawn();const write=(async()=>{const w=c.stdin.getWriter();await w.write(new TextEncoder().encode(value));await w.close();})();const o=await c.output();await write;if(!o.success||o.stderr.length)throw Error('native text check');return new TextDecoder().decode(o.stdout);};
+ if(await nativeText(html,'plain')!==await nativeText(text,'plain'))throw Error('Writer изменил body text');
+ const pre=(ast:any)=>{const found:string[]=[];const walk=(v:any)=>{if(v?.t==='CodeBlock')found.push(v.c[1]);if(Array.isArray(v))v.forEach(walk);else if(v&&typeof v==='object')Object.values(v).forEach(walk);};walk(ast.blocks);return found;};
+ if(JSON.stringify(pre(JSON.parse(await nativeText(html,'json'))))!==JSON.stringify(pre(JSON.parse(await nativeText(text,'json')))))throw Error('Writer изменил preformatted blocks');
+ console.log('PASS native body text/pre/title/lang preservation');
+
  const modules={publicLinks:core.publicLinks,createBodyLinks:qrc.createBodyLinks,zip:download.zip};
  const refuse=async(label:string,run:()=>Promise<unknown>)=>{try{await run();}catch{console.log('PASS refusal '+label);return;}throw Error('Не отказал: '+label);};
  await refuse('source mapping',()=>fn({...spec,sourcePages:{'tasks/task.qmd':'theory.html'}},modules));

@@ -1,17 +1,17 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — **5.1.2**. Версия
+Текущий ref — **5.1.3**. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5; при использовании Core
 требуется CUE 0.17.1. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-Версия 5.1.2 устанавливается из существующего
+Версия 5.1.3 устанавливается из существующего
 репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.2
+quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.3
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -211,7 +211,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает 5.1.2;
+Версия определяется descriptor того же Git ref. Текущий ref описывает 5.1.3;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
@@ -283,7 +283,7 @@ Browser CI использует Node 26.10.0, Playwright 1.62.1 из собст�
 Явное объявление ресурса не разрешает очистку QMD, Rmd, notebooks и YAML
 в output. Исключение для скопированных Markdown-ресурсов не меняет эту защиту.
 
-## Исправление 5.1.2
+## Исправление 5.1.3
 
 При композиции `projects[].source` получает тот же префикс области, что
 источник документа. Core сохраняет строгую проверку их согласованности.

@@ -30,6 +30,12 @@ jobs:
           ref: 3df2110e9f525f03f3ecb4926b5d55718e955c4c # QRC 3.1.0: опубликованный выпуск
           path: quarto-reference-catalog
           persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Afonenko-Course-Tools/quarto-project-download
+          ref: 2dd97d8ce28c4ad514e869fe86d25dbc19f79def # Download 3.2.0: существующий ZIP writer
+          path: quarto-project-download
+          persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
@@ -63,6 +69,7 @@ jobs:
           COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
+          SITE_CONDITIONS_PROVIDERS="$GITHUB_WORKSPACE" quarto run tests/conditions.ts
           quarto run tests/performance-context.ts
           quarto run tests/site-project-source.ts
           quarto run tests/site-project-native.ts

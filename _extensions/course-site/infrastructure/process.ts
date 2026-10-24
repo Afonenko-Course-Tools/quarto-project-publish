@@ -12,11 +12,13 @@ export async function quarto(
   const tool = executable();
   let result: Deno.CommandOutput;
   try {
+    const childEnv = __metrics.childEnv(env);
+    const observed = childEnv !== env;
     result = await new Deno.Command(tool, {
       args,
       cwd,
-      env: __metrics.childEnv({ ...Deno.env.toObject(), ...env }),
-      clearEnv: true,
+      env: observed ? __metrics.childEnv({ ...Deno.env.toObject(), ...env }) : childEnv,
+      clearEnv: observed,
       stdout: "piped",
       stderr: "piped",
     }).output();

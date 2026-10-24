@@ -33,9 +33,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-project-download
-          ref: 2dd97d8ce28c4ad514e869fe86d25dbc19f79def # Download 3.2.0: временный pin до итогового SHA 3.2.2
+          ref: d8f64967f72fbeda13054b040f94a379510c08a0 # Download 3.2.2: точный кандидат
           path: quarto-project-download
           persist-credentials: false
+      - name: Проверить закреплённый Download
+        run: |
+          git -C quarto-project-download rev-parse HEAD
+          test "$(git -C quarto-project-download rev-parse HEAD)" = "d8f64967f72fbeda13054b040f94a379510c08a0"
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}

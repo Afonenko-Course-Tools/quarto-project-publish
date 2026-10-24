@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 7d995e381caa5c716282c59d7b44a114a90f38e1 # QRC 3.1.1: неизменяемый R1 code ancestor
+          ref: b20d8934168e808cdb333e58179fbcd25e47bea8 # QRC 3.1.1: точный кандидат с актуальными source assertions
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -39,7 +39,7 @@ jobs:
       - name: Проверить закреплённые Core и QRC
         run: |
           test "$(git -C quarto-course rev-parse HEAD)" = "9acab6d11afbdcbeefdabb15130068488e2f6dc0"
-          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "7d995e381caa5c716282c59d7b44a114a90f38e1"
+          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "b20d8934168e808cdb333e58179fbcd25e47bea8"
       - name: Проверить закреплённый Download
         run: |
           git -C quarto-project-download rev-parse HEAD

@@ -21,25 +21,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: dc3bd4d7d035359289fc13c44446947830defeb0 # Core 8.2.3: точный кандидат
+          ref: 9acab6d11afbdcbeefdabb15130068488e2f6dc0 # Core 8.2.3: точный кандидат
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 9c0f9235b59fde3c00e9a12458b6630b61297373 # QRC 3.1.1: точный code-ready кандидат
+          ref: 7d995e381caa5c716282c59d7b44a114a90f38e1 # QRC 3.1.1: неизменяемый R1 code ancestor
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-project-download
-          ref: d8f64967f72fbeda13054b040f94a379510c08a0 # Download 3.2.2: точный кандидат
+          ref: 56f43befc8243e0d0623c47d9413c436da49de9d # Download 3.2.2: точный кандидат
           path: quarto-project-download
           persist-credentials: false
+      - name: Проверить закреплённые Core и QRC
+        run: |
+          test "$(git -C quarto-course rev-parse HEAD)" = "9acab6d11afbdcbeefdabb15130068488e2f6dc0"
+          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "7d995e381caa5c716282c59d7b44a114a90f38e1"
       - name: Проверить закреплённый Download
         run: |
           git -C quarto-project-download rev-parse HEAD
-          test "$(git -C quarto-project-download rev-parse HEAD)" = "d8f64967f72fbeda13054b040f94a379510c08a0"
+          test "$(git -C quarto-project-download rev-parse HEAD)" = "56f43befc8243e0d0623c47d9413c436da49de9d"
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
@@ -75,6 +79,7 @@ jobs:
         run: |
           SITE_CONDITIONS_PROVIDERS="$GITHUB_WORKSPACE" quarto run tests/conditions.ts
           quarto run tests/performance-context.ts
+          quarto run tests/performance-noenv.ts
           quarto run tests/site-project-source.ts
           quarto run tests/site-project-native.ts
           quarto run tests/site-paths.ts

@@ -1,4 +1,4 @@
-name: Native course-site
+name: Проверка course-site 5.1.4
 on:
   pull_request:
   push:
@@ -21,19 +21,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: 7c9388cb4d982caf66657ea8f96c09243d64a147 # Core 8.2.2: точный публичный кандидат
+          ref: dc3bd4d7d035359289fc13c44446947830defeb0 # Core 8.2.3: точный кандидат
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 3df2110e9f525f03f3ecb4926b5d55718e955c4c # QRC 3.1.0: опубликованный выпуск
+          ref: 9c0f9235b59fde3c00e9a12458b6630b61297373 # QRC 3.1.1: точный code-ready кандидат
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-project-download
-          ref: 2dd97d8ce28c4ad514e869fe86d25dbc19f79def # Download 3.2.0: существующий ZIP writer
+          ref: 2dd97d8ce28c4ad514e869fe86d25dbc19f79def # Download 3.2.0: временный pin до итогового SHA 3.2.2
           path: quarto-project-download
           persist-credentials: false
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
@@ -61,7 +61,7 @@ jobs:
       - name: Проверка режима off без доступа к часам
         working-directory: quarto-project-publish
         run: quarto run tests/performance.ts
-      - name: Native installed composition and domains
+      - name: Установленная native композиция и домены
         working-directory: quarto-project-publish
         env:
           COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
@@ -94,7 +94,7 @@ jobs:
           quarto run tests/site-preview.ts "$COURSE_SITE_TEST_ROOT"
           quarto run tests/site-domains.ts smoke
           quarto run tests/site-preview.ts "$COURSE_SITE_DOMAIN_ROOT" --course
-      - name: Diagnostics
+      - name: Диагностика
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

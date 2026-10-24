@@ -1,21 +1,25 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — **5.1.3**. Версия
+Текущий ref — кандидат **5.1.4**; до публикации соответствующего тега
+он имеет статус **unreleased**. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5; при использовании Core
 требуется CUE 0.17.1. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-Версия 5.1.3 устанавливается из существующего
-репозитория `quarto-project-publish`:
+Для локальной проверки установите полный checkout кандидата штатной командой:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.3
+quarto add /absolute/path/to/quarto-project-publish --no-prompt
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
 ```
+
+После публикации нового тега установка из GitHub выполняется командой
+`quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.4`. Наличие тега
+и готовность установленного курса проверяются отдельно.
 
 Используйте фактический installation prefix, показанный `quarto add`. Ниже пути
 для локальной установки без namespace. При установке GitHub добавьте namespace
@@ -174,11 +178,16 @@ ID и причины. Неизвестная внутренняя ошибка �
 
 ## Проверка
 
-Проверки композиции используют companion Core 8.2.1 и QRC 3.1.0.
-Для локальной разработки установите Site из текущего checkout штатной
+Согласуемая candidate матрица: Core 8.2.3, Site 5.1.4, QRC 3.1.1 и Download
+3.2.2. Полная проверка композиции с точными итоговыми refs и установленными
+пакетами требуется отдельно; прежний CI не подтверждает эту матрицу. CI этого
+ref закрепляет конкретные Core/QRC/Download SHA; их совместимость проверяется
+отдельно. Для локальной разработки установите Site из текущего checkout штатной
 командой `quarto add`.
 
 ```bash
+quarto run tests/performance.ts
+quarto run tests/performance-context.ts
 quarto run tests/site-project-source.ts
 quarto run tests/site-project-native.ts
 quarto run tests/site-paths.ts
@@ -211,7 +220,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает 5.1.3;
+Версия определяется descriptor того же Git ref. Текущий ref описывает unreleased-кандидат 5.1.4;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
@@ -233,6 +242,20 @@ Counters обходов не являются числом посещённых 
 
 Прежний `COURSE_BUILD_TRACE` удалён; для новых измерений используются фасады ABI 1.
 Копии `observability/bridge.ts` и `bridge.lua` синхронизируются из проекта Performance.
+Фасад сохраняет ABI 1 и передаёт `attributes.extension_id: "course-site"`.
+`document_id` остаётся необязательным: пакетные compose, publish и
+`addressNavigation`, обрабатывающие несколько outputs, не выбирают один
+произвольный документ. Эта разметка не означает полного семантического
+покрытия функций Publisher и не добавляет общий runtime.
+
+Только при активном контексте агента граница дочерней команды передаёт полный
+снимок окружения с явными переопределениями через `childEnv` и `clearEnv: true`. Рабочие переменные
+сохраняются, а удалённый устаревший `COURSE_PERF_PARENT_SPAN_ID` не наследуется
+повторно. Контекст родителя относится к текущему активному span.
+При identity-ответе фасада (`off`, отсутствующий агент или недоступное чтение
+режима) сохраняются прежние env overrides, native inheritance и разрешения:
+полное чтение env и `clearEnv` не добавляются. Проверка
+`quarto run tests/performance-noenv.ts` сохраняет исходные scoped permissions.
 
 ## Постоянная навигация и входы из индексов
 

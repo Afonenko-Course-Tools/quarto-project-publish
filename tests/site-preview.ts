@@ -99,7 +99,8 @@ async function preview(cwd: string, clean = false): Promise<void> {
   });
   // Keep the rejected exit promise observed after the serving race has settled.
   stopped.catch(() => {});
-  const startup = deadline(120_000, "native preview did not start serving");
+  // Чистый корень курса собирает три native проекта: два компонента и корень.
+  const startup = deadline(course && clean && cwd === root ? 360_000 : 120_000, "native preview did not start serving");
   try {
     await Promise.race([served, stopped, startup.promise]);
     startup.cancel();

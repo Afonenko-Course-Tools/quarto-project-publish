@@ -42,6 +42,9 @@ jobs:
       - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
         with:
           version: v0.17.1
+      - name: Восстанавливаемая Markdown-копия и защищённые исходники
+        working-directory: quarto-project-publish
+        run: timeout --signal=TERM --kill-after=5s 60s quarto run tests/release-resources.ts
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26.10.0'
@@ -71,6 +74,7 @@ jobs:
         run: |
           SITE_CONDITIONS_PROVIDERS="$GITHUB_WORKSPACE" quarto run tests/conditions.ts
           quarto run tests/performance-context.ts
+          quarto run tests/release-composition.ts
           quarto run tests/site-project-source.ts
           quarto run tests/site-project-native.ts
           quarto run tests/site-paths.ts

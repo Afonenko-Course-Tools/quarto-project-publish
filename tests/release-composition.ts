@@ -8,7 +8,7 @@ try{
   type: website
   output-dir: _site
   render: [index.qmd]
-  resources: [README.md, "!part/**"]
+  resources: [README.md, "!part/**", "!test-support/**"]
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
@@ -18,22 +18,31 @@ subprojects: [part]
   type: website
   output-dir: _site
   render: [index.qmd]
-  resources: [README.md]
+  resources: [README.md, "!test-support/**"]
   post-render: ../_extensions/course-site/entrypoints/collect.ts
 format: html
 `);
  for(const p of ['', 'part/']){
-  await Deno.writeTextFile(join(root,p+'index.qmd'),'# Раздел\n\nREPEAT_COMPOSITION\n');
+  await Deno.writeTextFile(join(root,p+'index.qmd'),'# Раздел\n\nREPEAT_COMPOSITION\n\n[Связанный Markdown](test-support/shared/linked.md)\n');
   await Deno.writeTextFile(join(root,p+'README.md'),'Объявленный ресурс '+p);
+  await Deno.mkdir(join(root,p+'test-support/shared'),{recursive:true});
+  await Deno.writeTextFile(join(root,p+'test-support/shared/linked.md'),'Связанный Markdown '+p+'\r\n');
+  for(const profile of ['student','full']){
+    await Deno.writeTextFile(join(root,p+'_quarto-'+profile+'.yml'),'project:\n  output-dir: '+(p?'_output/':'_site-')+profile+'\n');
+  }
  }
- for(let i=0;i<2;i++){
- const r=await new Deno.Command(Deno.env.get('QUARTO')||'quarto',{args:['render','--fail-if-warnings'],cwd:root,stdout:'piped',stderr:'piped'}).output();
+ for(const profile of ['student','full','student']){
+ const r=await new Deno.Command(Deno.env.get('QUARTO')||'quarto',{args:['render','--profile',profile,'--fail-if-warnings'],cwd:root,stdout:'piped',stderr:'piped'}).output();
  if(!r.success)throw Error(new TextDecoder().decode(r.stdout)+new TextDecoder().decode(r.stderr));
  for(const p of ['', 'part/']){
-  const html=await Deno.readTextFile(join(root,'_site',p+'index.html'));
+  const html=await Deno.readTextFile(join(root,'_site-'+profile,p+'index.html'));
   if(!html.includes('REPEAT_COMPOSITION'))throw Error('Потерян HTML');
-  if(await Deno.readTextFile(join(root,'_site',p+'README.md'))!=='Объявленный ресурс '+p)throw Error('Потерян ресурс');
+  if(!html.includes('href="test-support/shared/linked.md"'))throw Error('Потеряна ссылка Markdown');
+  const expected='Связанный Markdown '+p+'\r\n';
+  if(await Deno.readTextFile(join(root,p+'test-support/shared/linked.md'))!==expected)throw Error('Изменён исходный Markdown');
+  if(await Deno.readTextFile(join(root,'_site-'+profile,p+'test-support/shared/linked.md'))!==expected)throw Error('Потеряна копия Markdown');
+  if(await Deno.readTextFile(join(root,'_site-'+profile,p+'README.md'))!=='Объявленный ресурс '+p)throw Error('Потерян ресурс');
  }
  }
- console.log('PASS две композиции с явно объявленным README корня и дочернего проекта');
+ console.log('PASS student/full/student: README и связанный Markdown корня/child, source bytes и ссылки сохранены');
 }finally{await Deno.remove(root,{recursive:true})}

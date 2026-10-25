@@ -1,17 +1,18 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — **5.1.3**. Версия
+Текущий ref — кандидат **5.1.5**. Полный GREEN CI и публикация кандидата
+ещё не подтверждены. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5; при использовании Core
 требуется CUE 0.17.1. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-Версия 5.1.3 устанавливается из существующего
+После публикации версия 5.1.5 устанавливается из существующего
 репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.3
+quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.5
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
@@ -211,7 +212,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает 5.1.3;
+Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 5.1.5;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
@@ -289,3 +290,13 @@ Browser CI использует Node 26.10.0, Playwright 1.62.1 из собст�
 источник документа. Core сохраняет строгую проверку их согласованности.
 Исходные captured facts не меняются; пути проекта, common-files, check
 metadata и публичная/закрытая политика остаются в области исходного владельца.
+
+## Кандидат 5.1.5: повторная очистка Markdown
+
+Необъявленный Markdown, скопированный Quarto по ссылке, допускается при очистке
+только при наличии обычного безопасного source-файла с тем же относительным
+путём вне output и точным совпадением bytes. Исходный файл сохраняется.
+Отсутствующий, иной, не regular или symlink counterpart остаётся отказом;
+прежние qmd/ipynb/Rmd/yaml и служебные/cache защиты не меняются.
+Это доказательство восстанавливаемой копии, а не privacy/currentness публикации.
+Новые manifests, global source walks и private Quarto API не вводятся.

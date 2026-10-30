@@ -1,6 +1,6 @@
-import {collectConditions,stageConditions} from './conditions.ts';
-import {createMetrics as __createMetrics} from "../observability/bridge.ts";
-const __metrics=__createMetrics("course-site");
+import { collectConditions, stageConditions } from "./conditions.ts";
+import { createMetrics as __createMetrics } from "../observability/bridge.ts";
+const __metrics = __createMetrics("course-site");
 import { addressNavigation } from "../infrastructure/navigation.ts";
 import { diagnostic } from "../infrastructure/diagnostics.ts";
 import {
@@ -262,10 +262,12 @@ function qualify(value: any, prefix: string): any {
       : {}),
     ...(value.exercises ? { exercises: value.exercises.map(topic) } : {}),
     ...(value.projects
-      ? { projects: value.projects.map((project: any) => ({
-        ...project,
-        source: `${prefix}/${project.source}`,
-      })) }
+      ? {
+        projects: value.projects.map((project: any) => ({
+          ...project,
+          source: `${prefix}/${project.source}`,
+        })),
+      }
       : {}),
     ...(value.body?.publicExercises
       ? {
@@ -521,21 +523,37 @@ export async function post(root = Deno.cwd()): Promise<void> {
   }
   // Полный QRC уже опубликован; local/partial ветка сюда не попадает.
   if (ws.config["reference-catalog"]) {
-    const input=await collectConditions(ws.output,records,ws.config.website?.["site-url"] || ws.config["course-navigation"]?.["course-url"]);
-    if(input.archives.length) {
-      const staged=await stageConditions(input,{
-        publicLinks:(await module("course-core","body-export/links.ts")).publicLinks,
-        createBodyLinks:(await module("reference-catalog","entrypoints/body-links.ts")).createBodyLinks,
-        zip:(await module("project-download","domain/zip.ts")).zip,
+    const input = await collectConditions(
+      ws.output,
+      records,
+      ws.config.website?.["site-url"] ||
+        ws.config["course-navigation"]?.["course-url"],
+    );
+    if (input.archives.length) {
+      const staged = await stageConditions(input, {
+        publicLinks:
+          (await module("course-core", "body-export/links.ts")).publicLinks,
+        createBodyLinks:
+          (await module("reference-catalog", "entrypoints/body-links.ts"))
+            .createBodyLinks,
+        zip: (await module("project-download", "domain/zip.ts")).zip,
       });
       // Все входы проверены до первой записи; receipts описывают старые ZIP.
-      for(const archive of staged) await Deno.writeFile(join(ws.output,archive.path),archive.bytes);
-      await Deno.writeTextFile(join(run,"conditions-finalization.json"),JSON.stringify(staged.map(({bytes,...facts})=>facts),null,2));
+      for (const archive of staged) {
+        await Deno.writeFile(join(ws.output, archive.path), archive.bytes);
+      }
+      await Deno.writeTextFile(
+        join(run, "conditions-finalization.json"),
+        JSON.stringify(staged.map(({ bytes, ...facts }) => facts), null, 2),
+      );
     }
   }
   await addressNavigation(
-    ws.output, outputs, true,
-    ws.config["course-navigation"]?.["course-url"] || ws.config.website?.["site-url"],
+    ws.output,
+    outputs,
+    true,
+    ws.config["course-navigation"]?.["course-url"] ||
+      ws.config.website?.["site-url"],
   );
   await Deno.writeTextFile(
     join(run, "composition.json"),
@@ -548,8 +566,14 @@ export async function post(root = Deno.cwd()): Promise<void> {
 }
 
 // @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-pre=__metrics.wrapAsync({id:"course-site.application.compose.pre",kind:"phase"},pre);
+pre = __metrics.wrapAsync({
+  id: "course-site.application.compose.pre",
+  kind: "phase",
+}, pre);
 // @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-post=__metrics.wrapAsync({id:"course-site.application.compose.post",kind:"phase"},post);
+post = __metrics.wrapAsync({
+  id: "course-site.application.compose.post",
+  kind: "phase",
+}, post);
 
-export {stageConditions} from './conditions.ts';
+export { stageConditions } from "./conditions.ts";

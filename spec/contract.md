@@ -134,22 +134,19 @@ HTML каталоги и внутренние ссылки самой презе
 в output. Исключение для скопированных Markdown-ресурсов не меняет эту защиту.
 
 
-## Финализация conditions ZIP (5.1.3)
+## Публичная native операция B2
 
-После успешной полной публикации QRC Site разрешает отложенные ссылки только
-в conditions ZIP, связанных с текущими Download receipts, public model и Site
-collection. Partial/local compose этот этап не выполняет. Native Pandoc читает
-HTML; узкий Lua adapter восстанавливает только whitelist QRC data-атрибутов,
-которые снимает HTML reader. Core publicLinks и QRC createBodyLinks владеют
-семантикой ссылок. Target page/anchor проверяется в текущем публичном результате.
-Python stdlib HTMLParser проверяет только имена/дубликаты четырёх QRC transport
-атрибутов до native reader; он не читает семантику/текст и ничего не преобразует.
-Python stdlib zipfile читает CRC/имена/типы с ограничением размеров; существующий
-Download writer сохраняет все остальные member bytes. Нового parser/resolver нет.
+Текущий production compose использует Core/QRC/Download public modules и
+штатные Core native CLI phases, как описано в
+[публичной композиции](../docs/public-operation.md).
+QRC/Navigation завершают HTML до Core native-post; ZIP создаётся один раз после
+назначения final Pages base и успешной owner fence, сразу в конечном mount.
+Posthoc ZIP rewriting не вызывается. Core catalog проверяет текущие роли и outputs;
+Publisher сохраняет отдельные owner scopes и не объединяет самостоятельные курсы.
 
-Все результаты вычисляются до первой записи. Исходные Download receipts и
-NativeRun не переписываются; отдельный conditions-finalization.json описывает
-новую упаковку. Host entrypoint finalize-conditions.ts использует тот же
-stageConditions над явно объявленным snapshot, пишет только в новый output root
-и сохраняет внешний provenance. Он не создаёт native proof. Для этого этапа
-нужны установленный native Pandoc, Python3 и соседние Core822/QRC310/Download320.
+Прежние course/assessment/adapter release гарантии не заменяются catalog coverage:
+до принятого Core executable TS proof конфигурация course получает адресный
+SITE.RELEASE_UNQUALIFIED. Это обязательный временный gate полного выпуска.
+Исторический host finalize-conditions/helper не запускаются production compose;
+их окончательное удаление идёт вместе с квалифицированным owner condition-only
+inventory и эквивалентными controls, а не с постоянным вторым resolver.

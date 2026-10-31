@@ -94,6 +94,7 @@ jobs:
           quarto run tests/performance-noenv.ts
           quarto run tests/site-public-operation.ts
           B2_ROOT_NATIVE=1 quarto run tests/site-public-operation.ts
+          B2_ROOT_NATIVE=1 B2_DEFAULT_CORE=1 quarto run tests/site-public-operation.ts
           for mode in positive full author-starter conditions document-course assessment pl pl-missing root-pl default revealjs reveal-model inactive-course sequential; do
             quarto run tests/site-owner-release.ts "$mode"
           done

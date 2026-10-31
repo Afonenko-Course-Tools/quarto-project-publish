@@ -77,6 +77,17 @@ try {
     "tasks/index.qmd",
     '# Упражнения\n\n::: {#exr-demo difficulty=introductory statement-visibility=open project="projects/demo"}\nУсловие с [другой страницей](other.qmd#target).\n\n{{< project-download exr-demo kind=starter >}}\n:::\n',
   );
+  if (Deno.env.get("B2_DEFAULT_CORE")) {
+    for (const owner of ["_quarto.yml", "tasks/_quarto.yml"]) {
+      await put(
+        owner,
+        (await Deno.readTextFile(join(root, owner))).replace(
+          "course-core-runtime: native-ts\n",
+          "",
+        ),
+      );
+    }
+  }
   const rendered = await new Deno.Command("quarto", {
     args: ["render", "--to", "html"],
     cwd: root,
@@ -140,11 +151,16 @@ try {
   );
   await put(
     "_quarto.yml",
-    // Coarse отказ проверяет именно отсутствие native Core authority.
-    // В root-native positive она была включена и законно разрешала ordinary course.
+    // Core 9 по умолчанию native: отсутствие старого флага не является отказом.
+    // Здесь действительно отключаем Core, сохраняя course и прежнюю выдачу.
     (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
-      "course-core-runtime: native-ts\n", "",
-    ) + "\ncourse: {id: live-release}\n",
+      "course-core-runtime: native-ts\n",
+      "",
+    ).replace(
+      "filters: [course-core, project-download]",
+      "filters: [project-download]",
+    ) +
+      "\ncourse: {id: live-release}\n",
   );
   const refused = await new Deno.Command("quarto", {
     args: ["run", `${ext}/course-site/entrypoints/pre.ts`],

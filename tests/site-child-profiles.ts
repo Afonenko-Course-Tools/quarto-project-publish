@@ -33,9 +33,9 @@ try {
       `${part}/_quarto.yml`,
       `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n${
         core ? "  pre-render: _extensions/course-core/entrypoints/pre.ts\n" : ""
-      }  post-render:\n${
+      }  post-render:\n    - ../_extensions/course-site/entrypoints/collect.ts\n${
         core ? "    - _extensions/course-core/entrypoints/post.ts\n" : ""
-      }    - ../_extensions/course-site/entrypoints/collect.ts\nformat: html\n${
+      }format: html\n${
         mode === "default"
           ? "profile:\n  default: full\n"
           : "profile:\n  group:\n    - [web, print]\n    - [content, alternate]\n"
@@ -94,11 +94,17 @@ try {
         assertEquals(collection.profiles, profiles);
         collections++;
       }
-      if (entry.name.endsWith("-release.json")) {
-        const release = JSON.parse(
+      if (entry.name === "composition.json") {
+        const composition = JSON.parse(
           await Deno.readTextFile(join(runs, directory.name, entry.name)),
         );
-        assertEquals(release.documents[0].document.profiles, profiles);
+        assertEquals(composition.nativeOperations.length, 1);
+        const release = composition.nativeOperations[0];
+        assertEquals(release.project, "core");
+        assertEquals(release.catalog.identity.profiles, profiles);
+        assertEquals(release.release.proof.course.id, "lesson");
+        assertEquals(release.release.proof.documents.length, 1);
+        assertEquals(release.release.validationPasses, 1);
         releases++;
       }
     }

@@ -6,6 +6,13 @@ validator выполняет свой business договор. Catalog coverage 
 не заменяет. Course без активного native Core сохраняет SITE.RELEASE_UNQUALIFIED;
 обычный noCore Publisher остаётся независимым.
 
+Core 9 использует native TS по умолчанию: при `filters: [course-core]` старый
+`course-core-runtime: native-ts` не обязателен. Это выбирает технический маршрут,
+но не заменяет текущую операцию, проверку outputs или release proof Core.
+Явно чужой runtime и недопустимая проекция отклоняются. В дочернем проекте
+`collect.ts` должен завершить HTML перед Core post-hook, который фиксирует
+окончательные outputs; изменение HTML после фиксации остаётся ошибкой.
+
 Publisher открывает модули нужного owner в том же installed namespace. Child
 operation нельзя проверять validator другого root только потому, что parent
 импортировал собственный Download. Проекты не склеиваются в одну course identity.

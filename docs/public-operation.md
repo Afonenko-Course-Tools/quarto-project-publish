@@ -45,3 +45,9 @@ B3 остаётся Core dependency BLOCKED на actual generated-resource + rel
 installed или PL/Pages byte identity. Исторический finalize-conditions/helper пока
 сохранён и production его не вызывает. Окончательная очистка идёт вместе с полной
 приёмкой нового owner condition path, включая generated case; он не служит fallback.
+
+Full fixture с kind=full не квалифицирует произвольный Java bank: explicit
+kind=starter в author получает DOWNLOAD.STARTER_UNQUALIFIED. Сохраняется отдельный
+actual negative; typed assignment student condition/поддержанный маршрут и actual
+early/full135 должен принять ROOT. Production не запускает extra render и не
+переносит opaque ZIP между operation для обхода этой границы.

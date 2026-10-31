@@ -9,7 +9,7 @@ if (!core || !qrc || !download || !pl) {
   throw Error("Нужны exact CORE/QRC/DOWNLOAD/PL");
 }
 const mode = Deno.args[0] ?? "positive",
-  author = mode === "full",
+  author = mode === "full" || mode === "author-starter",
   slides = mode === "revealjs" || mode === "reveal-model",
   withPL = mode === "pl" || mode === "pl-missing" || mode === "root-pl";
 const root = await Deno.makeTempDir({ prefix: "site-b3-owner-" }),
@@ -138,7 +138,9 @@ try {
   const plConfig = withPL
     ? "prairielearn:\n  question-defaults: {topic: Git, grading: {method: manual}, submission: {mode: upload}}\n"
     : "";
-  const kind = author
+  const kind = mode === "author-starter"
+    ? "starter"
+    : author
     ? "full"
     : mode === "conditions"
     ? "conditions"
@@ -197,7 +199,26 @@ try {
     "pl-missing": "RELEASE.ADAPTER_UNQUALIFIED",
     "reveal-model": "CONDITION_UNQUALIFIED",
     "inactive-course": "SITE.RELEASE_UNQUALIFIED",
+    "author-starter": "DOWNLOAD.STARTER_UNQUALIFIED",
   };
+  if (mode === "author-starter" && rendered.success && Deno.env.get("B3_LOG")) {
+    const listed = await new Deno.Command("unzip", {
+      args: ["-Z1", join(root, "_site/tasks/_downloads/exr-demo-starter.zip")],
+      stdout: "piped",
+      stderr: "piped",
+    }).output();
+    const names = new TextDecoder().decode(listed.stdout).trim().split("\n");
+    await Deno.writeTextFile(
+      Deno.env.get("B3_LOG")! + ".privacy.json",
+      JSON.stringify({
+        mode,
+        nativeRenderSuccess: true,
+        unzipExit: listed.code,
+        names,
+        containsAuthor: names.some((n) => n.startsWith("author/")),
+      }) + "\n",
+    );
+  }
   if (expected[mode]) {
     assert(
       !rendered.success && log.includes(expected[mode]),

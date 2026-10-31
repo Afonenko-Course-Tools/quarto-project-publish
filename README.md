@@ -1,18 +1,18 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — кандидат **5.1.5**. Полный GREEN CI и публикация кандидата
+Текущий ref — кандидат **5.2.0**. Полный GREEN CI и публикация кандидата
 ещё не подтверждены. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5; при использовании Core
 требуется CUE 0.17.1. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-После публикации версия 5.1.5 устанавливается из существующего
+После публикации версия 5.2.0 устанавливается из существующего
 репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.5
+quarto add Afonenko-Course-Tools/quarto-project-publish@v5.2.0
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student

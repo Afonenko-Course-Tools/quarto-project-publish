@@ -24,8 +24,16 @@ import {
 import { profileArguments, quarto } from "../infrastructure/process.ts";
 import { publicOutputs, readCollection } from "../infrastructure/collection.ts";
 const siblings = dirname(dirname(dirname(fromFileUrl(import.meta.url))));
-async function module(name: string, path: string): Promise<any> {
-  const source = join(siblings, name, path);
+function ownerSiblings(root: string) {
+  const parts = siblings.split("/");
+  return join(root, ...parts.slice(parts.lastIndexOf("_extensions")));
+}
+async function module(
+  name: string,
+  path: string,
+  owner?: string,
+): Promise<any> {
+  const source = join(owner ? ownerSiblings(owner) : siblings, name, path);
   try {
     await Deno.stat(source);
   } catch (cause) {
@@ -55,21 +63,25 @@ async function remove(path: string) {
   }
 }
 function releaseQualification(config: any, root: string) {
-  if (config.course) {
+  if (config.course && config["course-core-runtime"] !== "native-ts") {
     throw diagnostic(
       "SITE.RELEASE_UNQUALIFIED",
-      "Требуется публичный executable TS release proof Core для course/assessment/adapter гарантий",
-      { source: root, field: "course" },
+      "Course release требует публичную текущую native operation Core",
+      { source: root, field: "course-core-runtime" },
     );
   }
+
   if (
     config["course-core-runtime"] &&
     (config["course-core-runtime"] !== "native-ts" ||
-      config["course-core-projection"] !== "student")
+      !["student", "author"].includes(
+        config["course-core-projection"] ??
+          (config.course?.view === "full" ? "author" : "student"),
+      ))
   ) {
     throw diagnostic(
       "SITE.NATIVE_UNQUALIFIED",
-      "Публичная операция квалифицирована для native-ts HTML/student",
+      "Публичная операция требует native-ts и явную student/author projection",
       { source: root, field: "course-core-runtime/projection" },
     );
   }
@@ -86,7 +98,68 @@ async function coreHook(root: string, config: any, phase: "pre" | "post") {
       {},
       true,
     );
+    if (phase === "pre") {
+      const path = join(siblings, "course-prairielearn", "public.ts");
+      let PL: any;
+      try {
+        await Deno.stat(path);
+        PL = await import(toFileUrl(path).href);
+      } catch (cause) {
+        if (!(cause instanceof Deno.errors.NotFound)) throw cause;
+      }
+      if (PL) {
+        await PL.prepareNativeAdapter(
+          await module("course-core", "public.ts"),
+          {
+            root,
+            profiles: (Deno.env.get("QUARTO_PROFILE") || "").split(",").filter(
+              Boolean,
+            ),
+            projection: projection(config),
+            outputDirectory: resolve(
+              root,
+              Deno.env.get("QUARTO_PROJECT_OUTPUT_DIR") ||
+                config.project?.["output-dir"] || "_site",
+            ),
+          },
+        );
+      }
+    }
   }
+}
+function projection(config: any): "student" | "author" {
+  return config["course-core-projection"] ??
+    (config.course?.view === "full" ? "author" : "student");
+}
+async function ownerRelease(root: string, operation: any, Core: any) {
+  let PL: any;
+  const path = join(ownerSiblings(root), "course-prairielearn", "public.ts");
+  try {
+    await Deno.stat(path);
+    PL = await import(toFileUrl(path).href);
+  } catch (cause) {
+    if (!(cause instanceof Deno.errors.NotFound)) throw cause;
+  }
+  const adapter = PL?.createNativeAdapter({ root, core: Core });
+  const request = {
+      expectedSources: operation.catalog.documents.map((d: any) => d.source),
+    },
+    before = operation.metrics;
+  let proof = await operation.validateRelease(
+      request,
+      adapter ? [adapter] : [],
+    ),
+    validationPasses = 1;
+  if (proof.validatedAdapters.includes("prairielearn")) {
+    proof = await adapter.validateCourse(operation, request);
+    validationPasses++;
+  }
+  return {
+    proof,
+    validationPasses,
+    metricsBefore: before,
+    metricsAfter: operation.metrics,
+  };
 }
 function catalogCoverage(catalog: any, record: any) {
   const actual = catalog.documents.map((d: any) =>
@@ -116,16 +189,22 @@ async function finalizeDownloads(
   catalogBaseUrl: string | undefined,
   destinationDirectory?: string,
 ) {
-  let catalog;
-  const observeOperation = (value: any) => {
+  let catalog, release;
+  const observeOperation = (value: any, proof: unknown) => {
     catalogCoverage(value, record);
     catalog = value;
+    release = proof;
   };
   if (config["project-download"]) {
-    const Download = await module("project-download", "public.ts");
+    const Download = await module("project-download", "public.ts", root);
     await Download.finishDownloads(root, {
       native: config["course-core-runtime"] === "native-ts",
       outputDirectory: record.outputDir,
+      projection: projection(config),
+      profiles: record.profiles,
+      ...(record.expectedDocuments
+        ? { expectedDocuments: record.expectedDocuments }
+        : {}),
       baseUrl,
       referenceCatalog,
       catalogBaseUrl,
@@ -133,19 +212,25 @@ async function finalizeDownloads(
       destinationDirectory,
     });
   } else if (config["course-core-runtime"] === "native-ts") {
-    const Core = await module("course-core", "public.ts");
+    const Core = await module("course-core", "public.ts", root);
     await Core.withCurrentNativeOperation(
       {
         root,
         profiles: record.profiles,
-        format: "html",
-        projection: "student",
+        projection: projection(config),
+        ...(record.expectedDocuments
+          ? { expectedDocuments: record.expectedDocuments }
+          : {}),
         outputDirectory: record.outputDir,
       },
-      (operation: any) => Promise.resolve(observeOperation(operation.catalog)),
+      async (operation: any) =>
+        observeOperation(
+          operation.catalog,
+          await ownerRelease(root, operation, Core),
+        ),
     );
   }
-  return catalog;
+  return catalog ? { catalog, release } : undefined;
 }
 export async function pre(root = Deno.cwd()): Promise<void> {
   const state = statePath(root);
@@ -265,14 +350,15 @@ export async function pre(root = Deno.cwd()): Promise<void> {
         (document) => ["render", document.source, "--to", document.format],
       )
       : [["render", ".", ...(plan.renderTo ? ["--to", plan.renderTo] : [])]];
-    const collected = [];
-    for (let index = 0; index < calls.length; index++) {
+    const collected: Awaited<ReturnType<typeof readCollection>>[] = [];
+    const capture = async (index: number, token?: string) => {
       const collection = join(run, `${project.id}-${index}.json`);
       await quarto(
         [...calls[index], ...profileArguments(ws.profiles)],
         project.path,
         {
           COURSE_SITE_COLLECTION: collection,
+          ...(token ? { COURSE_CORE_CAPTURE_TOKEN: token } : {}),
           COURSE_SITE_PROJECT: project.id,
           COURSE_SITE_DEFER_DOWNLOADS: "1",
           ...(publicationBase
@@ -296,7 +382,28 @@ export async function pre(root = Deno.cwd()): Promise<void> {
           true,
         ),
       );
-    }
+    };
+    if (config["course-core-runtime"] === "native-ts" && calls.length > 1) {
+      const Core = await module("course-core", "public.ts", project.path);
+      await Core.withNativeCaptureScope(
+        {
+          root: project.path,
+          projection: projection(config),
+          outputDirectory: output,
+        },
+        { expectedSources: plan.documents.map((d: any) => d.source) },
+        async (scope: any) => {
+          for (let index = 0; index < calls.length; index++) {
+            await scope.captureInputs(
+              [plan.documents[index].source],
+              async (token: string) => await capture(index, token),
+            );
+          }
+        },
+      );
+    } else {for (let index = 0; index < calls.length; index++) {
+        await capture(index);
+      }}
     const record = {
       id: project.id,
       projectRoot: project.path,
@@ -306,6 +413,10 @@ export async function pre(root = Deno.cwd()): Promise<void> {
         ...new Set(collected.flatMap((record) => record.nativeOutputs)),
       ],
       files: [...new Set(collected.flatMap((record) => record.files))],
+      expectedDocuments: plan.documents.map((d: any) => ({
+        source: d.source,
+        format: d.baseFormat,
+      })),
     };
     if (
       collected.some((value) =>
@@ -487,7 +598,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
       baseUrl,
       join(ws.output, project.mount),
     );
-    if (catalog) nativeOperations.push({ project: project.mount, catalog });
+    if (catalog) nativeOperations.push({ project: project.mount, ...catalog });
   }
   const rootCatalog = await finalizeDownloads(
     root,
@@ -503,7 +614,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
     baseUrl,
   );
   if (rootCatalog) {
-    nativeOperations.push({ project: "root", catalog: rootCatalog });
+    nativeOperations.push({ project: "root", ...rootCatalog });
   }
   await Deno.writeTextFile(
     join(run, "composition.json"),

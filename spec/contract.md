@@ -134,7 +134,7 @@ HTML каталоги и внутренние ссылки самой презе
 в output. Исключение для скопированных Markdown-ресурсов не меняет эту защиту.
 
 
-## Публичная native операция B2
+## Публичная native операция B3
 
 Текущий production compose использует Core/QRC/Download public modules и
 штатные Core native CLI phases, как описано в
@@ -144,9 +144,11 @@ QRC/Navigation завершают HTML до Core native-post; ZIP создаёт
 Posthoc ZIP rewriting не вызывается. Core catalog проверяет текущие роли и outputs;
 Publisher сохраняет отдельные owner scopes и не объединяет самостоятельные курсы.
 
-Прежние course/assessment/adapter release гарантии не заменяются catalog coverage:
-до принятого Core executable TS proof конфигурация course получает адресный
-SITE.RELEASE_UNQUALIFIED. Это обязательный временный gate полного выпуска.
+Effective per-document course/assessment/adapter гарантии проверяет Core
+validateRelease и actual C public validator в той же operation. Root config не
+заменяет этот proof. Отсутствующий validator даёт owner ADAPTER_UNQUALIFIED;
+coarse SITE.RELEASE_UNQUALIFIED остаётся course без native Core. Ordinary proof
+не предоставляет assignment intent. Открытый generated-resource + release
+membership blocker перечислен в packet; полный выпуск не квалифицирован.
 Исторический host finalize-conditions/helper не запускаются production compose;
-их окончательное удаление идёт вместе с квалифицированным owner condition-only
-inventory и эквивалентными controls, а не с постоянным вторым resolver.
+их удаление требует полной приёмки owner condition path с эквивалентными controls.

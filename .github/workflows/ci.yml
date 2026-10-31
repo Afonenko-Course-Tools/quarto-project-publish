@@ -55,9 +55,6 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
-      - uses: cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c
-        with:
-          version: v0.17.1
       - name: Восстанавливаемая Markdown-копия и защищённые исходники
         working-directory: quarto-project-publish
         run: timeout --signal=TERM --kill-after=5s 60s quarto run tests/release-resources.ts

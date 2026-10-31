@@ -14,7 +14,7 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 | Документ | type | component | status |
 | --- | --- | --- | --- |
 | [Контракт Publisher](contract.md) | contract | publisher | current |
-| [Структура subprojects](subprojects.cue) | contract/schema | publisher | current |
+| [Исполняемая проверка subprojects](../_extensions/course-site/infrastructure/config.ts) | contract/runtime | publisher | current |
 | [Диагностика](../docs/diagnostics.md) | reference | publisher | current |
 | [Авторская модель Core](../../quarto-course/spec/index.md) | specification/index | course-core | current |
 | [Результат реализации](../docs/releases/2026-10-08-implementation.md) | implementation-report | publisher | historical |
@@ -23,7 +23,7 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 Publisher владеет `subprojects`, размещением native outputs, collection/ownership и границей native child процесса. Quarto владеет metadata/profiles/форматами; Core владеет учебной моделью и отбором; QRC — адресами каталога.
 
 Версия пакета определяется [descriptor](../_extensions/course-site/_extension.yml) того же Git ref.
-Quarto 1.11.5 и CUE 0.17.1 согласованы с текущими правилами Core.
+Целевой Quarto — 1.11.5; исполняемая проверка конфигурации принадлежит TS-модулю Publisher.
 Текущий ref — кандидат **5.2.0**; полный GREEN CI и выпуск ещё не подтверждены. Изменения после
 выпущенного тега имеют статус **unreleased**.
 Документация установленного выпуска читается из того же immutable tag, что и код.

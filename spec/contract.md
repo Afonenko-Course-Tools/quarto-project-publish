@@ -9,8 +9,8 @@ status: current
 Текущий ref: **5.2.0** (unreleased); версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
-Корень native проекта объявляет непустой `subprojects: [paths]`; структура задаётся
-[subprojects.cue](subprojects.cue). Каждый путь относительный и обозначает папку
+Корень native проекта объявляет непустой `subprojects: [paths]`; структуру и файловые границы проверяет
+[исполняемый TS-контракт](../_extensions/course-site/infrastructure/config.ts). Каждый путь относительный и обозначает папку
 самостоятельного проекта. Размещение готовой части повторяет нормализованный путь.
 Повторы, вложенные пересечения источников/outputs и symlink отклоняются до cleanup.
 `course-site.projects` и отдельные id/mount/format части не поддерживаются.

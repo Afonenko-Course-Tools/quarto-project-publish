@@ -75,7 +75,7 @@ try {
   await put("tasks/other.qmd", "# Другая страница {#target}\n");
   await put(
     "tasks/index.qmd",
-    '# Упражнения\n\n::: {#exr-demo difficulty=introductory statement-visibility=open project="projects/demo/input.qmd"}\nУсловие с [другой страницей](other.qmd#target).\n\n{{< project-download exr-demo kind=starter >}}\n:::\n',
+    '# Упражнения\n\n::: {#exr-demo difficulty=introductory statement-visibility=open project="projects/demo"}\nУсловие с [другой страницей](other.qmd#target).\n\n{{< project-download exr-demo kind=starter >}}\n:::\n',
   );
   const rendered = await new Deno.Command("quarto", {
     args: ["render", "--to", "html"],
@@ -140,8 +140,11 @@ try {
   );
   await put(
     "_quarto.yml",
-    (await Deno.readTextFile(join(root, "_quarto.yml"))) +
-      "\ncourse: {id: live-release}\n",
+    // Coarse отказ проверяет именно отсутствие native Core authority.
+    // В root-native positive она была включена и законно разрешала ordinary course.
+    (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
+      "course-core-runtime: native-ts\n", "",
+    ) + "\ncourse: {id: live-release}\n",
   );
   const refused = await new Deno.Command("quarto", {
     args: ["run", `${ext}/course-site/entrypoints/pre.ts`],

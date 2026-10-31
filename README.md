@@ -18,6 +18,10 @@ quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
 ```
 
+После публикации нового тега установка из GitHub выполняется командой
+`quarto add Afonenko-Course-Tools/quarto-project-publish@v5.2.0`. Наличие тега
+и готовность установленного курса проверяются отдельно.
+
 Используйте фактический installation prefix, показанный `quarto add`. Ниже пути
 для локальной установки без namespace. При установке GitHub добавьте namespace
 между `_extensions/` и именем расширения. Core, QRC и course-site должны быть
@@ -175,11 +179,16 @@ ID и причины. Неизвестная внутренняя ошибка �
 
 ## Проверка
 
-Проверки композиции используют companion Core 8.2.1 и QRC 3.1.0.
-Для локальной разработки установите Site из текущего checkout штатной
-командой `quarto add`.
+Текущий кандидат 5.2.0 сохраняет main наблюдение/preview и публичный B3 путь.
+CI закрепляет Core8.4.0 `0613a4c6409d6cf766f926b8e096fd35d2a88422`,
+QRC3.2.0 `23312f3bd747a8f665fd2313afbb1c95c42978ac` и Download3.3.0
+`c868710c719f532d30fca8703b122545959b8ef8`. Настоящие CI и установленная композиция этих точных
+refs проверяются отдельно; прежняя матрица Core8.2.3/Site5.1.4/QRC3.1.1/
+Download3.2.2 сохраняется как исторический контекст, без автоматического PASS.
 
 ```bash
+quarto run tests/performance.ts
+quarto run tests/performance-context.ts
 quarto run tests/site-project-source.ts
 quarto run tests/site-project-native.ts
 quarto run tests/site-paths.ts
@@ -234,6 +243,20 @@ Counters обходов не являются числом посещённых 
 
 Прежний `COURSE_BUILD_TRACE` удалён; для новых измерений используются фасады ABI 1.
 Копии `observability/bridge.ts` и `bridge.lua` синхронизируются из проекта Performance.
+Фасад сохраняет ABI 1 и передаёт `attributes.extension_id: "course-site"`.
+`document_id` остаётся необязательным: пакетные compose, publish и
+`addressNavigation`, обрабатывающие несколько outputs, не выбирают один
+произвольный документ. Эта разметка не означает полного семантического
+покрытия функций Publisher и не добавляет общий runtime.
+
+Только при активном контексте агента граница дочерней команды передаёт полный
+снимок окружения с явными переопределениями через `childEnv` и `clearEnv: true`. Рабочие переменные
+сохраняются, а удалённый устаревший `COURSE_PERF_PARENT_SPAN_ID` не наследуется
+повторно. Контекст родителя относится к текущему активному span.
+При identity-ответе фасада (`off`, отсутствующий агент или недоступное чтение
+режима) сохраняются прежние env overrides, native inheritance и разрешения:
+полное чтение env и `clearEnv` не добавляются. Проверка
+`quarto run tests/performance-noenv.ts` сохраняет исходные scoped permissions.
 
 ## Постоянная навигация и входы из индексов
 

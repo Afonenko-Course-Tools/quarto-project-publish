@@ -6,7 +6,7 @@ status: current
 
 # Контракт Publisher
 
-Текущий ref: **5.1.2**; версия пакета задаётся
+Текущий ref: **5.2.0** (unreleased); версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
 Корень native проекта объявляет непустой `subprojects: [paths]`; структура задаётся
@@ -152,3 +152,21 @@ coarse SITE.RELEASE_UNQUALIFIED остаётся course без native Core. Ordi
 membership blocker перечислен в packet; полный выпуск не квалифицирован.
 Исторический host finalize-conditions/helper не запускаются production compose;
 их удаление требует полной приёмки owner condition path с эквивалентными controls.
+
+## Контекст наблюдения (5.1.4, unreleased)
+
+Канонический фасад сохраняет ABI 1 и добавляет к операциям
+`attributes.extension_id: "course-site"`. Контекст `document_id` необязателен;
+пакетные compose/publish и `addressNavigation` сохраняют общий контекст без
+выбора одного документа из списка outputs. Это не меняет адресацию навигации,
+состав текущих outputs и авторские metadata.
+
+Только при активном контексте агента полный снимок окружения с явными
+переопределениями проходит через `childEnv` и `clearEnv: true`. Поэтому удалённый устаревший
+`COURSE_PERF_PARENT_SPAN_ID` не восстанавливается повторным наследованием Deno,
+а рабочие переменные сохраняются. Parent context берётся из текущего активного
+span. Identity-ответ (`off`, отсутствующий агент или недоступное чтение режима)
+сохраняет исходные env overrides и native inheritance без нового полного чтения
+env и без `clearEnv`; прежние разрешения не расширяются. Фасад сохраняет
+исходные функции, Promise и переданное ему окружение. Новый общий runtime и полное семантическое покрытие Publisher
+не заявляются.

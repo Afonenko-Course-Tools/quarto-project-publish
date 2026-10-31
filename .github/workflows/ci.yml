@@ -1,4 +1,4 @@
-name: Native course-site
+name: Проверка course-site 5.2.0
 on:
   pull_request:
   push:
@@ -21,21 +21,37 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: 7c9388cb4d982caf66657ea8f96c09243d64a147 # Core 8.2.2: точный публичный кандидат
+          ref: 0613a4c6409d6cf766f926b8e096fd35d2a88422 # Core 8.4.0: точный проверенный кандидат
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 3df2110e9f525f03f3ecb4926b5d55718e955c4c # QRC 3.1.0: опубликованный выпуск
+          ref: 23312f3bd747a8f665fd2313afbb1c95c42978ac # QRC 3.2.0: preserving merge с main
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-project-download
-          ref: 2dd97d8ce28c4ad514e869fe86d25dbc19f79def # Download 3.2.0: существующий ZIP writer
+          ref: c868710c719f532d30fca8703b122545959b8ef8 # Download 3.3.0: preserving merge с main
           path: quarto-project-download
           persist-credentials: false
+      - name: Проверить закреплённые Core и QRC
+        run: |
+          test "$(git -C quarto-course rev-parse HEAD)" = "0613a4c6409d6cf766f926b8e096fd35d2a88422"
+          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "23312f3bd747a8f665fd2313afbb1c95c42978ac"
+      - name: Проверить закреплённый Download
+        run: |
+          git -C quarto-project-download rev-parse HEAD
+          test "$(git -C quarto-project-download rev-parse HEAD)" = "c868710c719f532d30fca8703b122545959b8ef8"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Afonenko-Course-Tools/quarto-course-prairielearn
+          ref: c41486739de77ab1e0ccef29f01ad08c49816a96 # Принятый public validator; не запуск C CLI
+          path: quarto-course-prairielearn
+          persist-credentials: false
+      - name: Проверить закреплённый public validator
+        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "c41486739de77ab1e0ccef29f01ad08c49816a96"
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
@@ -64,9 +80,13 @@ jobs:
       - name: Проверка режима off без доступа к часам
         working-directory: quarto-project-publish
         run: quarto run tests/performance.ts
-      - name: Native installed composition and domains
+      - name: Установленная native композиция и домены
         working-directory: quarto-project-publish
         env:
+          CORE: ${{ github.workspace }}/quarto-course
+          QRC: ${{ github.workspace }}/quarto-reference-catalog
+          DOWNLOAD: ${{ github.workspace }}/quarto-project-download
+          PL: ${{ github.workspace }}/quarto-course-prairielearn
           COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
           COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project
@@ -74,6 +94,12 @@ jobs:
         run: |
           SITE_CONDITIONS_PROVIDERS="$GITHUB_WORKSPACE" quarto run tests/conditions.ts
           quarto run tests/performance-context.ts
+          quarto run tests/performance-noenv.ts
+          quarto run tests/site-public-operation.ts
+          B2_ROOT_NATIVE=1 quarto run tests/site-public-operation.ts
+          for mode in positive full author-starter conditions document-course assessment pl pl-missing root-pl default revealjs reveal-model inactive-course sequential; do
+            quarto run tests/site-owner-release.ts "$mode"
+          done
           quarto run tests/release-composition.ts
           quarto run tests/site-project-source.ts
           quarto run tests/site-project-native.ts
@@ -98,7 +124,7 @@ jobs:
           quarto run tests/site-preview.ts "$COURSE_SITE_TEST_ROOT"
           quarto run tests/site-domains.ts smoke
           quarto run tests/site-preview.ts "$COURSE_SITE_DOMAIN_ROOT" --course
-      - name: Diagnostics
+      - name: Диагностика
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:

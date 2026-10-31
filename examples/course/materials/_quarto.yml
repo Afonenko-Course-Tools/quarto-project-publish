@@ -15,10 +15,10 @@ filters: [reference-catalog]
 reference-catalog: {namespace: study}
 website:
   repo-url: https://github.com/Afonenko-Course-Tools/quarto-project-publish
-  repo-branch: v5.0.0
+  repo-branch: v5.2.0
   repo-subdir: examples/course/materials
   repo-actions: [source]
   navbar:
     right:
       - text: Исходники проекта
-        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v5.0.0/examples/course/materials
+        href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v5.2.0/examples/course/materials

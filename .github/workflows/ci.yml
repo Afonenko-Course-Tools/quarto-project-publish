@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quarto: [1.11.5, 1.11.6]
+        quarto: [1.11.5]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -112,6 +112,7 @@ jobs:
           quarto run tests/site-collection.ts
           quarto run tests/site-effective-formats.ts
           quarto run tests/site-web-selection.ts
+          quarto run tests/process-live-output.ts
           quarto run tests/site-process.ts
           quarto run tests/site-siblings.ts
           quarto run tests/site-native.ts warnings

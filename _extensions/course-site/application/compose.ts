@@ -195,7 +195,22 @@ function catalogCoverage(catalog: any, record: any) {
     );
   }
 }
-async function finalizeDownloads(
+async function progress<T>(stage: string, project: string, action: () => Promise<T>): Promise<T> {
+  const started = performance.now();
+  console.error(`course-site: ${stage}: ${project} — начало`);
+  try {
+    const value = await action();
+    console.error(`course-site: ${stage}: ${project} — готово (${((performance.now() - started) / 1000).toFixed(1)} с)`);
+    return value;
+  } catch (error) {
+    console.error(`course-site: ${stage}: ${project} — ошибка (${((performance.now() - started) / 1000).toFixed(1)} с)`);
+    throw error;
+  }
+}
+async function finalizeDownloads(...args: Parameters<typeof finalizeDownloadsImpl>) {
+  return await progress("Проверка и загрузки", args[0], () => finalizeDownloadsImpl(...args));
+}
+async function finalizeDownloadsImpl(
   root: string,
   config: any,
   record: any,
@@ -383,7 +398,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
     const collected: Awaited<ReturnType<typeof readCollection>>[] = [];
     const capture = async (index: number, token?: string) => {
       const collection = join(run, `${project.id}-${index}.json`);
-      await quarto(
+      await progress("Рендер", project.path, () => quarto(
         [...calls[index], ...profileArguments(ws.profiles)],
         project.path,
         {
@@ -401,7 +416,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
             : {}),
         },
         true,
-      );
+      ));
       collected.push(
         await readCollection(
           collection,

@@ -16,7 +16,7 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 | [Контракт Publisher](contract.md) | contract | publisher | current |
 | [Исполняемая проверка subprojects](../_extensions/course-site/infrastructure/config.ts) | contract/runtime | publisher | current |
 | [Диагностика](../docs/diagnostics.md) | reference | publisher | current |
-| [Авторская модель Core](../../quarto-course/spec/index.md) | specification/index | course-core | current |
+| [Авторская модель Core](https://github.com/Afonenko-Course-Tools/quarto-course/blob/946ad619830aa1affcbdaf4b5b447324e3d41002/spec/index.md) | specification/index | course-core | current |
 | [Результат реализации](../docs/releases/2026-10-08-implementation.md) | implementation-report | publisher | historical |
 | [Карта сохранённой истории](../docs/history-index.md) | history-index | publisher | current |
 

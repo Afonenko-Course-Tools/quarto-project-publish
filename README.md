@@ -323,3 +323,13 @@ source-extraction проверка заменена настоящим installed
 прежние qmd/ipynb/Rmd/yaml и служебные/cache защиты не меняются.
 Это доказательство восстанавливаемой копии, а не privacy/currentness публикации.
 Новые manifests, global source walks и private Quarto API не вводятся.
+
+## Общее меню курса
+
+При `course-navigation.enabled: true` Site вызывает публичную композицию
+Navigation из того же namespace установленных расширений. Установите согласованный
+комплект Course с `course-navigation/public.ts`. В корне и HTML-компонентах
+включите `filters: [course-navigation]` и `website.navbar: {}` либо `book.navbar: {}`.
+Состав берётся из `subprojects`; отдельный список ссылок не нужен.
+Правила standalone и явно заданных авторских ссылок сохраняются без включения
+общей композиции. Подробности: [контракт](spec/contract.md#общее-меню-курса-unreleased).

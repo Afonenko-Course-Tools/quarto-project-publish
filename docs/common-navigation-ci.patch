@@ -1,0 +1,38 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 514ed28..d55e260 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -21,7 +21,7 @@ jobs:
+       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+         with:
+           repository: Afonenko-Course-Tools/quarto-course
+-          ref: c57babccdadbf72d02245c2d2d05c41948930ced # Core 9.0.1: exact independently reviewed source; tag publication separate
++          ref: 0d8e595e712dcf1125a93fea3a8dabb6ba3095cb # Core 9.0.1 и public Navigation/theme из связанного PR; исходный коммит
+           path: quarto-course
+           persist-credentials: false
+       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+@@ -38,7 +38,7 @@ jobs:
+           persist-credentials: false
+       - name: Проверить закреплённые Core и QRC
+         run: |
+-          test "$(git -C quarto-course rev-parse HEAD)" = "c57babccdadbf72d02245c2d2d05c41948930ced"
++          test "$(git -C quarto-course rev-parse HEAD)" = "0d8e595e712dcf1125a93fea3a8dabb6ba3095cb"
+           test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "a924b15372f8a7c95c090031c4a0ac935ce705f5"
+       - name: Проверить закреплённый Download
+         run: |
+@@ -80,6 +80,7 @@ jobs:
+       - name: Установленная native композиция и домены
+         working-directory: quarto-project-publish
+         env:
++          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
+           CORE: ${{ github.workspace }}/quarto-course
+           QRC: ${{ github.workspace }}/quarto-reference-catalog
+           DOWNLOAD: ${{ github.workspace }}/quarto-project-download
+@@ -93,6 +94,7 @@ jobs:
+         run: |
+           quarto run tests/performance-context.ts
+           quarto run tests/performance-noenv.ts
++          quarto run tests/site-composed-navigation.ts
+           quarto run tests/site-public-operation.ts
+           B2_ROOT_NATIVE=1 quarto run tests/site-public-operation.ts
+           B2_ROOT_NATIVE=1 B2_DEFAULT_CORE=1 quarto run tests/site-public-operation.ts

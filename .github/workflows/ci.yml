@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: 946ad619830aa1affcbdaf4b5b447324e3d41002 # Core 9.0.0: независимая рецензия исходного дерева
+          ref: c57babccdadbf72d02245c2d2d05c41948930ced # Core 9.0.1: exact independently reviewed source; tag publication separate
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -38,7 +38,7 @@ jobs:
           persist-credentials: false
       - name: Проверить закреплённые Core и QRC
         run: |
-          test "$(git -C quarto-course rev-parse HEAD)" = "946ad619830aa1affcbdaf4b5b447324e3d41002"
+          test "$(git -C quarto-course rev-parse HEAD)" = "c57babccdadbf72d02245c2d2d05c41948930ced"
           test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "a924b15372f8a7c95c090031c4a0ac935ce705f5"
       - name: Проверить закреплённый Download
         run: |
@@ -47,11 +47,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course-prairielearn
-          ref: 3a2c3ec8b0c402eb4c7eece5cb97499f9177384e # C 9.0.0: кандидат с Core 9; не запуск C CLI
+          ref: eb35a5f16600915bdc78a41c21601e1ae92fe019 # C 9.0.0: published exact source; не запуск C CLI
           path: quarto-course-prairielearn
           persist-credentials: false
       - name: Проверить закреплённый public validator
-        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "3a2c3ec8b0c402eb4c7eece5cb97499f9177384e"
+        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "eb35a5f16600915bdc78a41c21601e1ae92fe019"
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}

@@ -52,10 +52,13 @@ Ordinary native `.task-items` без explicit assignment capture может ос
 названо исправлением и не означает сохранность qualified student assembly.
 Текущий Publisher не владеет назначением работ или нормализацией оценивания.
 
-Перед release реальный qualified student assembly всех 135 материалов обязан
+Перед приёмкой курса/программы реальный qualified student assembly всех 135
+материалов обязан
 исключить hidden task slots и closed answer keys. Проверка проводится через
 настоящий assignment/P producer; обычные native proof/condition/resources её
 не заменяют. Пока этот gate открыт, все гарантии старого participant export не
-объявляются пройденными. В ordinary тестах по-прежнему строго отсутствуют
+объявляются пройденными. Это обязательный gate курса/программы; generic extension
+tag после OTHER и необходимых собственных проверок не означает его прохождение.
+В ordinary тестах по-прежнему строго отсутствуют
 PRIVATE_/RESTRICTED_ Body, закрытые ресурсы и соответствующее содержимое search;
 закрытые QRC targets тоже отсутствуют.

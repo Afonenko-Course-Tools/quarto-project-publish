@@ -10,19 +10,11 @@ import {
   within,
 } from "./files.ts";
 import { profileArguments, quarto } from "./process.ts";
-export interface Project {
-  id: string;
-  path: string;
-  mount: string;
+function projectRecord(path: string, mount: string) {
+  return { id: `subproject-${encodeURIComponent(mount)}`, path, mount };
 }
-export interface Workspace {
-  root: string;
-  output: string;
-  profiles: string[];
-  projects: Project[];
-  config: any;
-  resources?: string[];
-}
+export type Project = ReturnType<typeof projectRecord>;
+export type Workspace = Awaited<ReturnType<typeof workspace>>;
 export async function inspect(root: string, profiles: string[]): Promise<any> {
   return JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
@@ -52,7 +44,7 @@ export async function validateConfig(
   root: string,
   config: any,
   profiles: string[],
-): Promise<Workspace> {
+) {
   root = resolve(root);
   if (config.project?.type !== "website") {
     throw diagnostic(
@@ -191,15 +183,11 @@ export async function validateConfig(
         );
       }
     }
-    projects.push({
-      id: `subproject-${encodeURIComponent(mount)}`,
-      path,
-      mount,
-    });
+    projects.push(projectRecord(path, mount));
   }
   return { root, output, projects, profiles, config };
 }
-export async function workspace(root: string): Promise<Workspace> {
+export async function workspace(root: string) {
   const profiles = activeProfiles();
   const project = JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
@@ -213,15 +201,66 @@ export async function workspace(root: string): Promise<Workspace> {
   };
 }
 
+/** Чистый preflight: metadata не разрешают author выдачу в student audience. */
+export function validateAudience(
+  root: string,
+  profiles: string[],
+  view?: "student" | "full",
+  nativeProjection?: "student" | "author",
+  expectedAudience?: "student" | "full",
+) {
+  const audience = expectedAudience ??
+    profiles.find((profile) => profile === "student" || profile === "full") ??
+    view ??
+    (nativeProjection === undefined
+      ? undefined
+      : nativeProjection === "author"
+      ? "full"
+      : "student");
+  if (view !== undefined && view !== audience) {
+    throw diagnostic(
+      "SITE.AUDIENCE_MISMATCH",
+      "course.view не совпадает с выбранной student/full аудиторией",
+      {
+        source: root,
+        field: "course.view",
+        hint:
+          "Согласуйте course.view корня и native компонентов с выбранной аудиторией.",
+      },
+    );
+  }
+  if (
+    nativeProjection !== undefined &&
+    nativeProjection !== (audience === "full" ? "author" : "student")
+  ) {
+    throw diagnostic(
+      "SITE.AUDIENCE_MISMATCH",
+      "Native проекция Core не совпадает с выбранной student/full аудиторией",
+      {
+        source: root,
+        field: "course-core-projection",
+        hint: "Используйте student для student audience и author для full.",
+      },
+    );
+  }
+  return audience;
+}
+
 export async function validateAudienceOutputs(
   root: string,
   profiles: string[],
   selectedOutput: string,
   view?: "student" | "full",
+  nativeProjection?: "student" | "author",
+  expectedAudience?: "student" | "full",
 ): Promise<void> {
-  const selectedAudience =
-    profiles.find((profile) => profile === "student" || profile === "full") ||
-    view;
+  const selectedAudience = validateAudience(
+    root,
+    profiles,
+    view,
+    nativeProjection,
+    expectedAudience,
+  );
   const alternatives = selectedAudience
     ? ["student", "full"].filter((profile) => profile !== selectedAudience)
     : ["student", "full"];
@@ -286,25 +325,22 @@ export async function validateAudienceOutputs(
   }
 }
 
-export interface DocumentFormat {
-  source: string;
-  format: string;
-  baseFormat: string;
-  web: boolean;
+function documentFormat(
+  source: string,
+  format: string,
+  baseFormat: string,
+  web: boolean,
+) {
+  return { source, format, baseFormat, web };
 }
-export interface DocumentPlan {
-  resources?: string[];
-  config: any;
-  documents: DocumentFormat[];
-  /** undefined: native configuration; default: native first format; null: selected files. */
-  renderTo?: string | null;
-}
+export type DocumentFormat = ReturnType<typeof documentFormat>;
+export type DocumentPlan = Awaited<ReturnType<typeof inspectDocuments>>;
 /** Effective formats are native Quarto data, including directory metadata and profiles. */
 export async function inspectDocuments(
   root: string,
   profiles: string[],
   project?: any,
-): Promise<DocumentPlan> {
+) {
   project ??= JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
   );
@@ -373,13 +409,12 @@ export async function inspectDocuments(
       );
     }
     const [format, value] = selected;
-    documents.push({
-      source: relative(root, input).replaceAll("\\", "/"),
+    documents.push(documentFormat(
+      relative(root, input).replaceAll("\\", "/"),
       format,
-      baseFormat: value.identifier?.["base-format"] || value.pandoc?.to ||
-        format,
-      web: web.length === 1,
-    });
+      value.identifier?.["base-format"] || value.pandoc?.to || format,
+      web.length === 1,
+    ));
     hasOtherFormats ||= entries.length > 1;
     firstSelected &&= entries[0][0] === format;
   }

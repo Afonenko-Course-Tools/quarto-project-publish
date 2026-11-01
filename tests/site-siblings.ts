@@ -6,7 +6,7 @@ try {
   await Deno.mkdir(join(root, "part"));
   await Deno.writeTextFile(
     join(root, "_quarto.yml"),
-    "project:\n  type: website\n  output-dir: _site\nformat: html\ncourse: {id: portal}\nsubprojects: [part]\n",
+    "project:\n  type: website\n  output-dir: _site\nformat: html\nproject-download: {resources: {data: {path: assets}}}\nsubprojects: [part]\n",
   );
   await Deno.writeTextFile(join(root, "index.qmd"), "# Root\n");
   const add = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
@@ -21,18 +21,18 @@ try {
   );
   Deno.env.delete("QUARTO_PROJECT_RENDER_ALL");
   await assertRejects(() => pre(root), "SITE.SIBLING_MISSING", [
-    "course-core",
-    "native-run.ts",
+    "project-download",
+    "public.ts",
     "module",
   ]);
   const source = join(
     root,
-    "_extensions/course-core/infrastructure/native-run.ts",
+    "_extensions/project-download/public.ts",
   );
   await Deno.mkdir(dirname(source), { recursive: true });
   await Deno.writeTextFile(
     source,
-    'export function beginNativeRun() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
+    'export function prepareDownloads() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
   );
   try {
     await pre(root);
@@ -42,7 +42,7 @@ try {
     assertEquals((error as Error & { code: string }).code, "CORE.SENTINEL");
     assertEquals(error.cause, "original");
     assert(!error.message.includes("SITE.SIBLING_MISSING"));
-    assert(error.stack?.includes("beginNativeRun"));
+    assert(error.stack?.includes("prepareDownloads"));
   }
   // Import-time failures of a present QRC module must also stay foreign.
   await Deno.writeTextFile(
@@ -54,7 +54,7 @@ try {
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "_site/index.html");
   const qrc = join(
     root,
-    "_extensions/reference-catalog/infrastructure/publish.ts",
+    "_extensions/reference-catalog/public.ts",
   );
   await Deno.mkdir(dirname(qrc), { recursive: true });
   await Deno.writeTextFile(
@@ -71,7 +71,7 @@ try {
     assert(error instanceof Error);
     assertEquals(error.message, "INITIALIZATION_SENTINEL");
     assertEquals(error.cause, "module cause");
-    assert(error.stack?.includes("publish.ts"));
+    assert(error.stack?.includes("public.ts"));
   }
   console.log(
     "PASS missing sibling distinct from foreign call/import diagnostics and causes",

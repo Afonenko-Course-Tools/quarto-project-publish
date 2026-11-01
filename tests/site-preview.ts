@@ -1,6 +1,6 @@
-import {commandProbe} from "./command-probe.ts";
+import { commandProbe } from "./command-probe.ts";
 /** Installed existing/clean root and component previews, with and without Core. */
-import { join, resolve } from "stdlib/path";
+import { join, resolve, toFileUrl } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 
 const positional = Deno.args.filter((arg) => arg !== "--course");
@@ -11,8 +11,11 @@ assert(
 const root = resolve(positional[0]);
 const course = Deno.args.includes("--course");
 const quarto = Deno.env.get("QUARTO") || "quarto";
-const trace = join(root, "preview-trace.jsonl");
-const probe=await commandProbe(root,quarto,trace);
+// Журнал наблюдения не является authored input текущей операции Core.
+const traceDirectory = join(root, "_generated/test-logs");
+await Deno.mkdir(traceDirectory, { recursive: true });
+const trace = join(traceDirectory, "preview-trace.jsonl");
+const probe = await commandProbe(root, quarto, trace);
 
 async function renders(): Promise<number> {
   let text: string;
@@ -100,7 +103,10 @@ async function preview(cwd: string, clean = false): Promise<void> {
   // Keep the rejected exit promise observed after the serving race has settled.
   stopped.catch(() => {});
   // Чистый корень курса собирает три native проекта: два компонента и корень.
-  const startup = deadline(course && clean && cwd === root ? 360_000 : 120_000, "native preview did not start serving");
+  const startup = deadline(
+    course && clean && cwd === root ? 360_000 : 120_000,
+    "native preview did not start serving",
+  );
   try {
     await Promise.race([served, stopped, startup.promise]);
     startup.cancel();
@@ -141,14 +147,25 @@ async function preview(cwd: string, clean = false): Promise<void> {
   const expected = clean && cwd === root ? (course ? 2 : 1) : 0;
   assertEquals(await renders() - before, expected);
   if (course && !clean) {
-    let completion = false;
+    const Core = await import(
+      toFileUrl(join(cwd, "_extensions/course-core/public.ts")).href
+    );
+    let refused = "";
     try {
-      await Deno.stat(join(cwd, "_generated/course-spec/native-run.json"));
-      completion = true;
+      await Core.withCurrentNativeOperation({
+        root: cwd,
+        profiles: ["student"],
+        projection: "student",
+        outputDirectory: join(cwd, "_site-student"),
+      }, async () => {});
     } catch (error) {
-      if (!(error instanceof Deno.errors.NotFound)) throw error;
+      refused = (error as { code?: string }).code ?? String(error);
     }
-    assert(!completion, "zero-output hook fabricated completion");
+    assert(
+      ["OPERATION_BINDING", "OPERATION_INCOMPLETE"].includes(refused),
+      "zero-output hook fabricated genuine completion or refused for another reason: " +
+        refused,
+    );
   }
 }
 

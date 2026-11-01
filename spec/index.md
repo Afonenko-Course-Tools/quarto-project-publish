@@ -14,46 +14,35 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 | Документ | type | component | status |
 | --- | --- | --- | --- |
 | [Контракт Publisher](contract.md) | contract | publisher | current |
-| [Структура subprojects](subprojects.cue) | contract/schema | publisher | current |
+| [Исполняемая проверка subprojects](../_extensions/course-site/infrastructure/config.ts) | contract/runtime | publisher | current |
 | [Диагностика](../docs/diagnostics.md) | reference | publisher | current |
-| [Авторская модель Core](../../quarto-course/spec/index.md) | specification/index | course-core | current |
+| [Авторская модель Core](https://github.com/Afonenko-Course-Tools/quarto-course/blob/c57babccdadbf72d02245c2d2d05c41948930ced/spec/index.md) | specification/index | course-core | current |
 | [Результат реализации](../docs/releases/2026-10-08-implementation.md) | implementation-report | publisher | historical |
 | [Карта сохранённой истории](../docs/history-index.md) | history-index | publisher | current |
 
 Publisher владеет `subprojects`, размещением native outputs, collection/ownership и границей native child процесса. Quarto владеет metadata/profiles/форматами; Core владеет учебной моделью и отбором; QRC — адресами каталога.
 
 Версия пакета определяется [descriptor](../_extensions/course-site/_extension.yml) того же Git ref.
-Quarto 1.11.5 и CUE 0.17.1 согласованы с текущими правилами Core.
-Текущий ref — **5.1.4**. Изменения после
+Целевой Quarto — 1.11.5; исполняемая проверка конфигурации принадлежит TS-модулю Publisher.
+Текущий ref — кандидат **5.2.0**; полный GREEN CI и выпуск ещё не подтверждены. Изменения после
 выпущенного тега имеют статус **unreleased**.
 Документация установленного выпуска читается из того же immutable tag, что и код.
 
-## Исправление 5.1.2
+## Текущий публичный договор
 
-Site согласованно проецирует источник каждого `ProjectFact` вместе с источником
-его документа. Owner-relative пути и строгие проверки Core сохраняются.
-Документация и код выбранного выпуска читаются из одного ref.
+Core 9 использует native TS по умолчанию. Publisher сохраняет отдельную
+операцию каждого owner и её release proof; обычный проект без Core остаётся
+самостоятельным. Project/Workspace/DocumentFormat/DocumentPlan выводятся из
+конструкторов и действующих TS-операций владельца, отдельные ручные interfaces
+их формы не поддерживаются.
 
-## Исправление 5.1.1
+QRC завершает адресацию до фиксации Core, затем Download создаёт ZIP один раз
+в конечном месте. Старые NativeRun и host finalize-conditions не являются
+входами текущего пакета. [Карта переноса проверок](../tests/legacy-harness-mapping.md)
+связывает действующие гарантии с их владельцами и отделяет удалённые входы.
 
-Очистка предыдущего результата учитывает явно объявленные ресурсы из
-`quarto inspect`, включая README. Необъявленные исходники и служебные
-каталоги в output по-прежнему блокируют очистку; границы и запрет symlink
-сохраняются. Core владеет правилами публичной и закрытой выдачи.
-
-## Кандидат 5.1.3
-
-После полного QRC Site финализирует conditions ZIP существующими pure API;
-исходные receipts и NativeRun сохраняются. До выпуска версия unreleased.
-
-## Кандидат 5.1.4
-
-Фасады ABI 1 передают `attributes.extension_id`; пакетная навигация и композиция
-сохраняют общий контекст без произвольного `document_id`. Дочерняя команда
-использует полный снимок окружения через `childEnv` и `clearEnv: true` только
-при активном контексте агента. Identity/off/недоступный режим/отсутствующий агент
-сохраняют прежние env overrides, наследование и разрешения.
-Авторская модель, API Core 8.1 и Body v2 сохраняются; общий runtime не вводится.
-Согласуемая матрица Core 8.2.3 / Site 5.1.4 / QRC 3.1.1 / Download 3.2.2 требует
-отдельной проверки точных итоговых refs и установленного состава. До нового
-выпуска версия остаётся unreleased; матрица сама по себе не является evidence.
+Сохранены ABI 1 и контекст наблюдения, native профили, guards путей и outputs,
+политика student/full, восстановимые Markdown-копии и preview. Подробности —
+[контракт](contract.md) и [публичная композиция](../docs/public-operation.md).
+Исторические кандидаты и прежние матрицы сохранены в Git и
+[указателе истории](../docs/history-index.md); они не подтверждают текущий выпуск.

@@ -2,7 +2,7 @@
 title: Презентация
 format:
   revealjs:
-    footer: "[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v5.1.4/examples/course/materials/slides.qmd)"
+    footer: "[Исходный QMD](https://github.com/Afonenko-Course-Tools/quarto-project-publish/blob/v5.2.0/examples/course/materials/slides.qmd)"
 ---
 
 # Составной курс {#sec-slide}

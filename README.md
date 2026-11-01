@@ -1,24 +1,24 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — кандидат **5.1.4**; до публикации соответствующего тега
-он имеет статус **unreleased**. Версия
+Текущий ref — кандидат **5.2.0**. Полный GREEN CI и публикация кандидата
+ещё не подтверждены. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
-из одного immutable tag. Минимум — Quarto 1.11.5; при использовании Core
-требуется CUE 0.17.1. Локальная разработка устанавливает расширение штатным
+из одного immutable tag. Минимум — Quarto 1.11.5. Конфигурацию проверяет исполняемый TS-контракт владельца. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-Для локальной проверки установите полный checkout кандидата штатной командой:
+После публикации версия 5.2.0 устанавливается из существующего
+репозитория `quarto-project-publish`:
 
 ```bash
-quarto add /absolute/path/to/quarto-project-publish --no-prompt
+quarto add Afonenko-Course-Tools/quarto-project-publish@v5.2.0
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
 ```
 
 После публикации нового тега установка из GitHub выполняется командой
-`quarto add Afonenko-Course-Tools/quarto-project-publish@v5.1.4`. Наличие тега
+`quarto add Afonenko-Course-Tools/quarto-project-publish@v5.2.0`. Наличие тега
 и готовность установленного курса проверяются отдельно.
 
 Используйте фактический installation prefix, показанный `quarto add`. Ниже пути
@@ -42,8 +42,8 @@ format: html
 subprojects: [theory, slides]
 ```
 
-У каждой части есть собственный `_quarto.yml`, native `output-dir` и последний
-post-render hook `../_extensions/course-site/entrypoints/collect.ts`. Например:
+У каждой части есть собственный `_quarto.yml`, native `output-dir` и post-render hook `../_extensions/course-site/entrypoints/collect.ts`: после QRC
+и перед Core post-hook, если Core подключён. Например:
 
 ```yaml
 lang: ru
@@ -67,8 +67,10 @@ format: html
 `project.output-dir`: в корне `_site-student` / `_site-full`, в частях
 `_output/student` / `_output/full`. При использовании Course каждый профиль также
 задаёт `course.view: student` / `full` в Course-проектах. Корень без Course metadata
-берёт ожидаемый view каждого домена из разрешённой конфигурации его частей;
-каждая часть выбирает собственную согласованную проекцию view. Расширение использует
+с выбранным student/full профилем требует эту же аудиторию у native частей;
+при custom/default профилях согласованная аудитория следует effective конфигурации.
+Несогласованные `course.view` или native `course-core-projection` дают
+`SITE.AUDIENCE_MISMATCH` до очистки и child render. Расширение использует
 `quarto inspect` для разрешённой конфигурации и передаёт выбранные профили в том же
 порядке. Пересекающиеся output разных audience отклоняются до удаления файлов.
 Если корень не выбирает профили, части сохраняют собственные native defaults,
@@ -91,7 +93,7 @@ output может точно совпадать с одной из этих пр
 `exercise-bank: true`; имя папки и `course.id` его не включают. Для ссылок
 установите `reference-catalog`, добавьте
 его фильтр и `reference-catalog.namespace`. Корневой course-site hook сам вызывает
-Core begin/finish и QRC full; дополнительные Core pre/post hooks в корне не нужны.
+Core native-pre/native-post и QRC full; дополнительные Core pre/post hooks в корне не нужны.
 В частях настройте:
 
 ```yaml
@@ -102,9 +104,9 @@ project:
   output-dir: _output/default
   pre-render: _extensions/course-core/entrypoints/pre.ts
   post-render:
-    - _extensions/course-core/entrypoints/post.ts
     - _extensions/reference-catalog/entrypoints/post.ts
     - ../_extensions/course-site/entrypoints/collect.ts
+    - _extensions/course-core/entrypoints/post.ts
 filters: [course-core, reference-catalog]
 course: {view: full}
 reference-catalog: {namespace: theory}
@@ -114,8 +116,7 @@ reference-catalog: {namespace: theory}
 полную политику exports/imports сайта. Core проверяет результаты каждого native проекта.
 Каждая часть сохраняет самостоятельную область нативных ID и свой QRC namespace.
 `course.id` в корне обозначает логический курс для явного экспорта выбранного
-банка; путь публикации и namespace не заменяют эту идентичность. Полные
-модели самостоятельных частей сохраняются локально в
+банка; путь публикации и namespace не заменяют эту идентичность. Коллекции outputs и отчёты публичных операций самостоятельных частей сохраняются в
 `_generated/course-site/runs/<id>/`, вне сайта. Core не объединяет несвязанные
 задания разных частей в один экспортный банк.
 
@@ -178,17 +179,15 @@ ID и причины. Неизвестная внутренняя ошибка �
 
 ## Проверка
 
-Согласуемая candidate матрица: Core 8.2.3, Site 5.1.4, QRC 3.1.1 и Download
-3.2.2. Полная проверка композиции с точными итоговыми refs и установленными
-пакетами требуется отдельно; прежний CI не подтверждает эту матрицу. CI этого
-ref закрепляет конкретные Core/QRC/Download SHA; их совместимость проверяется
-отдельно. Для локальной разработки установите Site из текущего checkout штатной
-командой `quarto add`.
+Текущий кандидат 5.2.0 сохраняет main наблюдение/preview и публичный B3 путь.
+Точные контрольные commits Core/QRC/Download/C задаются [CI](.github/workflows/ci.yml)
+того же Git ref. Целевой договор — Core 9 и PrairieLearn 9; старые матрицы не
+подтверждают новую пару. Core включается через `filters: [course-core]`, старый
+runtime-флаг не обязателен. Реальный CI, установка и публикация проверяются отдельно.
 
 ```bash
 quarto run tests/performance.ts
 quarto run tests/performance-context.ts
-quarto run tests/site-project-source.ts
 quarto run tests/site-project-native.ts
 quarto run tests/site-paths.ts
 quarto run tests/site-profiles.ts
@@ -220,7 +219,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает unreleased-кандидат 5.1.4;
+Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 5.2.0;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
@@ -308,7 +307,19 @@ Browser CI использует Node 26.10.0, Playwright 1.62.1 из собст�
 
 ## Исправление 5.1.2
 
-При композиции `projects[].source` получает тот же префикс области, что
-источник документа. Core сохраняет строгую проверку их согласованности.
-Исходные captured facts не меняются; пути проекта, common-files, check
-metadata и публичная/закрытая политика остаются в области исходного владельца.
+Историческое исправление 5.1.2 согласовывало префиксы глобальной модели.
+Текущий Core 9 использует отдельную операцию каждого владельца с local sources;
+Publisher монтирует outputs и не переписывает эти sources. Project origins,
+common files и check metadata остаются в области исходного owner. Прежняя
+source-extraction проверка заменена настоящим installed public API контролем;
+см. [карту миграции](tests/legacy-harness-mapping.md).
+
+## Кандидат 5.1.5: повторная очистка Markdown
+
+Необъявленный Markdown, скопированный Quarto по ссылке, допускается при очистке
+только при наличии обычного безопасного source-файла с тем же относительным
+путём вне output и точным совпадением bytes. Исходный файл сохраняется.
+Отсутствующий, иной, не regular или symlink counterpart остаётся отказом;
+прежние qmd/ipynb/Rmd/yaml и служебные/cache защиты не меняются.
+Это доказательство восстанавливаемой копии, а не privacy/currentness публикации.
+Новые manifests, global source walks и private Quarto API не вводятся.

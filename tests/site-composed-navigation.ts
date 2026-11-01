@@ -93,7 +93,7 @@ course-navigation: {enabled: true}
     }
   }
   await run(["add", repo, "--no-prompt"]);
-  for (const profile of ["student", "full"]) {
+  for (const profile of ["student", "full", "student"]) {
     await run(["render", "--profile", profile, "--fail-if-warnings"]);
     const output = join(root, "_site-" + profile);
     const chapter = await Deno.readTextFile(
@@ -103,6 +103,16 @@ course-navigation: {enabled: true}
       chapter.includes('data-course-link="root"'),
       "Site передаёт состав курса в Navigation",
     );
+    assert.equal(
+      (chapter.match(/data-course-link="root"/g) || []).length,
+      1,
+      "Повторная композиция сохраняет ровно один вход корня",
+    );
+    assert.ok(
+      !chapter.includes('data-course-link="handout"'),
+      "PDF-only компонент не становится web-участником",
+    );
+    assert.ok((await Deno.stat(join(output, "handout/index.pdf"))).isFile);
     assert.ok(chapter.includes('href="../../slides/"'));
     const deck = await Deno.readTextFile(join(output, "slides/lesson.html"));
     assert.ok(deck.includes('"href":"../theory/"'));
@@ -134,8 +144,24 @@ course-navigation: {enabled: true}
     stderr: "inherit",
   }).output();
   assert.equal(browser.code, 0);
+  const config = await Deno.readTextFile(join(root, "_quarto.yml"));
+  await write(
+    "_quarto.yml",
+    config.replace(
+      "course-navigation: {enabled: true}",
+      "course-navigation: {enabled: false}",
+    ),
+  );
+  await run(["render", "--profile", "student", "--fail-if-warnings"]);
+  const withoutComposition = await Deno.readTextFile(
+    join(root, "_site-student/theory/nested/chapter.html"),
+  );
+  assert.ok(
+    !withoutComposition.includes('data-course-link="root"'),
+    "Без явного включения общее меню не создаётся",
+  );
   console.log(
-    "PASS установленная композиция Navigation/Site: student/full, HTML/Reveal, вложенность и standalone",
+    "PASS установленная композиция Navigation/Site: student/full/repeat, HTML/Reveal, PDF-only, standalone и opt-in",
   );
 } finally {
   if (Deno.env.get("COURSE_SITE_COMPOSITION_KEEP")) {

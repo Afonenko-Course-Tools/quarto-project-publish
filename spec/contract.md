@@ -6,7 +6,7 @@ status: current
 
 # Контракт Publisher
 
-Текущий ref: **5.2.0** (unreleased); версия пакета задаётся
+Текущий ref: **5.3.0** (unreleased); версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
 Корень native проекта объявляет непустой `subprojects: [paths]`; структуру и файловые границы проверяет
@@ -187,7 +187,7 @@ nonCore компонент не обязан объявлять Core проек�
 не изменяет предыдущую выдачу. Проверка не добавляет обхода источников или
 собственной модели учебных данных.
 
-## Общее меню курса (unreleased)
+## Общее меню курса (5.3.0)
 
 `course-navigation.enabled: true` в корне включает публичную композицию
 `course-navigation/public.ts` → `composeNavigation`. Site передаёт `stage`,

@@ -114,14 +114,14 @@ jobs:
           quarto run tests/site-siblings.ts
           quarto run tests/site-native.ts warnings
           quarto run tests/site-native.ts
-          quarto run tests/site-domains.ts
-          quarto run tests/site-domains.ts resources
-          quarto run tests/site-domains.ts rootless
+          COURSE_SITE_DOMAIN_ROOT="${COURSE_SITE_DOMAIN_ROOT}-all" quarto run tests/site-domains.ts
+          COURSE_SITE_DOMAIN_ROOT="${COURSE_SITE_DOMAIN_ROOT}-resources" quarto run tests/site-domains.ts resources
+          COURSE_SITE_DOMAIN_ROOT="${COURSE_SITE_DOMAIN_ROOT}-rootless" quarto run tests/site-domains.ts rootless
           quarto run tests/site-formats.ts
           quarto run tests/site-local.ts
           quarto run tests/site-preview.ts "$COURSE_SITE_TEST_ROOT"
-          quarto run tests/site-domains.ts smoke
-          quarto run tests/site-preview.ts "$COURSE_SITE_DOMAIN_ROOT" --course
+          COURSE_SITE_DOMAIN_ROOT="${COURSE_SITE_DOMAIN_ROOT}-smoke" quarto run tests/site-domains.ts smoke
+          quarto run tests/site-preview.ts "${COURSE_SITE_DOMAIN_ROOT}-smoke" --course
       - name: Диагностика
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -130,6 +130,9 @@ jobs:
           path: |
             ${{ runner.temp }}/course-site-native/logs
             ${{ runner.temp }}/course-site-native/trace.jsonl
-            ${{ runner.temp }}/course-site-domains/_generated/test-logs
+            ${{ runner.temp }}/course-site-domains-all/_generated/test-logs
+            ${{ runner.temp }}/course-site-domains-resources/_generated/test-logs
+            ${{ runner.temp }}/course-site-domains-rootless/_generated/test-logs
+            ${{ runner.temp }}/course-site-domains-smoke/_generated/test-logs
             ${{ runner.temp }}/course-site-project/_generated/test-logs
           if-no-files-found: ignore

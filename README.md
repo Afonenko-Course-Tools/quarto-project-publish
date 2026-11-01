@@ -42,8 +42,8 @@ format: html
 subprojects: [theory, slides]
 ```
 
-У каждой части есть собственный `_quarto.yml`, native `output-dir` и последний
-post-render hook `../_extensions/course-site/entrypoints/collect.ts`. Например:
+У каждой части есть собственный `_quarto.yml`, native `output-dir` и post-render hook `../_extensions/course-site/entrypoints/collect.ts`: после QRC
+и перед Core post-hook, если Core подключён. Например:
 
 ```yaml
 lang: ru
@@ -91,7 +91,7 @@ output может точно совпадать с одной из этих пр
 `exercise-bank: true`; имя папки и `course.id` его не включают. Для ссылок
 установите `reference-catalog`, добавьте
 его фильтр и `reference-catalog.namespace`. Корневой course-site hook сам вызывает
-Core begin/finish и QRC full; дополнительные Core pre/post hooks в корне не нужны.
+Core native-pre/native-post и QRC full; дополнительные Core pre/post hooks в корне не нужны.
 В частях настройте:
 
 ```yaml
@@ -102,9 +102,9 @@ project:
   output-dir: _output/default
   pre-render: _extensions/course-core/entrypoints/pre.ts
   post-render:
-    - _extensions/course-core/entrypoints/post.ts
     - _extensions/reference-catalog/entrypoints/post.ts
     - ../_extensions/course-site/entrypoints/collect.ts
+    - _extensions/course-core/entrypoints/post.ts
 filters: [course-core, reference-catalog]
 course: {view: full}
 reference-catalog: {namespace: theory}
@@ -114,8 +114,7 @@ reference-catalog: {namespace: theory}
 полную политику exports/imports сайта. Core проверяет результаты каждого native проекта.
 Каждая часть сохраняет самостоятельную область нативных ID и свой QRC namespace.
 `course.id` в корне обозначает логический курс для явного экспорта выбранного
-банка; путь публикации и namespace не заменяют эту идентичность. Полные
-модели самостоятельных частей сохраняются локально в
+банка; путь публикации и namespace не заменяют эту идентичность. Коллекции outputs и отчёты публичных операций самостоятельных частей сохраняются в
 `_generated/course-site/runs/<id>/`, вне сайта. Core не объединяет несвязанные
 задания разных частей в один экспортный банк.
 
@@ -179,11 +178,10 @@ ID и причины. Неизвестная внутренняя ошибка �
 ## Проверка
 
 Текущий кандидат 5.2.0 сохраняет main наблюдение/preview и публичный B3 путь.
-CI закрепляет Core8.4.0 `0613a4c6409d6cf766f926b8e096fd35d2a88422`,
-QRC3.2.0 `23312f3bd747a8f665fd2313afbb1c95c42978ac` и Download3.3.0
-`c868710c719f532d30fca8703b122545959b8ef8`. Настоящие CI и установленная композиция этих точных
-refs проверяются отдельно; прежняя матрица Core8.2.3/Site5.1.4/QRC3.1.1/
-Download3.2.2 сохраняется как исторический контекст, без автоматического PASS.
+Точные контрольные commits Core/QRC/Download/C задаются [CI](.github/workflows/ci.yml)
+того же Git ref. Целевой договор — Core 9 и PrairieLearn 9; старые матрицы не
+подтверждают новую пару. Core включается через `filters: [course-core]`, старый
+runtime-флаг не обязателен. Реальный CI, установка и публикация проверяются отдельно.
 
 ```bash
 quarto run tests/performance.ts

@@ -150,8 +150,9 @@ validateRelease и actual C public validator в той же operation. Root conf
 coarse SITE.RELEASE_UNQUALIFIED остаётся course без native Core. Ordinary proof
 не предоставляет assignment intent. Открытый generated-resource + release
 membership blocker перечислен в packet; полный выпуск не квалифицирован.
-Исторический host finalize-conditions/helper не запускаются production compose;
-их удаление требует полной приёмки owner condition path с эквивалентными controls.
+Исторические host finalize-conditions/helper удалены. Conditions ZIP создаёт
+Download один раз из текущего Core inventory после окончательного назначения
+адресов; чтение и повторная упаковка старого ZIP больше не поддерживаются.
 
 ## Контекст наблюдения (5.1.4, unreleased)
 

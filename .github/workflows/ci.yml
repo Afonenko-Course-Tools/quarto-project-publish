@@ -89,7 +89,6 @@ jobs:
           COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
-          SITE_CONDITIONS_PROVIDERS="$GITHUB_WORKSPACE" quarto run tests/conditions.ts
           quarto run tests/performance-context.ts
           quarto run tests/performance-noenv.ts
           quarto run tests/site-public-operation.ts

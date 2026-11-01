@@ -62,7 +62,7 @@ try {
     await put(
       "_quarto.yml",
       (await Deno.readTextFile(join(root, "_quarto.yml"))) +
-        `\ncourse-core-runtime: native-ts\ncourse-core-projection: student\nfilters:\n - {at: pre-ast, path: ${ext}/course-prairielearn/native-ts/raw-capture.lua}\n - course-core\n`,
+        `\ncourse-core-runtime: native-ts\ncourse-core-projection: student\nfilters: [course-core]\n`,
     );
     await put(
       "index.qmd",
@@ -87,11 +87,7 @@ try {
     "tasks/_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, other.qmd]\n  pre-render: [quarto run ${ext}/project-download/entrypoints/pre.ts, quarto run ${ext}/course-core/entrypoints/native-pre.ts${plPre}]\n  post-render: [quarto run ../${ext}/course-site/entrypoints/collect.ts, quarto run ${ext}/course-core/entrypoints/native-post.ts, quarto run ${ext}/project-download/entrypoints/post.ts --native${
       author ? " --author" : ""
-    }]\nformat: {html: {theme: none}}\nfilters:\n${
-      withPL && mode !== "pl-missing"
-        ? ` - {at: pre-ast, path: ${ext}/course-prairielearn/native-ts/raw-capture.lua}\n`
-        : ""
-    } - course-core\n - project-download\ncourse-core-runtime: native-ts\ncourse-core-projection: ${projection}\nexercise-bank: true\nproject-download:\n  course-model: true\n  resources: {data: {path: assets, gitignore: false}}\ncourse-project:\n  build:\n    files: {build.gradle: shared/build.gradle, settings.gradle: shared/settings.gradle}\n  instructions:\n    gradle: {path: shared/gradle.md}\n    local: {path: README.local.md}\nreference-catalog: {namespace: tasks}\n`,
+    }]\nformat: {html: {theme: none}}\nfilters: [course-core, project-download]\ncourse-core-runtime: native-ts\ncourse-core-projection: ${projection}\nexercise-bank: true\nproject-download:\n  course-model: true\n  resources: {data: {path: assets, gitignore: false}}\ncourse-project:\n  build:\n    files: {build.gradle: shared/build.gradle, settings.gradle: shared/settings.gradle}\n  instructions:\n    gradle: {path: shared/gradle.md}\n    local: {path: README.local.md}\nreference-catalog: {namespace: tasks}\n`,
   );
   for (
     const [path, text] of Object.entries({

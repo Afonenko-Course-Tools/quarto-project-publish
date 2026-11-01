@@ -47,11 +47,11 @@ condition-only, default kind, reveal owner/resources, ordinary reveal model от
 sequential captures и coarse inactive-course gate. Final mounted README, suffixes,
 anchors, privacy и exact source coverage проверяются в этих случаях.
 
-B3 остаётся Core dependency BLOCKED на actual generated-resource + release guard;
-подробный handoff находится в execution packet. Это не весь Java128/SP7, true
-installed или PL/Pages byte identity. Исторический finalize-conditions/helper пока
-сохранён и production его не вызывает. Окончательная очистка идёт вместе с полной
-приёмкой нового owner condition path, включая generated case; он не служит fallback.
+Текущий ref остаётся кандидатом: полный Java/SP, установленный состав, CI и
+публикация проверяются отдельно. Исторические host finalize-conditions и reader
+старого ZIP удалены: Publisher больше не переупаковывает готовый архив и не
+принимает legacy receipt вместо текущей операции. Гарантии и действующие
+проверки перечислены в [карте переноса](../tests/legacy-harness-mapping.md).
 
 Full fixture с kind=full не квалифицирует произвольный Java bank: explicit
 kind=starter в author получает DOWNLOAD.STARTER_UNQUALIFIED. Сохраняется отдельный

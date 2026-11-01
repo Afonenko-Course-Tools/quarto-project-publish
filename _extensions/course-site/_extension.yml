@@ -1,5 +1,5 @@
 title: Составной сайт курса
-version: 5.2.0
+version: 5.3.0
 quarto-required: ">=1.11.5"
 contributes:
   metadata:

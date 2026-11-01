@@ -1,10 +1,10 @@
-import {commandProbe} from "./command-probe.ts";
+import { commandProbe } from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   root = await Deno.makeTempDir({ prefix: "course-site-web-selection-" });
 const executable = Deno.env.get("QUARTO") || "quarto";
-const probe=await commandProbe(root,executable,join(root,"trace.jsonl"));
+const probe = await commandProbe(root, executable, join(root, "trace.jsonl"));
 async function write(path: string, value: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), value);
@@ -29,7 +29,7 @@ async function run(args: string[], cwd = root) {
 try {
   await write(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nfilters: [reference-catalog]\nreference-catalog: {namespace: rootpage}\nsubprojects: [a/slides]\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nfilters: [reference-catalog]\nreference-catalog: {namespace: rootpage}\nsubprojects: [{path: a/slides, to: default}]\n`,
   );
   await write("index.qmd", "# Root\n\n@talk:sec-slide\n");
   await write(
@@ -42,7 +42,7 @@ try {
   );
   await write(
     "a/slides/index.qmd",
-    "---\ntitle: Website\nformat:\n  pdf: default\n  html: default\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
+    "---\ntitle: Website\nformat:\n  html: default\n  pdf: default\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
   );
   await write(
     "a/slides/talk.qmd",
@@ -59,7 +59,15 @@ try {
   assertEquals(counts, ["Slides", "Website"]);
   const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
     .split("\n").map((line) => JSON.parse(line));
-  assertEquals(trace.filter((row) => row.kind === "render").length, 2);
+  const childRenders = trace.filter((row) => row.kind === "render");
+  assertEquals(childRenders.length, 1);
+  assertEquals(childRenders[0].args, ["render", ".", "--to", "default"]);
+  assert(
+    trace.filter((row) => row.kind === "inspect").every((row) =>
+      !row.args[1].endsWith(".qmd")
+    ),
+    "Возвращён document inspect fanout",
+  );
   const webpage = await Deno.readTextFile(
     join(root, "_site/a/slides/index.html"),
   );
@@ -91,7 +99,7 @@ try {
   }
   assert(!pdf, "web composition rendered PDF");
   console.log(
-    "PASS PDF-first web selection, nested QRC outputs, circular HTML/Reveal links and one body render per document",
+    "PASS native HTML-first default, nested QRC, circular HTML/Reveal links, одна child команда и один body на документ",
   );
 } finally {
   await Deno.remove(root, { recursive: true });

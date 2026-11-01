@@ -53,7 +53,7 @@ fail-if-warnings: true
 filters: [course-core]
 course: {id: project-source}
 exercise-bank: true
-${owner ? "" : "subprojects: [part, nested/second]\n"}course-project:
+${owner ? "" : "subprojects: [{path: part, to: default}, {path: nested/second, to: default}]\n"}course-project:
   build:
     files: {Public.java: common/Public.java}
 project-materialization:

@@ -51,7 +51,7 @@ await write(
 format:
   html:
     theme: cosmo
-subprojects: [part]
+subprojects: [{path: part, to: default}]
 `,
 );
 await write("index.qmd", "# Root\n\n[Lesson](part/index.html)\n");

@@ -1,24 +1,24 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — кандидат **5.3.0**. Полный GREEN CI и публикация кандидата
+Текущий ref — кандидат **6.0.0**. Полный GREEN CI и публикация кандидата
 ещё не подтверждены. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5. Конфигурацию проверяет исполняемый TS-контракт владельца. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-После публикации версия 5.3.0 устанавливается из существующего
+После публикации версия 6.0.0 устанавливается из существующего
 репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v5.3.0
+quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.0
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
 ```
 
 После публикации нового тега установка из GitHub выполняется командой
-`quarto add Afonenko-Course-Tools/quarto-project-publish@v5.3.0`. Наличие тега
+`quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.0`. Наличие тега
 и готовность установленного курса проверяются отдельно.
 
 Используйте фактический installation prefix, показанный `quarto add`. Ниже пути
@@ -39,7 +39,9 @@ project:
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
-subprojects: [theory, slides]
+subprojects:
+  - {path: theory, to: default}
+  - {path: slides, to: default}
 ```
 
 У каждой части есть собственный `_quarto.yml`, native `output-dir` и post-render hook `../_extensions/course-site/entrypoints/collect.ts`: после QRC
@@ -56,7 +58,8 @@ project:
 format: html
 ```
 
-`subprojects` — непустой список относительных путей папок. Адрес части совпадает
+`subprojects` — непустой список строгих `{path, to}`. `path` — относительный путь папки;
+`to` обязателен: `default`, `html` или `revealjs`. Прежние строки не поддерживаются. Адрес части совпадает
 с её нормализованным путём: `a/slides` публикуется в `a/slides/`. `./tasks` и
 `tasks` обозначают одну часть и не могут входить в список вместе. Вложенные
 пересекающиеся проекты, symlink и пересечение источников/outputs запрещены.
@@ -83,7 +86,8 @@ output может точно совпадать с одной из этих пр
 отклоняется. Явный audience или разрешённый course.view также проверяется
 против output другого audience.
 Все выбранные исходные документы проверяются на containment и symlink перед
-документным inspect, cleanup Publisher и рендером частей.
+cleanup Publisher и рендером частей. Список берётся из настоящего project inspect;
+Publisher не выполняет inspect каждого документа и не разрешает YAML повторно.
 
 ## Core и QRC
 
@@ -122,21 +126,9 @@ reference-catalog: {namespace: theory}
 
 ## Native поведение и ошибки
 
-Полный native root render читает эффективный формат каждого выбранного документа
-через `quarto inspect` с теми же профилями. Website может сочетать HTML и Revealjs;
-front matter, directory metadata и пользовательские форматы сохраняют native смысл.
-Два веб-формата одного документа отклоняются с предложением выбрать профиль.
-HTML и PDF одной конфигурации не считаются двумя веб-форматами.
+Каждая часть рендерится одной штатной командой `quarto render . --to <to>` с выбранными профилями. `default` сохраняет native выбор первого формата документа, включая смешанный HTML index и Revealjs. `html` или `revealjs` явно выбирают этот native формат для всей части. Publisher не выводит формат из project inspect и не вводит собственную эвристику единственного web-формата. Если HTML/PDF конфигурация ставит PDF первым, автор выбирает `to: html` для веб-публикации; `default` следует настоящему порядку Quarto. Тип book/website, metadata, профили и hooks сохраняются.
 
-Обычная часть рендерится один раз без общего `--to`. Если у документов также
-есть невеб-форматы и выбранный веб-формат первый, используется native
-`--to default`; книга с единственным веб-форматом может выбирать его через
-`--to`. Если website требует разных выбранных форматов и веб-формат не первый,
-сборщик рендерит выбранные документы native командами, каждый один раз, и
-сохраняет текущие outputs каждой команды. PDF и другие невеб-результаты не
-создаются в этой веб-сборке: их собирают отдельно штатным `quarto render --to pdf`
-или функциональным профилем. Часть только с одним невеб-форматом остаётся
-самостоятельным native маршрутом готовых файлов.
+До cleanup один project inspect каждого owner независимо определяет selected sources и resources. В полной композиции actual Core catalog должен точно покрывать этот selected set и текущие HTML outputs; явный `to` проверяется по actual Core format. Проверка выполняется внутри существующей live operation до упаковки ZIP соответствующего owner, без нового lease или приватного API. Для `default` формат является только native/Core фактом. Без Core успешная native команда и текущие output paths не объявляются модельным release proof. Partial render/preview сохраняет локальную область.
 
 Свежие outputs, ресурсы и search монтируются по путям папок; QRC строго связывает
 текущие HTML и объединяет search. `.quarto`, `_freeze` и кеши движков сохраняются.
@@ -179,7 +171,7 @@ ID и причины. Неизвестная внутренняя ошибка �
 
 ## Проверка
 
-Текущий кандидат 5.3.0 сохраняет main наблюдение/preview и публичный B3 путь.
+Текущий кандидат 6.0.0 сохраняет main наблюдение/preview и публичный B3 путь.
 Точные контрольные commits Core/QRC/Download/C задаются [CI](.github/workflows/ci.yml)
 того же Git ref. Целевой договор — Core 9 и PrairieLearn 9; старые матрицы не
 подтверждают новую пару. Core включается через `filters: [course-core]`, старый
@@ -219,7 +211,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 5.3.0;
+Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 6.0.0;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
@@ -267,7 +259,7 @@ Publisher вычисляет адреса полной композиции по
 
 Штатные `index.html` открывают реальные презентации текущей native сборки в
 новой вкладке. Отдельный список целей не нужен. В standalone это обеспечивает
-существующий `collect.ts`, подключённый последним post-render hook; metadata
+существующий `collect.ts`, подключённый после QRC и перед Core post-hook; metadata
 репозитория остаются авторскими и используются native HTML source/issue actions.
 Точные границы: [контракт](spec/contract.md). Нейтральная browser-проверка:
 

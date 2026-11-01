@@ -6,11 +6,12 @@ status: current
 
 # Контракт Publisher
 
-Текущий ref: **5.3.0** (unreleased); версия пакета задаётся
+Текущий ref: **6.0.0** (кандидат); версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
-Корень native проекта объявляет непустой `subprojects: [paths]`; структуру и файловые границы проверяет
-[исполняемый TS-контракт](../_extensions/course-site/infrastructure/config.ts). Каждый путь относительный и обозначает папку
+Корень native проекта объявляет непустой список `subprojects: [{path: theory, to: default}]`; структуру и файловые границы проверяет
+[исполняемый TS-контракт](../_extensions/course-site/infrastructure/config.ts). Каждый элемент содержит только `path` и `to`; прежние строки отклоняются. `to` обязателен: `default|html|revealjs`.
+Каждый путь относительный и обозначает папку
 самостоятельного проекта. Размещение готовой части повторяет нормализованный путь.
 Повторы, вложенные пересечения источников/outputs и symlink отклоняются до cleanup.
 `course-site.projects` и отдельные id/mount/format части не поддерживаются.
@@ -18,9 +19,9 @@ status: current
 Native Quarto определяет selected sources, эффективные форматы и профили.
 Publisher сохраняет native defaults/groups при отсутствии root profile и записывает
 фактический `QUARTO_PROFILE` post-hook; `files.config` не определяет профиль.
-Student/full outputs не пересекаются. Один документ получает один выбранный
-веб-формат и один native body render; неоднозначные веб-форматы отклоняются.
-Невеб-форматы собираются отдельным штатным маршрутом.
+Student/full outputs не пересекаются. Каждый child получает одну native whole-project команду `render . --to <to>`; `default` выбирает первый формат штатным правилом Quarto, явный `html|revealjs` задаёт формат всей части. Publisher не выполняет N document inspect, не вычисляет effective format и не переходит к per-document render. Невеб-результаты при `default` остаются обычным native поведением, без вымышленного Core release proof.
+
+В full preflight independent project inspect корня и каждого child определяет validated selected sources до cleanup. Root native результат не запрашивается повторно. Точный owner/profile результат можно повторно использовать только внутри этого preflight; другие профили требуют своего native факта. В full post source set actual Core catalog точно равен независимому selected set; output set точно равен текущим HTML outputs, а явный `to` — actual format. Сравнение выполняется в уже существующем live observer до ZIP соответствующего owner; без Download — до ownerRelease, которому передаётся независимый список. Новый Core lease, metadata resolver или authority не создаётся. Partial/preview не сравнивается с полным project set. При отказе успешный composition.json не записывается; внешняя публикация требует rc0.
 
 Явные pre/post/collect hooks передают только текущие outputs успешных native
 процессов. Сохранённые HTML и sidecar другой попытки не включаются автоматически.

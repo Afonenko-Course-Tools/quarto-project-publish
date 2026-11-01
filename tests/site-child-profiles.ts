@@ -24,7 +24,7 @@ async function run(args: string[], cwd = root) {
 try {
   await write(
     "_quarto.yml",
-    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [plain, core]\n",
+    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [{path: plain, to: default}, {path: core, to: default}]\n",
   );
   await write("index.qmd", "# Root\n");
   for (const part of ["plain", "core"]) {

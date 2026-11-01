@@ -46,7 +46,7 @@ profile:
 filters: [course-core, reference-catalog]
 course: {id: portal}
 reference-catalog: {namespace: portal}
-subprojects: [part, second]
+subprojects: [{path: part, to: default}, {path: second, to: default}]
 `,
 );
 await write(

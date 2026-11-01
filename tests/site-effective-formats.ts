@@ -1,81 +1,119 @@
-import { assert, assertEquals, assertRejects } from "./support.ts";
-const root = await Deno.makeTempDir({ prefix: "course-site-effective-" });
+import { dirname, fromFileUrl, join } from "stdlib/path";
+import { assert } from "./support.ts";
+const repo = dirname(dirname(fromFileUrl(import.meta.url)));
+const root = await Deno.makeTempDir({ prefix: "site-effective-native-" });
+const write = async (path: string, text: string) => {
+  await Deno.mkdir(dirname(join(root, path)), { recursive: true });
+  await Deno.writeTextFile(join(root, path), text);
+};
+const executable = Deno.env.get("QUARTO") || "quarto";
+async function native(args: string[]) {
+  const r = await new Deno.Command(executable, {
+    args,
+    cwd: root,
+    stdout: "piped",
+    stderr: "piped",
+    env: { QUARTO: executable, QUARTO_PROFILE: "" },
+  }).output();
+  assert(
+    r.success,
+    new TextDecoder().decode(r.stdout) + new TextDecoder().decode(r.stderr),
+  );
+}
+async function render(to = "default", profiles: string[] = []) {
+  await write(
+    "_quarto.yml",
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [{path: part, to: ${to}}]\n`,
+  );
+  await native([
+    "render",
+    ".",
+    ...(profiles.length ? ["--profile", profiles.join(",")] : []),
+  ]);
+  const output = profiles.length ? "_site-full" : "_site";
+  return {
+    index: await Deno.readTextFile(join(root, output, "part/index.html")),
+    slides: await Deno.readTextFile(join(root, output, "part/slides.html")),
+  };
+}
 try {
-  await Deno.writeTextFile(
-    `${root}/_quarto.yml`,
-    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, slides.qmd]\nformat: html\n",
+  await write("index.qmd", "# Корень\n");
+  await write(
+    "part/_quarto.yml",
+    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, slides.qmd]\n  post-render: ../_extensions/course-site/entrypoints/collect.ts\nformat: html\n",
   );
-  await Deno.writeTextFile(`${root}/index.qmd`, "# HTML\n");
-  await Deno.writeTextFile(
-    `${root}/slides.qmd`,
-    "---\nformat: revealjs\n---\n# Slides\n",
+  await write("part/index.qmd", "# Native HTML\n");
+  await write(
+    "part/slides.qmd",
+    "---\nformat: revealjs\n---\n# Native слайды\n",
   );
-  await Deno.writeTextFile(`${root}/_quarto-full.yml`, "format: revealjs\n");
-  const api: any = await import(
-    "../_extensions/course-site/infrastructure/config.ts"
-  );
+  await Deno.mkdir(join(root, "_extensions"));
+  const copied = await new Deno.Command("cp", {
+    args: [
+      "-R",
+      join(repo, "_extensions/course-site"),
+      join(root, "_extensions/course-site"),
+    ],
+  }).output();
+  assert(copied.success, "Копирование Publisher");
+  let actual = await render();
   assert(
-    api.inspectDocuments,
-    "effective native document format inspection is missing",
+    !actual.index.includes("reveal.js") && actual.slides.includes("reveal.js"),
+    "Native mixed default изменён",
   );
-  const plan = await api.inspectDocuments(root, []);
-  assertEquals(
-    plan.documents.find((d: any) => d.source.endsWith("index.qmd")).format,
-    "html",
+  await write("_quarto-full.yml", "project: {output-dir: _site-full}\n");
+  await write(
+    "part/_quarto-full.yml",
+    "project: {output-dir: _site-full}\nformat: revealjs\n",
   );
-  assertEquals(
-    plan.documents.find((d: any) => d.source.endsWith("slides.qmd")).format,
-    "revealjs",
-  );
-  assertEquals(plan.renderTo, undefined);
-  const full = await api.inspectDocuments(root, ["full"]);
+  actual = await render("default", ["full"]);
   assert(
-    full.documents.every((d: any) => d.format === "revealjs"),
-    "profile override was ignored",
+    actual.index.includes("reveal.js") && actual.slides.includes("reveal.js"),
+    "Native profile format потерян",
   );
-  await Deno.writeTextFile(
-    `${root}/index.qmd`,
-    "---\nformat:\n  html: default\n  pdf: default\n---\n# Web plus print\n",
+  await write(
+    "part/index.qmd",
+    "---\nformat: {html: default, pdf: default}\n---\n# HTML первым\n",
   );
-  const both = await api.inspectDocuments(root, []);
-  assertEquals(
-    both.documents.find((d: any) => d.source.endsWith("index.qmd")).format,
-    "html",
+  actual = await render();
+  assert(
+    !actual.index.includes("reveal.js") && actual.index.includes("HTML первым"),
+    "Native default первого формата изменён",
   );
-  assertEquals(both.renderTo, "default");
-  await Deno.writeTextFile(
-    `${root}/index.qmd`,
-    "---\nformat:\n  pdf: default\n  html: default\n---\n# Print first\n",
+  await write(
+    "part/index.qmd",
+    "---\nformat: {pdf: default, html: default}\n---\n# Явный HTML\n",
   );
-  const printFirst = await api.inspectDocuments(root, []);
-  assertEquals(printFirst.renderTo, null);
-  await Deno.mkdir(`${root}/_extensions/custom`, { recursive: true });
-  await Deno.writeTextFile(
-    `${root}/_extensions/custom/_extension.yml`,
+  actual = await render("html");
+  assert(
+    !actual.index.includes("reveal.js") && !actual.slides.includes("reveal.js"),
+    "Явный html не передан native процессу",
+  );
+  await write(
+    "part/_extensions/custom/_extension.yml",
     "title: Custom\nversion: 0.1.0\ncontributes:\n  formats:\n    html:\n      toc: true\n",
   );
-  await Deno.writeTextFile(
-    `${root}/index.qmd`,
-    "---\nformat: custom-html\n---\n# Custom\n",
+  await write(
+    "part/index.qmd",
+    "---\nformat: custom-html\n---\n# Native Custom\n",
   );
-  const custom = await api.inspectDocuments(root, []);
-  const customDoc = custom.documents.find((d: any) => d.source === "index.qmd");
-  assertEquals([customDoc.format, customDoc.baseFormat, customDoc.web], [
-    "custom-html",
-    "html",
-    true,
-  ]);
-  await Deno.writeTextFile(
-    `${root}/index.qmd`,
-    "---\nformat:\n  html: default\n  revealjs: default\n---\n# Ambiguous\n",
+  actual = await render();
+  assert(
+    actual.index.includes("Native Custom") &&
+      !actual.index.includes("reveal.js"),
+    "Custom html alias изменён",
   );
-  await assertRejects(
-    () => api.inspectDocuments(root, []),
-    "SITE.FORMAT_AMBIGUOUS",
-    [root, "index.qmd", "format"],
+  await write(
+    "part/index.qmd",
+    "---\nformat: {html: default, revealjs: default}\n---\n# Native первый web\n",
+  );
+  actual = await render();
+  assert(
+    !actual.index.includes("reveal.js") && actual.slides.includes("reveal.js"),
+    "Два web formats должны следовать native default, без собственной ambiguity эвристики",
   );
   console.log(
-    "PASS effective per-document formats, profiles, HTML+PDF and web ambiguity",
+    "PASS actual mixed native formats, profiles, HTML/PDF intent, custom-html и native default первого web",
   );
 } finally {
   await Deno.remove(root, { recursive: true });

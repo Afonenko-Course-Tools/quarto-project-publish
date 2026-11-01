@@ -21,4 +21,4 @@ website:
 format: html
 filters: [reference-catalog]
 reference-catalog: {namespace: portal}
-subprojects: [book, materials]
+subprojects: [{path: book, to: default}, {path: materials, to: default}]

@@ -31,7 +31,7 @@ await write(
 format: html
 filters: [reference-catalog]
 reference-catalog: {namespace: portal}
-subprojects: [part]
+subprojects: [{path: part, to: default}]
 `,
 );
 await write("index.qmd", "# Root\n\n@part:sec-later\n");

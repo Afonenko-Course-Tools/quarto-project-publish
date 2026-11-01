@@ -40,7 +40,7 @@ try {
   ) await install(source!, name, "tasks");
   await put(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: none\nwebsite:\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks]\nreference-catalog:\n  namespace: portal\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: none\nwebsite:\n  site-url: https://pages.example.test/course/\nsubprojects: [{path: tasks, to: default}]\nreference-catalog:\n  namespace: portal\n`,
   );
   if (Deno.env.get("B2_ROOT_NATIVE")) {
     const config = await Deno.readTextFile(join(root, "_quarto.yml"));
@@ -88,7 +88,7 @@ try {
       );
     }
   }
-  const rendered = await new Deno.Command("quarto", {
+  const rendered = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
     args: ["render", "--to", "html"],
     cwd: root,
     env: { QUARTO_RUN_NO_NETWORK: "true" },
@@ -162,7 +162,7 @@ try {
     ) +
       "\ncourse: {id: live-release}\n",
   );
-  const refused = await new Deno.Command("quarto", {
+  const refused = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
     args: ["run", `${ext}/course-site/entrypoints/pre.ts`],
     cwd: root,
     env: {

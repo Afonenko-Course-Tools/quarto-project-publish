@@ -6,7 +6,7 @@ try {
   await Deno.mkdir(join(root, "part"));
   await Deno.writeTextFile(
     join(root, "_quarto.yml"),
-    "project:\n  type: website\n  output-dir: _site\nformat: html\nproject-download: {resources: {data: {path: assets}}}\nsubprojects: [part]\n",
+    "project:\n  type: website\n  output-dir: _site\nformat: html\nproject-download: {resources: {data: {path: assets}}}\nsubprojects: [{path: part, to: default}]\n",
   );
   await Deno.writeTextFile(join(root, "index.qmd"), "# Root\n");
   const add = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
@@ -47,7 +47,7 @@ try {
   // Import-time failures of a present QRC module must also stay foreign.
   await Deno.writeTextFile(
     join(root, "_quarto.yml"),
-    "project:\n  type: website\n  output-dir: _site\nformat: html\nreference-catalog: {namespace: root}\nsubprojects: [part]\n",
+    "project:\n  type: website\n  output-dir: _site\nformat: html\nreference-catalog: {namespace: root}\nsubprojects: [{path: part, to: default}]\n",
   );
   await Deno.mkdir(join(root, "_site"));
   await Deno.writeTextFile(join(root, "_site/index.html"), "current");

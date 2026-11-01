@@ -84,6 +84,8 @@ jobs:
           QRC: ${{ github.workspace }}/quarto-reference-catalog
           DOWNLOAD: ${{ github.workspace }}/quarto-project-download
           PL: ${{ github.workspace }}/quarto-course-prairielearn
+          COURSE_CORE_PROVIDER: ${{ github.workspace }}/quarto-course
+          QRC_PROVIDER: ${{ github.workspace }}/quarto-reference-catalog
           COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
           COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project
@@ -98,7 +100,6 @@ jobs:
             quarto run tests/site-owner-release.ts "$mode"
           done
           quarto run tests/release-composition.ts
-          quarto run tests/site-project-source.ts
           quarto run tests/site-project-native.ts
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
@@ -129,6 +130,6 @@ jobs:
           path: |
             ${{ runner.temp }}/course-site-native/logs
             ${{ runner.temp }}/course-site-native/trace.jsonl
-            ${{ runner.temp }}/course-site-domains/logs
-            ${{ runner.temp }}/course-site-project/logs
+            ${{ runner.temp }}/course-site-domains/_generated/test-logs
+            ${{ runner.temp }}/course-site-project/_generated/test-logs
           if-no-files-found: ignore

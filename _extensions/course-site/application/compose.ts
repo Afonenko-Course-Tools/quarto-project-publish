@@ -18,6 +18,7 @@ import {
 } from "../infrastructure/files.ts";
 import {
   inspectDocuments,
+  validateAudience,
   validateAudienceOutputs,
   workspace,
 } from "../infrastructure/config.ts";
@@ -253,6 +254,12 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   await remove(state);
   const ws = await workspace(root);
   releaseQualification(ws.config, root);
+  const audience = validateAudience(
+    root,
+    ws.profiles,
+    ws.config.course?.view,
+    nativeCore(ws.config) ? projection(ws.config) : undefined,
+  );
   if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
     if (ws.config["project-download"]) {
       await (await module("project-download", "public.ts")).prepareDownloads(
@@ -264,7 +271,14 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   }
   const run = join(dirname(state), "runs", crypto.randomUUID());
   await Deno.mkdir(run, { recursive: true });
-  await validateAudienceOutputs(root, ws.profiles, ws.output);
+  await validateAudienceOutputs(
+    root,
+    ws.profiles,
+    ws.output,
+    ws.config.course?.view,
+    nativeCore(ws.config) ? projection(ws.config) : undefined,
+    audience,
+  );
   const publicationBase = ws.config.website?.["site-url"] ||
     ws.config["course-navigation"]?.["course-url"];
   if (ws.config["project-download"]?.["course-model"] && !publicationBase) {
@@ -311,6 +325,8 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       ws.profiles,
       output,
       config.course?.view,
+      nativeCore(config) ? projection(config) : undefined,
+      nativeCore(config) ? audience : undefined,
     );
     inspected.push({ project, config, output, plan });
   }

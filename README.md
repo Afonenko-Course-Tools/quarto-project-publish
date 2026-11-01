@@ -67,8 +67,10 @@ format: html
 `project.output-dir`: в корне `_site-student` / `_site-full`, в частях
 `_output/student` / `_output/full`. При использовании Course каждый профиль также
 задаёт `course.view: student` / `full` в Course-проектах. Корень без Course metadata
-берёт ожидаемый view каждого домена из разрешённой конфигурации его частей;
-каждая часть выбирает собственную согласованную проекцию view. Расширение использует
+с выбранным student/full профилем требует эту же аудиторию у native частей;
+при custom/default профилях согласованная аудитория следует effective конфигурации.
+Несогласованные `course.view` или native `course-core-projection` дают
+`SITE.AUDIENCE_MISMATCH` до очистки и child render. Расширение использует
 `quarto inspect` для разрешённой конфигурации и передаёт выбранные профили в том же
 порядке. Пересекающиеся output разных audience отклоняются до удаления файлов.
 Если корень не выбирает профили, части сохраняют собственные native defaults,
@@ -186,7 +188,6 @@ runtime-флаг не обязателен. Реальный CI, установ�
 ```bash
 quarto run tests/performance.ts
 quarto run tests/performance-context.ts
-quarto run tests/site-project-source.ts
 quarto run tests/site-project-native.ts
 quarto run tests/site-paths.ts
 quarto run tests/site-profiles.ts
@@ -306,10 +307,12 @@ Browser CI использует Node 26.10.0, Playwright 1.62.1 из собст�
 
 ## Исправление 5.1.2
 
-При композиции `projects[].source` получает тот же префикс области, что
-источник документа. Core сохраняет строгую проверку их согласованности.
-Исходные captured facts не меняются; пути проекта, common-files, check
-metadata и публичная/закрытая политика остаются в области исходного владельца.
+Историческое исправление 5.1.2 согласовывало префиксы глобальной модели.
+Текущий Core 9 использует отдельную операцию каждого владельца с local sources;
+Publisher монтирует outputs и не переписывает эти sources. Project origins,
+common files и check metadata остаются в области исходного owner. Прежняя
+source-extraction проверка заменена настоящим installed public API контролем;
+см. [карту миграции](tests/legacy-harness-mapping.md).
 
 ## Кандидат 5.1.5: повторная очистка Markdown
 

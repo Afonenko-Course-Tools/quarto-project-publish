@@ -34,13 +34,14 @@ namespace/current outputs/search. Publisher не вводит общий экс�
 [Core](../../quarto-course/spec/index.md), адресация —
 [QRC](../../quarto-reference-catalog/docs/contract.md).
 
-При композиции источник документа и `projects[].source` получают один префикс
-из текущей области Site. Каждый source берётся из своего исходного факта;
-противоречие не исправляется подстановкой источника документа. Исходные captures
-не изменяются. `projectRoot` и `common-files.source` остаются owner-relative;
-check paths и `common-files.target` сохраняют исходную область проекта/partition.
-ID и materialization declarations сохраняются. Core equality/duplicate/private
-guards продолжают действовать; повторная композиция использует свежие owner facts.
+В Core 9 Publisher сохраняет отдельную genuine operation каждого владельца.
+Источники в catalog/proof/document остаются относительными к этому owner:
+например, root, `part` и `nested/second` имеют собственный `index.qmd` и разные
+operation identities. Mounted URL получает путь компонента в конечном сайте;
+этот URL не переписывает Core source, project root или raw check metadata.
+Прежняя глобальная модель с префиксами `projects[].source` снята с текущего пути.
+Guarded project contexts/materialization принадлежат public API Core; C проверяет
+собственные check facts. Publisher не вводит свой параллельный model DTO.
 
 Quarto определяет отказ native команды. Успешный stderr сам по себе не является
 ошибкой; собственные и foreign ошибки сохраняют ID, оба потока и cause.
@@ -51,14 +52,18 @@ Strict warnings задаются штатным `fail-if-warnings` каждог�
 ## Банк и выбранная проекция
 
 Область канонических задач включает native `exercise-bank: true` и эффективную
-политику `exercise-statement-visibility: open|restricted`. У каждого `#exr-*`
+политику `statement-visibility: open|restricted`. У каждого `#exr-*`
 свои обязательные difficulty/time; вне области остаётся обычный Quarto.
 Страницы работ могут находиться вне банка. В выбранной книге сохраняется одна
 экспортная идентичность; Publisher не объединяет самостоятельные проекты.
 
 Student outputs не содержат restricted условий и их ссылок назначений, решений
 обычных open задач, закрытых ключей и заметок преподавателя. Mounted resources,
-HTML, search и каталоги QRC следуют той же текущей проекции. Full использует
+HTML, search и каталоги QRC следуют той же текущей проекции. Гарантия ссылок
+назначений проверяется реальным explicit assignment/P producer; ordinary
+`.task-items` fixture не заменяет эту квалификацию и может сохранить неразрешённый
+ID скрытой задачи без её Body. Обязательный открытый all135 gate описан в
+[карте проверок](../tests/legacy-harness-mapping.md#обязательная-открытая-проверка-qualified-task-slots). Full использует
 свой отдельный output. Native `repo-actions: [source]` ведёт к GitHub; source modal
 и копирование raw QMD с закрытыми телами в student output не включаются.
 
@@ -97,7 +102,7 @@ Publisher меняет только `href` у `scope: course` на путь от
 Самостоятельный `collect.ts` также применяет правило к текущим native outputs,
 даже без `COURSE_SITE_COLLECTION`. Hook с пустым текущим списком остаётся пустым;
 сохранённые outputs другой попытки не становятся новыми целями. Для standalone
-подключите collect последним post-render hook. Полная сборка проекта собирает
+подключите collect после QRC и перед Core post-hook, если Core включён. Полная сборка проекта собирает
 его индекс и презентации вместе; selected render не объявляет старые файлы
 текущими результатами.
 
@@ -171,3 +176,13 @@ span. Identity-ответ (`off`, отсутствующий агент или �
 env и без `clearEnv`; прежние разрешения не расширяются. Фасад сохраняет
 исходные функции, Promise и переданное ему окружение. Новый общий runtime и полное семантическое покрытие Publisher
 не заявляются.
+
+
+Publisher до очистки output и child render проверяет student/full audience:
+`course.view` корня и native компонентов и их `course-core-projection` должны
+соответствовать выбранной аудитории (student → student, full → author).
+Для custom profiles аудитория следует effective root view/projection; generic
+nonCore компонент не обязан объявлять Core проекцию. Несогласованность даёт
+`SITE.AUDIENCE_MISMATCH` с полем `course.view` или `course-core-projection` и
+не изменяет предыдущую выдачу. Проверка не добавляет обхода источников или
+собственной модели учебных данных.

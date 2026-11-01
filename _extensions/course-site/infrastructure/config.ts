@@ -201,15 +201,66 @@ export async function workspace(root: string) {
   };
 }
 
+/** Чистый preflight: metadata не разрешают author выдачу в student audience. */
+export function validateAudience(
+  root: string,
+  profiles: string[],
+  view?: "student" | "full",
+  nativeProjection?: "student" | "author",
+  expectedAudience?: "student" | "full",
+) {
+  const audience = expectedAudience ??
+    profiles.find((profile) => profile === "student" || profile === "full") ??
+    view ??
+    (nativeProjection === undefined
+      ? undefined
+      : nativeProjection === "author"
+      ? "full"
+      : "student");
+  if (view !== undefined && view !== audience) {
+    throw diagnostic(
+      "SITE.AUDIENCE_MISMATCH",
+      "course.view не совпадает с выбранной student/full аудиторией",
+      {
+        source: root,
+        field: "course.view",
+        hint:
+          "Согласуйте course.view корня и native компонентов с выбранной аудиторией.",
+      },
+    );
+  }
+  if (
+    nativeProjection !== undefined &&
+    nativeProjection !== (audience === "full" ? "author" : "student")
+  ) {
+    throw diagnostic(
+      "SITE.AUDIENCE_MISMATCH",
+      "Native проекция Core не совпадает с выбранной student/full аудиторией",
+      {
+        source: root,
+        field: "course-core-projection",
+        hint: "Используйте student для student audience и author для full.",
+      },
+    );
+  }
+  return audience;
+}
+
 export async function validateAudienceOutputs(
   root: string,
   profiles: string[],
   selectedOutput: string,
   view?: "student" | "full",
+  nativeProjection?: "student" | "author",
+  expectedAudience?: "student" | "full",
 ): Promise<void> {
-  const selectedAudience =
-    profiles.find((profile) => profile === "student" || profile === "full") ||
-    view;
+  const selectedAudience = validateAudience(
+    root,
+    profiles,
+    view,
+    nativeProjection,
+    expectedAudience,
+  );
   const alternatives = selectedAudience
     ? ["student", "full"].filter((profile) => profile !== selectedAudience)
     : ["student", "full"];

@@ -3,7 +3,7 @@ const root = await Deno.makeTempDir({ prefix: "course-site-effective-" });
 try {
   await Deno.writeTextFile(
     `${root}/_quarto.yml`,
-    "project:\n  type: website\n  output-dir: _site\nformat: html\n",
+    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, slides.qmd]\nformat: html\n",
   );
   await Deno.writeTextFile(`${root}/index.qmd`, "# HTML\n");
   await Deno.writeTextFile(

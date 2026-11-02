@@ -55,7 +55,7 @@ try {
     view = author ? "full" : "student";
   await put(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat: {html: {theme: none}}\nwebsite: {site-url: 'https://pages.example.test/course/'}\nsubprojects: [tasks]\nreference-catalog: {namespace: portal}\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat: {html: {theme: none}}\nwebsite: {site-url: 'https://pages.example.test/course/'}\nsubprojects: [{path: tasks, to: default}]\nreference-catalog: {namespace: portal}\n`,
   );
   await put("index.qmd", "# Общий сайт\n");
   if (mode === "root-pl") {
@@ -118,12 +118,12 @@ try {
       )) + "\nformat: revealjs\n",
     );
   }
-  if (mode === "sequential") {
+  if (mode === "mixed-default") {
     await put(
       "tasks/_quarto.yml",
       (await Deno.readTextFile(join(root, "tasks/_quarto.yml"))).replace(
         "format: {html: {theme: none}}",
-        "format: {pdf: default, html: {theme: none}}",
+        "format: {html: {theme: none}, pdf: default}",
       ),
     );
   }
@@ -169,7 +169,7 @@ try {
     "tasks/other.qmd",
     `---\n${identity()}${plConfig}---\n# Другая страница {#target}\n`,
   );
-  const rendered = await new Deno.Command("quarto", {
+  const rendered = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
     args: ["render", "--to", "html"],
     cwd: root,
     env: { QUARTO_RUN_NO_NETWORK: "true", DENO_NO_PACKAGE_JSON: "1" },
@@ -270,8 +270,13 @@ try {
       "Proof потерял owner source coverage",
     );
     assert(
-      current.release.validationPasses === (withPL ? 2 : 1),
-      "Не раскрыто число owner validation passes",
+      current.release.validationPasses === 1,
+      "Download owner должен сообщать один genuine validation pass",
+    );
+    assert(
+      JSON.stringify(current.release.proof.validatedAdapters) ===
+        JSON.stringify(withPL ? ["prairielearn"] : []),
+      "Download proof потерял actual selected adapter validation",
     );
     for (
       const metric of [

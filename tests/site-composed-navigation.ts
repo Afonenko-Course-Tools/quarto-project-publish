@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { dirname, fromFileUrl, join } from "stdlib/path";
+const webOnly = Deno.args.includes("--web-only");
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const provider = Deno.env.get("CORE") || join(dirname(repo), "quarto-course");
 const root = await Deno.makeTempDir({ prefix: "site-composed-navigation-" });
@@ -39,10 +40,17 @@ website:
   navbar: {}
 filters: [course-navigation]
 course-navigation: {enabled: true}
-subprojects: [theory, slides, handout]
+subprojects: ${
+      webOnly
+        ? "[{path: theory, to: default}, {path: slides, to: default}]"
+        : "[{path: theory, to: default}, {path: slides, to: default}, {path: handout, to: default}]"
+    }
 `,
   );
-  await write("index.qmd", "# Портал\n");
+  await write(
+    "index.qmd",
+    "# Портал\n\n[Статический файл](static-handout.pdf)\n",
+  );
   await write(
     "theory/_quarto.yml",
     `project:
@@ -64,6 +72,7 @@ course-navigation: {enabled: true}
     `project:
   type: website
   output-dir: _output
+  render: [index.qmd, lesson.qmd]
   post-render: ../_extensions/course-site/entrypoints/collect.ts
 format: course-theme-html
 lang: ru
@@ -77,12 +86,20 @@ course-navigation: {enabled: true}
     "slides/lesson.qmd",
     "---\ntitle: Презентация\nformat: revealjs\nrevealjs-plugins: [course-navigation]\nrepo-url: https://github.com/example/course\nrepo-actions: [source]\n---\n\n## Первый слайд\n\nМатериал.\n",
   );
+  if (!webOnly) {
+    await write(
+      "handout/_quarto.yml",
+      "project:\n  type: default\n  output-dir: _output\n  post-render: ../_extensions/course-site/entrypoints/collect.ts\nformat: typst\nlang: ru\n",
+    );
+    await write("handout/index.qmd", "# Печатные материалы\n\nДополнение.\n");
+  }
   await write(
-    "handout/_quarto.yml",
-    "project:\n  type: default\n  output-dir: _output\n  post-render: ../_extensions/course-site/entrypoints/collect.ts\nformat: typst\nlang: ru\n",
+    "static-handout.pdf",
+    "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
   );
-  await write("handout/index.qmd", "# Печатные материалы\n\nДополнение.\n");
-  for (const scope of ["", "theory", "slides", "handout"]) {
+  for (
+    const scope of ["", "theory", "slides", ...(webOnly ? [] : ["handout"])]
+  ) {
     await run(["add", provider, "--no-prompt"], join(root, scope));
     for (const profile of ["student", "full"]) {
       await write(
@@ -112,8 +129,18 @@ course-navigation: {enabled: true}
       !chapter.includes('data-course-link="handout"'),
       "PDF-only компонент не становится web-участником",
     );
-    assert.ok((await Deno.stat(join(output, "handout/index.pdf"))).isFile);
-    assert.ok(chapter.includes('href="../../slides/"'));
+    if (!webOnly) {
+      assert.ok((await Deno.stat(join(output, "handout/index.pdf"))).isFile);
+    }
+    assert.deepEqual(
+      await Deno.readFile(join(output, "static-handout.pdf")),
+      await Deno.readFile(join(root, "static-handout.pdf")),
+      "Статический nonweb asset изменён",
+    );
+    assert.ok(
+      chapter.includes('href="../../slides/"'),
+      JSON.stringify(chapter.match(/<a[^>]*data-course-link[^>]*>/g)),
+    );
     const deck = await Deno.readTextFile(join(output, "slides/lesson.html"));
     assert.ok(deck.includes('"href":"../theory/"'));
     assert.ok(

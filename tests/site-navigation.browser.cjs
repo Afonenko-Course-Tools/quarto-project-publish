@@ -20,7 +20,7 @@ write('_quarto.yml', `project:
   resources: ['!units/**', '!theory/**', '!_extensions/**', '!_generated/**']
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
-subprojects: [units/slides, theory, deck]
+subprojects: [{path: units/slides, to: default}, {path: theory, to: default}, {path: deck, to: default}]
 format: html
 lang: ru
 website:

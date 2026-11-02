@@ -12,7 +12,7 @@ try{
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
-subprojects: [part]
+subprojects: [{path: part, to: default}]
 `);
  await Deno.writeTextFile(join(root,'part/_quarto.yml'),`project:
   type: website

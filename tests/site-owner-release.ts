@@ -270,8 +270,13 @@ try {
       "Proof потерял owner source coverage",
     );
     assert(
-      current.release.validationPasses === (withPL ? 2 : 1),
-      "Не раскрыто число owner validation passes",
+      current.release.validationPasses === 1,
+      "Download owner должен сообщать один genuine validation pass",
+    );
+    assert(
+      JSON.stringify(current.release.proof.validatedAdapters) ===
+        JSON.stringify(withPL ? ["prairielearn"] : []),
+      "Download proof потерял actual selected adapter validation",
     );
     for (
       const metric of [

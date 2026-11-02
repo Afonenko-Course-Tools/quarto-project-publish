@@ -34,10 +34,17 @@ resources назначаются до единственного README writer/�
 не вызывает posthoc conditions ZIP mutation.
 
 composition.json сохраняет nativeOperations с public catalog, release proof и
-числом validation passes. NoPL — один Core проход; selected PL — Core с actual C
-descriptor и затем actual C.validateCourse, два прохода. Это согласованный
-временный C composition seam. Метрики before/after явно сохраняют дополнительные
-local fences; actual tests проверяют отсутствие нового inspect/discovery/hash.
+числом validation passes. У owner с Download выполняется один проход: без PL —
+Core `validateRelease`, с установленным PL — public C `inspectPublication` с
+настоящим Core proof. Selected PL отражён в `proof.validatedAdapters`; ordinary
+publication проверяет metadata/assessment/project/common sources, не запускает
+полную grading composition и не даёт assignment прав.
+
+У owner без Download сохраняется отдельный Publisher маршрут: NoPL — один Core
+проход; selected PL — Core с actual C descriptor и затем actual C.validateCourse,
+два прохода. `root-pl` проверяет этот путь отдельно. Метрики before/after явно
+сохраняют дополнительные local fences; actual tests проверяют отсутствие нового
+inspect/discovery/hash.
 Ordinary proof не выдаётся за assignment intent или квалификацию exporter.
 
 `tests/site-owner-release.ts` использует actual root/child hooks, temporary

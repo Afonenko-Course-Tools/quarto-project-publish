@@ -94,6 +94,7 @@ jobs:
         run: |
           quarto run tests/performance-context.ts
           quarto run tests/performance-noenv.ts
+          quarto run tests/planning-progress.ts
           quarto run tests/site-native-planning.ts
           quarto run tests/site-native-pipeline.ts
           for mode in missing unexpected format root-missing; do

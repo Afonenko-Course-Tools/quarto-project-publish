@@ -1,24 +1,24 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — кандидат **6.0.0**. Полный GREEN CI и публикация кандидата
+Текущий ref — кандидат **6.0.1**. Полный GREEN CI и публикация кандидата
 ещё не подтверждены. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5. Конфигурацию проверяет исполняемый TS-контракт владельца. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-После публикации версия 6.0.0 устанавливается из существующего
+После публикации версия 6.0.1 устанавливается из существующего
 репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.0
+quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.1
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
 ```
 
 После публикации нового тега установка из GitHub выполняется командой
-`quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.0`. Наличие тега
+`quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.1`. Наличие тега
 и готовность установленного курса проверяются отдельно.
 
 Используйте фактический installation prefix, показанный `quarto add`. Ниже пути
@@ -171,7 +171,7 @@ ID и причины. Неизвестная внутренняя ошибка �
 
 ## Проверка
 
-Текущий кандидат 6.0.0 сохраняет main наблюдение/preview и публичный B3 путь.
+Текущий кандидат 6.0.1 сохраняет main наблюдение/preview и публичный B3 путь.
 Точные контрольные commits Core/QRC/Download/C задаются [CI](.github/workflows/ci.yml)
 того же Git ref. Целевой договор — Core 9 и PrairieLearn 9; старые матрицы не
 подтверждают новую пару. Core включается через `filters: [course-core]`, старый
@@ -211,7 +211,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 6.0.0;
+Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 6.0.1;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные

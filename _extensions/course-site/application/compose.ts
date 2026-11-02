@@ -305,7 +305,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   await safePath(root, state);
   await Deno.mkdir(dirname(state), { recursive: true });
   await remove(state);
-  const ws = await workspace(root);
+  const ws = await progress("Планирование корня", root, () => workspace(root));
   releaseQualification(ws.config, root);
   const audience = validateAudience(
     root,
@@ -324,7 +324,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   }
   const run = join(dirname(state), "runs", crypto.randomUUID());
   await Deno.mkdir(run, { recursive: true });
-  await validateAudienceOutputs(
+  await progress("Проверка аудиторий", root, () => validateAudienceOutputs(
     root,
     ws.profiles,
     ws.output,
@@ -332,7 +332,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
     nativeCore(ws.config) ? projection(ws.config) : undefined,
     audience,
     { profiles: ws.profiles, config: ws.config },
-  );
+  ));
   const publicationBase = ws.config.website?.["site-url"] ||
     ws.config["course-navigation"]?.["course-url"];
   if (ws.config["project-download"]?.["course-model"] && !publicationBase) {
@@ -345,7 +345,9 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   const inspected = [];
   // Validate all selected destinations before deleting any output.
   for (const project of ws.projects) {
-    const plan = await inspectProject(project.path, ws.profiles);
+    const plan = await progress("Планирование компонента", project.path, () =>
+      inspectProject(project.path, ws.profiles)
+    );
     const config = plan.config;
     releaseQualification(config, project.path);
     if (config["project-download"]?.["course-model"] && !publicationBase) {
@@ -374,7 +376,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       project.path,
       config.project["output-dir"],
     );
-    await validateAudienceOutputs(
+    await progress("Проверка аудиторий", project.path, () => validateAudienceOutputs(
       project.path,
       ws.profiles,
       output,
@@ -382,7 +384,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       nativeCore(config) ? projection(config) : undefined,
       nativeCore(config) ? audience : undefined,
       { profiles: ws.profiles, config },
-    );
+    ));
     inspected.push({ project, config, output, plan });
   }
   for (const { project, output } of inspected) {

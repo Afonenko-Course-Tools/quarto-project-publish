@@ -24,11 +24,29 @@ import {
 } from "../infrastructure/config.ts";
 import { profileArguments, quarto } from "../infrastructure/process.ts";
 import { publicOutputs, readCollection } from "../infrastructure/collection.ts";
+import type {
+  NativeCatalog,
+  NativeOperation,
+  NativeReleaseRequest,
+  NativeSiteRecord,
+  SiblingModuleMap,
+} from "./sibling-contracts.ts";
 const siblings = dirname(dirname(dirname(fromFileUrl(import.meta.url))));
 function ownerSiblings(root: string) {
   const parts = siblings.split("/");
   return join(root, ...parts.slice(parts.lastIndexOf("_extensions")));
 }
+function module<Name extends keyof SiblingModuleMap>(
+  name: Name,
+  path: "public.ts",
+  owner?: string,
+): Promise<SiblingModuleMap[Name]>;
+// Остальные публичные соседи пока сохраняют прежнюю нетипизированную границу.
+function module(
+  name: "project-download" | "reference-catalog" | "course-navigation",
+  path: "public.ts",
+  owner?: string,
+): Promise<any>;
 async function module(
   name: string,
   path: string,
@@ -115,7 +133,7 @@ async function coreHook(root: string, config: any, phase: "pre" | "post") {
     );
     if (phase === "pre") {
       const path = join(siblings, "course-prairielearn", "public.ts");
-      let PL: any;
+      let PL: SiblingModuleMap["course-prairielearn"] | undefined;
       try {
         await Deno.stat(path);
         PL = await import(toFileUrl(path).href);
@@ -148,11 +166,11 @@ function projection(config: any): "student" | "author" {
 }
 async function ownerRelease(
   root: string,
-  operation: any,
-  Core: any,
+  operation: NativeOperation,
+  Core: SiblingModuleMap["course-core"],
   selectedSources?: string[],
 ) {
-  let PL: any;
+  let PL: SiblingModuleMap["course-prairielearn"] | undefined;
   const path = join(ownerSiblings(root), "course-prairielearn", "public.ts");
   try {
     await Deno.stat(path);
@@ -163,16 +181,19 @@ async function ownerRelease(
   const adapter = PL?.createNativeAdapter({ root, core: Core });
   const request = {
       expectedSources: selectedSources ??
-        operation.catalog.documents.map((d: any) => d.source),
-    },
+        operation.catalog.documents.map((d) => d.source),
+    } satisfies NativeReleaseRequest,
     before = operation.metrics;
-  let proof = await operation.validateRelease(
+  const coreProof = await operation.validateRelease(
       request,
       adapter ? [adapter] : [],
-    ),
-    validationPasses = 1;
-  if (proof.validatedAdapters.includes("prairielearn")) {
-    proof = await adapter.validateCourse(operation, request);
+    );
+  // Второй proof пока приходит из PL producer с возвращаемым any.
+  let proof: unknown = coreProof, validationPasses = 1;
+  if (coreProof.validatedAdapters.includes("prairielearn")) {
+    // Genuine Core proof требует переданный validator для каждого имени;
+    // единственный validator выше — этот неизменяемый optional adapter.
+    proof = await adapter!.validateCourse(operation, request);
     validationPasses++;
   }
   return {
@@ -182,12 +203,12 @@ async function ownerRelease(
     metricsAfter: operation.metrics,
   };
 }
-function catalogCoverage(catalog: any, record: any) {
+function catalogCoverage(catalog: NativeCatalog, record: NativeSiteRecord) {
   const documents = catalog.documents;
-  const sources = new Set(documents.map((document: any) => document.source));
+  const sources = new Set(documents.map((document) => document.source));
   const expectedSources = record.selectedSources &&
     new Set(record.selectedSources);
-  const outputs = documents.map((document: any) =>
+  const outputs = documents.map((document) =>
     resolve(record.outputDir, document.output)
   );
   const actual = new Set(outputs);
@@ -202,7 +223,7 @@ function catalogCoverage(catalog: any, record: any) {
     actual.size !== outputs.length || actual.size !== expected.size ||
     [...actual].some((path) => !expected.has(path)) ||
     (record.to && record.to !== "default" &&
-      documents.some((document: any) => document.format !== record.to))
+      documents.some((document) => document.format !== record.to))
   ) {
     throw diagnostic(
       "SITE.CURRENT_RESULT_MISSING",
@@ -252,7 +273,7 @@ async function finalizeDownloads(
 async function finalizeDownloadsImpl(
   root: string,
   config: any,
-  record: any,
+  record: NativeSiteRecord,
   baseUrl: string | undefined,
   referenceCatalog: unknown,
   catalogBaseUrl: string | undefined,
@@ -286,7 +307,7 @@ async function finalizeDownloadsImpl(
         projection: projection(config),
         outputDirectory: record.outputDir,
       },
-      async (operation: any) => {
+      async (operation) => {
         catalogCoverage(operation.catalog, record);
         catalog = operation.catalog;
         release = await ownerRelease(

@@ -19,7 +19,6 @@ import {
 import {
   inspectProject,
   validateAudience,
-  validateAudienceOutputs,
   workspace,
 } from "../infrastructure/config.ts";
 import { profileArguments, quarto } from "../infrastructure/process.ts";
@@ -345,15 +344,6 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   }
   const run = join(dirname(state), "runs", crypto.randomUUID());
   await Deno.mkdir(run, { recursive: true });
-  await progress("Проверка аудиторий", root, () => validateAudienceOutputs(
-    root,
-    ws.profiles,
-    ws.output,
-    ws.config.course?.view,
-    nativeCore(ws.config) ? projection(ws.config) : undefined,
-    audience,
-    { profiles: ws.profiles, config: ws.config },
-  ));
   const publicationBase = ws.config.website?.["site-url"] ||
     ws.config["course-navigation"]?.["course-url"];
   if (ws.config["project-download"]?.["course-model"] && !publicationBase) {
@@ -397,15 +387,13 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       project.path,
       config.project["output-dir"],
     );
-    await progress("Проверка аудиторий", project.path, () => validateAudienceOutputs(
+    validateAudience(
       project.path,
       ws.profiles,
-      output,
       config.course?.view,
       nativeCore(config) ? projection(config) : undefined,
       nativeCore(config) ? audience : undefined,
-      { profiles: ws.profiles, config },
-    ));
+    );
     inspected.push({ project, config, output, plan });
   }
   for (const { project, output } of inspected) {

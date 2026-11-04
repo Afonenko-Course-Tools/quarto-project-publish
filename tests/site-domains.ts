@@ -232,11 +232,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
     assertEquals(row.catalog.documents.map((d: any) => d.source), [
       "index.qmd",
     ]);
-    assertEquals(row.release.proof.documents, [{
-      source: "index.qmd",
-      format: "html",
-    }]);
-    assertEquals(row.release.proof.course, {
+    assertEquals(row.course, {
       id: "shared-course",
       view,
       adapters: [],
@@ -258,10 +254,6 @@ async function assertOwners(view: "student" | "full", resources = false) {
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(owner, `_site-${view}`),
     }, async (op: any) => {
-      assertEquals(
-        await op.validateRelease({ expectedSources: ["index.qmd"] }),
-        row.release.proof,
-      );
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
       assert(
@@ -489,5 +481,5 @@ if (Deno.args[0] === "rootless") {
 console.log(
   `PASS installed ${
     Deno.args[0] || "all"
-  }: owner-local genuine proofs, 2 namespace resources, student/full privacy/search/crossrefs и адресные negative guards`,
+  }: owner-local catalogs, 2 namespace resources, student/full privacy/search/crossrefs и адресные negative guards`,
 );

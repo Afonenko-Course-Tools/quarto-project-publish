@@ -179,11 +179,7 @@ for (const view of ["student", "full"]) {
     assertEquals(release.catalog.documents.map((d: any) => d.source), [
       "index.qmd",
     ]);
-    assertEquals(release.release.proof.documents, [{
-      source: "index.qmd",
-      format: "html",
-    }]);
-    assertEquals(release.release.proof.course, {
+    assertEquals(release.course, {
       id: "project-source",
       view,
       adapters: [],
@@ -201,10 +197,6 @@ for (const view of ["student", "full"]) {
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(ownerRoot, `_output-${view}`),
     }, async (op: any) => {
-      const proof = await op.validateRelease({
-        expectedSources: ["index.qmd"],
-      });
-      assertEquals(proof, release.release.proof);
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
       assertEquals(doc.definitions[`exr-${ids[i]}`].project, "/projects/demo");
@@ -312,6 +304,6 @@ try {
   await Deno.remove(external);
 }
 console.log(
-  "PASS installed namespace, root/child/nested owner-local sources, genuine release/project contexts, native metadata/actual materialization, student/full privacy и foreign-source guard",
+  "PASS installed namespace, root/child/nested owner-local sources, owner-local catalog/project contexts, native metadata/actual materialization, student/full privacy и foreign-source guard",
 );
 console.log("FIXTURE " + root);

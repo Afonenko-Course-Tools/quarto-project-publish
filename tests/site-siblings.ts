@@ -32,7 +32,7 @@ try {
   await Deno.mkdir(dirname(source), { recursive: true });
   await Deno.writeTextFile(
     source,
-    'export function prepareDownloads() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
+    'export function resetDownloadRequests() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
   );
   try {
     await pre(root);
@@ -42,7 +42,7 @@ try {
     assertEquals((error as Error & { code: string }).code, "CORE.SENTINEL");
     assertEquals(error.cause, "original");
     assert(!error.message.includes("SITE.SIBLING_MISSING"));
-    assert(error.stack?.includes("prepareDownloads"));
+    assert(error.stack?.includes("resetDownloadRequests"));
   }
   // Import-time failures of a present QRC module must also stay foreign.
   await Deno.writeTextFile(

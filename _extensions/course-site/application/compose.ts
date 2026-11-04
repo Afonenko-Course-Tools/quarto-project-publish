@@ -25,8 +25,8 @@ import { profileArguments, quarto } from "../infrastructure/process.ts";
 import { publicOutputs, readCollection } from "../infrastructure/collection.ts";
 import type {
   NativeCatalog,
-  NativeOperation,
-  NativeReleaseRequest,
+  PreparedDownloads,
+  PublicationInspection,
   NativeSiteRecord,
   SiblingModuleMap,
 } from "./sibling-contracts.ts";
@@ -42,7 +42,7 @@ function module<Name extends keyof SiblingModuleMap>(
 ): Promise<SiblingModuleMap[Name]>;
 // Остальные публичные соседи пока сохраняют прежнюю нетипизированную границу.
 function module(
-  name: "project-download" | "reference-catalog" | "course-navigation",
+  name: "reference-catalog" | "course-navigation",
   path: "public.ts",
   owner?: string,
 ): Promise<any>;
@@ -130,77 +130,11 @@ async function coreHook(root: string, config: any, phase: "pre" | "post") {
       {},
       true,
     );
-    if (phase === "pre") {
-      const path = join(siblings, "course-prairielearn", "public.ts");
-      let PL: SiblingModuleMap["course-prairielearn"] | undefined;
-      try {
-        await Deno.stat(path);
-        PL = await import(toFileUrl(path).href);
-      } catch (cause) {
-        if (!(cause instanceof Deno.errors.NotFound)) throw cause;
-      }
-      if (PL) {
-        await PL.prepareNativeAdapter(
-          await module("course-core", "public.ts"),
-          {
-            root,
-            profiles: (Deno.env.get("QUARTO_PROFILE") || "").split(",").filter(
-              Boolean,
-            ),
-            projection: projection(config),
-            outputDirectory: resolve(
-              root,
-              Deno.env.get("QUARTO_PROJECT_OUTPUT_DIR") ||
-                config.project?.["output-dir"] || "_site",
-            ),
-          },
-        );
-      }
-    }
   }
 }
 function projection(config: any): "student" | "author" {
   return config["course-core-projection"] ??
     (config.course?.view === "full" ? "author" : "student");
-}
-async function ownerRelease(
-  root: string,
-  operation: NativeOperation,
-  Core: SiblingModuleMap["course-core"],
-  selectedSources?: string[],
-) {
-  let PL: SiblingModuleMap["course-prairielearn"] | undefined;
-  const path = join(ownerSiblings(root), "course-prairielearn", "public.ts");
-  try {
-    await Deno.stat(path);
-    PL = await import(toFileUrl(path).href);
-  } catch (cause) {
-    if (!(cause instanceof Deno.errors.NotFound)) throw cause;
-  }
-  const adapter = PL?.createNativeAdapter({ root, core: Core });
-  const request = {
-      expectedSources: selectedSources ??
-        operation.catalog.documents.map((d) => d.source),
-    } satisfies NativeReleaseRequest,
-    before = operation.metrics;
-  const coreProof = await operation.validateRelease(
-      request,
-      adapter ? [adapter] : [],
-    );
-  // Второй proof пока приходит из PL producer с возвращаемым any.
-  let proof: unknown = coreProof, validationPasses = 1;
-  if (coreProof.validatedAdapters.includes("prairielearn")) {
-    // Genuine Core proof требует переданный validator для каждого имени;
-    // единственный validator выше — этот неизменяемый optional adapter.
-    proof = await adapter!.validateCourse(operation, request);
-    validationPasses++;
-  }
-  return {
-    proof,
-    validationPasses,
-    metricsBefore: before,
-    metricsAfter: operation.metrics,
-  };
 }
 function catalogCoverage(catalog: NativeCatalog, record: NativeSiteRecord) {
   const documents = catalog.documents;
@@ -278,48 +212,57 @@ async function finalizeDownloadsImpl(
   catalogBaseUrl: string | undefined,
   destinationDirectory?: string,
 ) {
-  let catalog, release;
-  const observeOperation = (value: any, proof: unknown) => {
-    catalogCoverage(value, record);
-    catalog = value;
-    release = proof;
-  };
-  if (config["project-download"]) {
-    const Download = await module("project-download", "public.ts", root);
-    await Download.finishDownloads(root, {
-      native: nativeCore(config),
-      outputDirectory: record.outputDir,
-      projection: projection(config),
-      profiles: record.profiles,
-      baseUrl,
-      referenceCatalog,
-      catalogBaseUrl,
-      observeOperation,
-      destinationDirectory,
-    });
-  } else if (nativeCore(config)) {
-    const Core = await module("course-core", "public.ts", root);
-    await Core.withCurrentNativeOperation(
-      {
-        root,
+  if (!nativeCore(config)) {
+    if (config["project-download"]) {
+      const Download = await module("project-download", "public.ts", root);
+      await Download.finishDownloads(root, {
         profiles: record.profiles,
-        projection: projection(config),
         outputDirectory: record.outputDir,
-      },
-      async (operation) => {
-        catalogCoverage(operation.catalog, record);
-        catalog = operation.catalog;
-        release = await ownerRelease(
-          root,
-          operation,
-          Core,
-          record.selectedSources,
-        );
-      },
-    );
+        destinationDirectory,
+      });
+    }
+    return undefined;
   }
-  return catalog ? { catalog, release } : undefined;
+  const Core = await module("course-core", "public.ts", root);
+  const pending: { draft?: PreparedDownloads } = {};
+  try {
+    const snapshot = await Core.withNativePublication({
+      root,
+      profiles: record.profiles,
+      projection: projection(config),
+      outputDirectory: record.outputDir,
+    }, record.selectedSources ? { expectedSources: record.selectedSources } : undefined,
+    async (publication) => {
+      catalogCoverage(publication.catalog, record);
+      let inspection: PublicationInspection | undefined;
+      if (publication.course.adapters.includes("prairielearn")) {
+        const PL = await module("course-prairielearn", "public.ts", root);
+        inspection = await PL.inspectPublication(publication);
+      }
+      if (config["project-download"]) {
+        const Download = await module("project-download", "public.ts", root);
+        // Сохранить handle до await outer closing: catch должен видеть draft.
+        pending.draft = await Download.prepareNativeDownloads(publication, {
+          destinationDirectory,
+          baseUrl,
+          referenceCatalog,
+          catalogBaseUrl,
+        });
+      }
+      return {
+        catalog: publication.catalog,
+        course: publication.course,
+        ...(inspection ? { inspection } : {}),
+      };
+    });
+    await pending.draft?.publish();
+    return snapshot;
+  } catch (cause) {
+    try { await pending.draft?.discard(); } catch { /* Cleanup не маскирует primary cause. */ }
+    throw cause;
+  }
 }
+
 export async function pre(root = Deno.cwd()): Promise<void> {
   const state = statePath(root);
   await safePath(root, state);
@@ -335,7 +278,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
   );
   if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
     if (ws.config["project-download"]) {
-      await (await module("project-download", "public.ts")).prepareDownloads(
+      await (await module("project-download", "public.ts")).resetDownloadRequests(
         root,
       );
     }
@@ -434,7 +377,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
     ...inspected.flatMap(({ plan }) => plan.resources || []),
   ]);
   if (ws.config["project-download"]) {
-    await (await module("project-download", "public.ts")).prepareDownloads(
+    await (await module("project-download", "public.ts")).resetDownloadRequests(
       root,
     );
   }
@@ -554,7 +497,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
   if (rootFiles.includes(rootSearch)) {
     searchIndexes.push({ path: rootSearch, mount: "" });
   }
-  const nativeOperations: any[] = [];
+  const nativeOperations: (NonNullable<Awaited<ReturnType<typeof finalizeDownloads>>> & { project: string })[] = [];
   const members = [];
   for (const { project, config, record } of records) {
     const mount = join(ws.output, project.mount);

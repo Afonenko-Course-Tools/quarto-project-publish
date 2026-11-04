@@ -128,7 +128,7 @@ reference-catalog: {namespace: theory}
 
 Каждая часть рендерится одной штатной командой `quarto render . --to <to>` с выбранными профилями. `default` сохраняет native выбор первого формата документа, включая смешанный HTML index и Revealjs. `html` или `revealjs` явно выбирают этот native формат для всей части. Publisher не выводит формат из project inspect и не вводит собственную эвристику единственного web-формата. Если HTML/PDF конфигурация ставит PDF первым, автор выбирает `to: html` для веб-публикации; `default` следует настоящему порядку Quarto. Тип book/website, metadata, профили и hooks сохраняются.
 
-До cleanup один project inspect каждого owner независимо определяет selected sources и resources. В полной композиции actual Core catalog должен точно покрывать этот selected set и текущие HTML outputs; явный `to` проверяется по actual Core format. Проверка выполняется внутри существующей live operation до упаковки ZIP соответствующего owner, без нового lease или приватного API. Для `default` формат является только native/Core фактом. Без Core успешная native команда и текущие output paths не объявляются модельным release proof. Partial render/preview сохраняет локальную область.
+До cleanup один project inspect каждого owner независимо определяет selected sources и resources. В полной композиции actual Core catalog должен точно покрывать этот selected set и текущие HTML outputs; явный `to` проверяется по actual Core format. Проверка выполняется внутри единой Core publication session до подготовки ZIP соответствующего owner, без нового lease или приватного API. Для `default` формат является только native/Core фактом. Без Core успешная native команда и текущие output paths не объявляются модельной publication authority. Partial render/preview сохраняет локальную область.
 
 Свежие outputs, ресурсы и search монтируются по путям папок; QRC строго связывает
 текущие HTML и объединяет search. `.quarto`, `_freeze` и кеши движков сохраняются.
@@ -325,3 +325,8 @@ Navigation из того же namespace установленных расшир�
 Состав берётся из `subprojects`; отдельный список ссылок не нужен.
 Правила standalone и явно заданных авторских ссылок сохраняются без включения
 общей композиции. Подробности: [контракт](spec/contract.md#общее-меню-курса-530).
+
+Обычная Native публикация с Download и без него использует единый Core/PL
+маршрут; grading/seed qualification выполняется отдельно. Download публикует
+готовый draft после успешного Core closing. Ранние clean/render/mount effects
+сохраняются без общего rollback. Подробности — [публичная композиция](docs/public-operation.md).

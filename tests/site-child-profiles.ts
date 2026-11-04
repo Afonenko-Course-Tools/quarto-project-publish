@@ -102,9 +102,7 @@ try {
         const release = composition.nativeOperations[0];
         assertEquals(release.project, "core");
         assertEquals(release.catalog.identity.profiles, profiles);
-        assertEquals(release.release.proof.course.id, "lesson");
-        assertEquals(release.release.proof.documents.length, 1);
-        assertEquals(release.release.validationPasses, 1);
+        assertEquals(release.course.id, "lesson");
         releases++;
       }
     }

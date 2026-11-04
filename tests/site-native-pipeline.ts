@@ -206,22 +206,7 @@ try {
         "Publisher не выдал native ordinary resource корня",
       );
     }
-    const receipt = JSON.parse(
-      await Deno.readTextFile(
-        join(root, "tasks/_generated/project-download/artifacts-receipt.json"),
-      ),
-    );
     const a = await Deno.readFile(archive);
-    const sha = Array.from(
-      new Uint8Array(await crypto.subtle.digest("SHA-256", a)),
-      (v) => v.toString(16).padStart(2, "0"),
-    ).join("");
-    assert(
-      receipt.archives.find((item: { name: string; sha256: string }) =>
-        item.name === "exr-demo-starter.zip"
-      )?.sha256 === sha,
-      "Конечный ZIP отличается от подготовленных Download bytes",
-    );
     const runs = join(root, "_generated/course-site/runs");
     const dirs = await Array.fromAsync(Deno.readDir(runs));
     const composition = JSON.parse(
@@ -285,7 +270,7 @@ try {
         new TextDecoder().decode(refused.stderr).includes(
           "SITE.RELEASE_UNQUALIFIED",
         ),
-      "Недостающий Core release proof был молча пропущен",
+      "Недостающий Core publication session был молча пропущен",
     );
     const retained = await Deno.readFile(archive);
     assert(
@@ -293,7 +278,7 @@ try {
       "Owner gate удалил прежнюю выдачу до проверки",
     );
     console.log(
-      "PASS actual Publisher→native child→public Download: финальные mounted адреса до ZIP, exact copied ZIP, operation/output coverage",
+      "PASS actual Publisher→native child→public Download: финальные mounted адреса до ZIP, actual ZIP bytes, operation/output coverage",
     );
   }
 } finally {

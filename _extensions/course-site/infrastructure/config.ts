@@ -12,9 +12,8 @@ import { profileArguments, quarto } from "./process.ts";
 function projectRecord(
   path: string,
   mount: string,
-  to: "default" | "html" | "revealjs",
 ) {
-  return { id: `subproject-${encodeURIComponent(mount)}`, path, mount, to };
+  return { id: `subproject-${encodeURIComponent(mount)}`, path, mount };
 }
 export type Project = ReturnType<typeof projectRecord>;
 export type Workspace = Awaited<ReturnType<typeof workspace>>;
@@ -70,30 +69,26 @@ export async function validateConfig(
       },
     );
   }
-  const raw = config.subprojects;
+  const raw: unknown = config.subprojects;
   if (
     !Array.isArray(raw) || !raw.length ||
-    raw.some((item) =>
-      !item || typeof item !== "object" || Array.isArray(item) ||
-      Object.keys(item).length !== 2 || !Object.hasOwn(item, "path") ||
-      !Object.hasOwn(item, "to") ||
-      typeof item.path !== "string" || !item.path ||
-      !["default", "html", "revealjs"].includes(item.to)
+    !raw.every((item: unknown): item is string =>
+      typeof item === "string" && item.length > 0
     )
   ) {
     throw diagnostic(
       "SITE.CONFIG_INVALID",
-      "subprojects должен быть непустым списком {path, to}",
+      "subprojects должен быть непустым списком каталогов",
       {
         source: root,
         field: "subprojects",
         hint:
-          "Например: subprojects: [{path: theory, to: default}]. Допустимы default, html, revealjs.",
+          "Например: subprojects: [theory, tasks, lectures].",
       },
     );
   }
   const projects: Project[] = [];
-  for (const { path: item, to } of raw) {
+  for (const item of raw) {
     if (isAbsolute(item) || /^[a-z][a-z0-9+.-]*:/i.test(item)) {
       throw diagnostic(
         "SITE.SUBPROJECT_INVALID",
@@ -188,7 +183,7 @@ export async function validateConfig(
         );
       }
     }
-    projects.push(projectRecord(path, mount, to));
+    projects.push(projectRecord(path, mount));
   }
   return { root, output, projects, profiles, config };
 }

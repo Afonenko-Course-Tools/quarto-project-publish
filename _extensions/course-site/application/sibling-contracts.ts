@@ -2,7 +2,7 @@ import type * as Core from "course-core/public.ts";
 import type * as PrairieLearn from "course-prairielearn/public.ts";
 import type * as Download from "project-download/public.ts";
 import type { Record as CollectionRecord } from "../infrastructure/collection.ts";
-import type { Project, Workspace } from "../infrastructure/config.ts";
+import type { Workspace } from "../infrastructure/config.ts";
 
 /** Формы доверенных соседей задают их действительные публичные модули. */
 export interface SiblingModuleMap {
@@ -17,7 +17,6 @@ export type NativeSiteRecord = Pick<
   "projectRoot" | "outputDir" | "profiles" | "nativeOutputs"
 > & {
   selectedSources?: Workspace["selectedSources"];
-  to?: Project["to"];
 };
 
 export type {

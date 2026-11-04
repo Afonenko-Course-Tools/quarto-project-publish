@@ -42,7 +42,7 @@ try {
   ) await install(source!, name, "tasks");
   await put(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [{path: tasks, to: default}, {path: book, to: default}]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks, book]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
   );
   if (true) {
     const config = await Deno.readTextFile(join(root, "_quarto.yml"));
@@ -108,7 +108,6 @@ try {
       if(mode==="root-missing") state.ws.selectedSources=[];
       else if(mode==="missing") state.records[0].record.selectedSources.pop();
       else if(mode==="unexpected") state.records[0].record.selectedSources.push("foreign.qmd");
-      else if(mode==="format") state.records[0].record.to="html";
       else throw Error("Неизвестный mutant");
       await Deno.writeTextFile(path,JSON.stringify(state));`,
     );
@@ -133,7 +132,7 @@ try {
   if (mutant) {
     assert(
       !rendered.success && log.includes("SITE.CURRENT_RESULT_MISSING"),
-      "Ожидался отказ independent selection/format: " + root + "\n" + log,
+      "Ожидался отказ independent selection: " + root + "\n" + log,
     );
     const zip = join(
       root,

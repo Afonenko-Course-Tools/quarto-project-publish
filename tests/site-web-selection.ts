@@ -29,7 +29,7 @@ async function run(args: string[], cwd = root) {
 try {
   await write(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nfilters: [reference-catalog]\nreference-catalog: {namespace: rootpage}\nsubprojects: [{path: a/slides, to: default}]\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nfilters: [reference-catalog]\nreference-catalog: {namespace: rootpage}\nsubprojects: [a/slides]\n`,
   );
   await write("index.qmd", "# Root\n\n@talk:sec-slide\n");
   await write(

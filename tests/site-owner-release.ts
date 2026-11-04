@@ -55,7 +55,7 @@ try {
     view = author ? "full" : "student";
   await put(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat: {html: {theme: none}}\nwebsite: {site-url: 'https://pages.example.test/course/'}\nsubprojects: [{path: tasks, to: default}]\nreference-catalog: {namespace: portal}\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat: {html: {theme: none}}\nwebsite: {site-url: 'https://pages.example.test/course/'}\nsubprojects: [tasks]\nreference-catalog: {namespace: portal}\n`,
   );
   await put("index.qmd", "# Общий сайт\n");
   if (mode === "root-pl") {

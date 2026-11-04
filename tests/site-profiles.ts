@@ -58,7 +58,7 @@ try {
   );
   await Deno.writeTextFile(
     `${root}/_quarto.yml`,
-    "project: {type: website, output-dir: _site}\nformat: html\nsubprojects: [{path: part, to: default}]\nfilters: [course-core]\ncourse: {id: guarded-root, view: full}\n",
+    "project: {type: website, output-dir: _site}\nformat: html\nsubprojects: [part]\nfilters: [course-core]\ncourse: {id: guarded-root, view: full}\n",
   );
   const oldProfile = Deno.env.get("QUARTO_PROFILE"),
     oldAll = Deno.env.get("QUARTO_PROJECT_RENDER_ALL");
@@ -82,7 +82,7 @@ try {
     // обязан остановить композицию до cleanup обеих предыдущих выдач.
     await Deno.writeTextFile(
       `${root}/_quarto.yml`,
-      "project: {type: website, output-dir: _site}\nformat: html\nsubprojects: [{path: part, to: default}]\ncourse-core-runtime: native-ts\ncourse: {id: guarded-root, view: student}\n",
+      "project: {type: website, output-dir: _site}\nformat: html\nsubprojects: [part]\ncourse-core-runtime: native-ts\ncourse: {id: guarded-root, view: student}\n",
     );
     await Deno.writeTextFile(`${root}/part/index.qmd`, "# Part\n");
     await Deno.writeTextFile(

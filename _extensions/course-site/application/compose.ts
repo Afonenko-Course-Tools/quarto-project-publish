@@ -154,18 +154,16 @@ function catalogCoverage(catalog: NativeCatalog, record: NativeSiteRecord) {
       (sources.size !== expectedSources.size ||
         [...sources].some((source) => !expectedSources.has(source)))) ||
     actual.size !== outputs.length || actual.size !== expected.size ||
-    [...actual].some((path) => !expected.has(path)) ||
-    (record.to && record.to !== "default" &&
-      documents.some((document) => document.format !== record.to))
+    [...actual].some((path) => !expected.has(path))
   ) {
     throw diagnostic(
       "SITE.CURRENT_RESULT_MISSING",
-      "Публичный каталог Core не совпадает с native selection, outputs или выбранным to",
+      "Публичный каталог Core не совпадает с native selection или outputs",
       {
         source: record.projectRoot,
-        field: "selectedSources/output/format",
+        field: "selectedSources/output",
         hint:
-          "Проверьте неизменность native selection и явный формат компонента.",
+          "Проверьте неизменность native selection и текущие outputs компонента.",
       },
     );
   }
@@ -387,7 +385,7 @@ export async function pre(root = Deno.cwd()): Promise<void> {
     const collection = join(run, `${project.id}-0.json`);
     await progress("Рендер", project.path, () =>
       quarto(
-        ["render", ".", "--to", project.to, ...profileArguments(ws.profiles)],
+        ["render", ".", ...profileArguments(ws.profiles)],
         project.path,
         {
           COURSE_SITE_COLLECTION: collection,
@@ -420,7 +418,6 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       nativeOutputs: collected.nativeOutputs,
       files: collected.files,
       selectedSources: plan.selectedSources,
-      to: project.to,
     };
     records.push({ project, config, record });
   }

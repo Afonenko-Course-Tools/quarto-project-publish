@@ -4,7 +4,8 @@
 `Core.withNativePublication(expectation, selection, use)`. Core проверяет
 семантические facts документов/course/assessment, coverage, audience и текущий
 capture. Publisher сравнивает catalog с независимо выбранными Native sources,
-HTML outputs и явным `to` внутри callback. Native course без активного Core
+текущими HTML outputs внутри callback. Форматы определяют конфигурация, профили
+и документы дочернего Quarto. Native course без активного Core
 сохраняет `SITE.RELEASE_UNQUALIFIED`; ordinary noCore проект самостоятельный.
 
 PL активен по фактическому `publication.course.adapters`. При активном

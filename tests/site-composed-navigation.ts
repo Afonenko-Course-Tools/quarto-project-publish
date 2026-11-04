@@ -42,8 +42,8 @@ filters: [course-navigation]
 course-navigation: {enabled: true}
 subprojects: ${
       webOnly
-        ? "[{path: theory, to: default}, {path: slides, to: default}]"
-        : "[{path: theory, to: default}, {path: slides, to: default}, {path: handout, to: default}]"
+        ? "[theory, slides]"
+        : "[theory, slides, handout]"
     }
 `,
   );

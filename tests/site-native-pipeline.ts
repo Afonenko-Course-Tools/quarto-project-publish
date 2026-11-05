@@ -130,9 +130,12 @@ try {
     new TextDecoder().decode(rendered.stderr);
   await Deno.writeTextFile(join(root, "_generated/render.log"), log);
   if (mutant) {
+    const expectedDiagnostic = mutant === "root-missing"
+      ? "RELEASE.EXPECTED_SOURCES_INVALID"
+      : "RELEASE.COVERAGE";
     assert(
-      !rendered.success && log.includes("RELEASE.COVERAGE"),
-      "Ожидался отказ Core publication по independent selection: " + root + "\n" + log,
+      !rendered.success && log.includes(expectedDiagnostic),
+      "Ожидался отказ Core publication " + expectedDiagnostic + ": " + root + "\n" + log,
     );
     const zip = join(
       root,

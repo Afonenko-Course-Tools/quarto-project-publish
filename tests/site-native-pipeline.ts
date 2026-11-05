@@ -131,8 +131,8 @@ try {
   await Deno.writeTextFile(join(root, "_generated/render.log"), log);
   if (mutant) {
     assert(
-      !rendered.success && log.includes("SITE.CURRENT_RESULT_MISSING"),
-      "Ожидался отказ independent selection: " + root + "\n" + log,
+      !rendered.success && log.includes("RELEASE.COVERAGE"),
+      "Ожидался отказ Core publication по independent selection: " + root + "\n" + log,
     );
     const zip = join(
       root,

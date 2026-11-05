@@ -34,7 +34,7 @@ try {
   await write("index.qmd", "# Root\n\n@talk:sec-slide\n");
   await write(
     "a/slides/_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, talk.qmd]\n  post-render:\n    - _extensions/reference-catalog/entrypoints/post.ts\n    - ../../_extensions/course-site/entrypoints/collect.ts\nformat: html\nfilters: [count.lua, reference-catalog]\nreference-catalog: {namespace: talk}\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, talk.qmd, notes.qmd]\n  post-render:\n    - _extensions/reference-catalog/entrypoints/post.ts\n    - ../../_extensions/course-site/entrypoints/collect.ts\nformat: html\nfilters: [count.lua, reference-catalog]\nreference-catalog: {namespace: talk}\n`,
   );
   await write(
     "a/slides/count.lua",
@@ -42,12 +42,16 @@ try {
   );
   await write(
     "a/slides/index.qmd",
-    // GFM проверяет настоящий невеб-результат без зависимости fixture от TeX.
-    "---\ntitle: Website\nformat:\n  html: default\n  gfm: default\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
+    "---\ntitle: Website\nformat: html\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
   );
   await write(
     "a/slides/talk.qmd",
     "---\ntitle: Slides\nformat: revealjs\n---\n# Slide {#sec-slide}\n\n@talk:sec-web\n",
+  );
+  await write(
+    "a/slides/notes.qmd",
+    // GFM без QRC-ссылок проверяет невеб-результат без зависимости от TeX.
+    "---\ntitle: Notes\nformat:\n  html: default\n  gfm: default\n---\n# Native notes\n",
   );
   await run(["add", repo, "--no-prompt"]);
   const qrc = Deno.env.get("QRC_PROVIDER") ||
@@ -57,7 +61,7 @@ try {
   await run(["render"]);
   const counts = (await Deno.readTextFile(join(root, "counts.txt"))).trim()
     .split("\n").sort();
-  assertEquals(counts, ["Slides:revealjs", "Website:gfm", "Website:html"]);
+  assertEquals(counts, ["Notes:gfm", "Notes:html", "Slides:revealjs", "Website:html"]);
   const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
     .split("\n").map((line) => JSON.parse(line));
   const childRenders = trace.filter((row) => row.kind === "render");
@@ -92,9 +96,9 @@ try {
   );
   assertEquals(catalog.targets["talk:sec-slide"].page, "a/slides/talk.html");
   const markdown = await Deno.readTextFile(
-    join(root, "_site/a/slides/index.md"),
+    join(root, "_site/a/slides/notes.md"),
   );
-  assert(markdown.includes("# Website"), "Потерян настоящий native GFM результат");
+  assert(markdown.includes("# Native notes"), "Потерян настоящий native GFM результат");
   console.log(
     "PASS native HTML/GFM/Reveal selection, nested QRC, circular HTML/Reveal links, одна child команда и body каждого формата",
   );

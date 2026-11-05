@@ -74,6 +74,11 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: npm run test:browser
+      - name: HTML-дерево и автономная поставка навигации
+        working-directory: quarto-project-publish
+        run: |
+          quarto run tests/site-navigation-html.ts
+          quarto run tests/site-navigation-installed.ts
       - name: Проверка режима off без доступа к часам
         working-directory: quarto-project-publish
         run: quarto run tests/performance.ts

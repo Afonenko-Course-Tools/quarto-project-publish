@@ -189,6 +189,7 @@ try {
     "reveal-model": "CONDITION_UNQUALIFIED",
     "inactive-course": "SITE.RELEASE_UNQUALIFIED",
     "author-starter": "DOWNLOAD.STARTER_UNQUALIFIED",
+    "mixed-default": "DOCUMENT_BINDING: native format не квалифицирован",
   };
   if (mode === "author-starter" && rendered.success && Deno.env.get("B3_LOG")) {
     const listed = await new Deno.Command("unzip", {

@@ -55,7 +55,7 @@ course: {id: project-source}
 exercise-bank: true
 ${owner ? "" : "subprojects: [part, nested/second]\n"}course-project:
   build:
-    files: {Public.java: common/Public.java}
+    files: {Public.java: {path: common/Public.java, base: config}}
 project-materialization:
   projects:
     exr-${ids[i]}:

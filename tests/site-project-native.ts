@@ -203,25 +203,21 @@ for (const view of ["student", "full"]) {
       assertEquals(doc.definitions[`exr-${ids[i]}`]["project-check"], "junit");
       await op.withProjectContexts([{
         owner: ownerRoot,
-        inputs: ["projects/demo/native-input.qmd"],
+        directories: ["projects/demo"],
         profiles: [view],
         format: "html",
       }], async (batch: any) => {
         const context = batch.groups[0].contexts[0];
-        assert(
-          context.input.startsWith(ownerRoot + "/projects/demo/"),
-          "Потерян owner проекта",
-        );
-        const rawChecks = context.effectiveMetadata["project-checks"];
-        assertEquals(rawChecks.profiles.junit["source-profile"], "main");
-        assertEquals(rawChecks.profiles.junit.tests, ["tests/*Test.java"]);
-        const rawMaterialization =
-          context.effectiveMetadata["project-materialization"]
-            .projects[`exr-${ids[i]}`];
-        assertEquals(rawMaterialization["include-git"], true);
+        assertEquals(context.owner, ownerRoot);
+        assertEquals(context.input, join(ownerRoot, "projects/demo"));
+        assertEquals(context.contract.starter.path, join(context.input, "student"));
         assertEquals(
-          rawMaterialization["common-files"].map((f: any) => f.audience),
-          ["student", "grading"],
+          context.contract.solutions.reference.path,
+          join(context.input, "reference"),
+        );
+        assertEquals(
+          context.contract.build.files["Public.java"].path,
+          join(ownerRoot, "common/Public.java"),
         );
         const plan = await Core.planProject(context, {
           audience: view === "full" ? "full" : "student",

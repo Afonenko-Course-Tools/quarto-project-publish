@@ -38,11 +38,12 @@ try {
   );
   await write(
     "a/slides/count.lua",
-    'function Pandoc(doc) local file = assert(io.open(os.getenv("COURSE_FORMAT_COUNTS"), "a")); file:write(pandoc.utils.stringify(doc.meta.title) .. "\\n"); file:close() end\n',
+    'function Pandoc(doc) local file = assert(io.open(os.getenv("COURSE_FORMAT_COUNTS"), "a")); file:write(pandoc.utils.stringify(doc.meta.title) .. ":" .. quarto.format.format_identifier()["target-format"] .. "\\n"); file:close() end\n',
   );
   await write(
     "a/slides/index.qmd",
-    "---\ntitle: Website\nformat:\n  html: default\n  pdf: default\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
+    // GFM проверяет настоящий невеб-результат без зависимости fixture от TeX.
+    "---\ntitle: Website\nformat:\n  html: default\n  gfm: default\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
   );
   await write(
     "a/slides/talk.qmd",
@@ -56,12 +57,12 @@ try {
   await run(["render"]);
   const counts = (await Deno.readTextFile(join(root, "counts.txt"))).trim()
     .split("\n").sort();
-  assertEquals(counts, ["Slides", "Website"]);
+  assertEquals(counts, ["Slides:revealjs", "Website:gfm", "Website:html"]);
   const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
     .split("\n").map((line) => JSON.parse(line));
   const childRenders = trace.filter((row) => row.kind === "render");
   assertEquals(childRenders.length, 1);
-  assertEquals(childRenders[0].args, ["render", ".", "--to", "default"]);
+  assertEquals(childRenders[0].args, ["render", "."]);
   assert(
     trace.filter((row) => row.kind === "inspect").every((row) =>
       !row.args[1].endsWith(".qmd")
@@ -90,16 +91,12 @@ try {
     await Deno.readTextFile(join(root, "_site/reference-catalog.json")),
   );
   assertEquals(catalog.targets["talk:sec-slide"].page, "a/slides/talk.html");
-  let pdf = false;
-  try {
-    await Deno.stat(join(root, "_site/a/slides/index.pdf"));
-    pdf = true;
-  } catch (error) {
-    if (!(error instanceof Deno.errors.NotFound)) throw error;
-  }
-  assert(!pdf, "web composition rendered PDF");
+  const markdown = await Deno.readTextFile(
+    join(root, "_site/a/slides/index.md"),
+  );
+  assert(markdown.includes("# Website"), "Потерян настоящий native GFM результат");
   console.log(
-    "PASS native HTML-first default, nested QRC, circular HTML/Reveal links, одна child команда и один body на документ",
+    "PASS native HTML/GFM/Reveal selection, nested QRC, circular HTML/Reveal links, одна child команда и body каждого формата",
   );
 } finally {
   await Deno.remove(root, { recursive: true });

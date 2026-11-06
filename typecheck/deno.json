@@ -1,0 +1,12 @@
+{
+  "lock": false,
+  "nodeModulesDir": "manual",
+  "compilerOptions": {
+    "strict": true,
+    "checkJs": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": true
+  }
+}

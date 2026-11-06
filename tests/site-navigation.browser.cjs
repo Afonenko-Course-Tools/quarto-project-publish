@@ -1,3 +1,4 @@
+// @ts-check
 /* Нейтральный native fixture: композиция, standalone, профили и индексные входы. */
 'use strict';
 const assert = require('node:assert/strict');
@@ -6,11 +7,14 @@ const path = require('node:path');
 const os = require('node:os');
 const http = require('node:http');
 const {execFileSync} = require('node:child_process');
+/** @type {typeof import("playwright")} */
 const playwright = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES || '', 'playwright'));
 const repo = path.resolve(__dirname,'..');
 const navigation = path.resolve(process.env.COURSE_CORE_PROVIDER || path.join(repo,'../quarto-course'));
 const root = fs.mkdtempSync(path.join(os.tmpdir(),'site-navigation-'));
+/** @param {string} file @param {string} text */
 const write = (file,text) => {fs.mkdirSync(path.dirname(path.join(root,file)),{recursive:true}); fs.writeFileSync(path.join(root,file),text);};
+/** @param {string[]} args @param {string} [cwd] */
 const run = (args,cwd=root) => execFileSync(process.env.QUARTO || 'quarto',args,{cwd,stdio:'pipe'});
 const child = 'units/slides';
 write('_quarto.yml', `project:
@@ -68,7 +72,7 @@ for (const [directory,base] of [['','_site'],[child,'_output'],['theory','_outpu
   for (const profile of ['student','full']) write(`${directory ? directory+'/' : ''}_quarto-${profile}.yml`, `project:\n  output-dir: ${base}-${profile}\n`);
 }
 const server = http.createServer((req,res) => {
-  let file = path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1)));
+  let file = path.resolve(root,decodeURIComponent(new URL(req.url || '/','http://localhost').pathname.slice(1)));
   if (!file.startsWith(root+path.sep)) {res.writeHead(403).end(); return;}
   if(fs.existsSync(file) && fs.statSync(file).isDirectory()) file=path.join(file,'index.html');
   fs.readFile(file,(error,data)=>{if(error) res.writeHead(404).end(); else {res.setHeader('Content-Type',path.extname(file)==='.html'?'text/html; charset=utf-8':path.extname(file)==='.js'?'text/javascript':path.extname(file)==='.css'?'text/css':'application/octet-stream');res.end(data);}});
@@ -78,8 +82,11 @@ const server = http.createServer((req,res) => {
   try {
     run(['add',repo,'--no-prompt']);
     fs.cpSync(path.join(navigation,'_extensions/course-navigation'),path.join(root,child,'_extensions/course-navigation'),{recursive:true});
-    await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-    const origin=`http://127.0.0.1:${server.address().port}`;
+    await new Promise(resolve=>server.listen(0,'127.0.0.1',()=>resolve(undefined)));
+    const address = server.address();
+    assert.ok(address && typeof address !== "string");
+    const port = address.port;
+    const origin=`http://127.0.0.1:${port}`;
     browser=await playwright.chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox']});
     const page=await browser.newPage();
     for (const profile of ['student','full']) {
@@ -94,11 +101,11 @@ const server = http.createServer((req,res) => {
       for (const [name, href] of [['Доклад по каталогу',`${base}/deck/`],['Доклад с параметрами',`${base}/deck/?view=1#second`]]) {
         const link = page.getByRole('link',{name,exact:true});
         assert.equal(await link.getAttribute('target'),'_blank','URL каталога реального Reveal открывается отдельно');
-        assert.equal(await link.evaluate(a=>a.href),href,'Query и fragment авторской ссылки сохраняются');
-        const rel = (await link.getAttribute('rel')).split(/\s+/);
+        assert.equal(await link.evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }),href,'Query и fragment авторской ссылки сохраняются');
+        const rel = (await link.getAttribute('rel') || '').split(/\s+/);
         assert.ok(rel.includes('noopener') && rel.includes('noreferrer'));
         const nextTab = page.waitForEvent('popup'); await link.click();
-        const presentation = await nextTab; await presentation.waitForFunction(()=>window.Reveal?.isReady());
+        const presentation = await nextTab; await presentation.waitForFunction(()=>"Reveal" in window && typeof window.Reveal === "object" && window.Reveal !== null && "isReady" in window.Reveal && typeof window.Reveal.isReady === "function" && window.Reveal.isReady());
         assert.equal(page.url(),`${base}/index.html`,'HTML индекс остаётся открытым');
         assert.equal(new URL(presentation.url()).search,new URL(href).search);
         await presentation.close();
@@ -108,7 +115,7 @@ const server = http.createServer((req,res) => {
       await deck.locator('.course-nav-controls [data-action=next]').click();
       assert.equal(page.url(),`${base}/index.html`);
       const links=deck.locator('.course-nav-sidebar .course-nav-permanent a');
-      assert.deepEqual(await links.evaluateAll(list=>list.map(a=>a.href)),[
+      assert.deepEqual(await links.evaluateAll(list=>list.map(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; })),[
         `${base}/index.html`,`${base}/${child}/index.html`,`${base}/theory/index.html`,
         'https://github.com/neutral/learning/blob/0123456789abcdef/units/slides/chapters/talk.qmd',
         'https://github.com/neutral/learning/issues/new',
@@ -123,8 +130,8 @@ const server = http.createServer((req,res) => {
       assert.equal(await page.evaluate(()=>window.opener),null);
       await page.getByRole('link',{name:'Курс',exact:true}).first().click(); await page.waitForURL(`${base}/index.html`);
       await page.goto(`${base}/theory/index.html`);
-      assert.equal(await page.locator('.navbar-nav a').filter({hasText:'Курс'}).first().evaluate(a=>a.href), `${base}/`, 'Native navbar получает адрес композиции');
-      assert.equal(await page.locator('.navbar-nav a').filter({hasText:'Теория'}).first().evaluate(a=>a.href), `${base}/theory/`);
+      assert.equal(await page.locator('.navbar-nav a').filter({hasText:'Курс'}).first().evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }), `${base}/`, 'Native navbar получает адрес композиции');
+      assert.equal(await page.locator('.navbar-nav a').filter({hasText:'Теория'}).first().evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }), `${base}/theory/`);
       assert.equal(await page.getByRole('link',{name:'Связь в тексте',exact:true}).getAttribute('href'),'https://neutral.example/course/units/slides/chapters/special.html','Авторская ссылка в тексте не получает overlay');
       await page.locator('.navbar-nav a').filter({hasText:'Курс'}).first().click(); await page.waitForURL(`${base}/`);
       await page.goto(`${base}/theory/index.html`);
@@ -138,9 +145,9 @@ const server = http.createServer((req,res) => {
       for (const [name, suffix] of [['Краткий доклад','chapters/'],['Краткий доклад с параметрами','chapters/?view=1#second']]) {
         const link = page.getByRole('link',{name,exact:true});
         assert.equal(await link.getAttribute('target'),'_blank','Standalone индекс распознаёт URL каталога Reveal');
-        assert.equal(await link.evaluate(a=>a.href),`${standalone}/${suffix}`);
+        assert.equal(await link.evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }),`${standalone}/${suffix}`);
         const nextTab = page.waitForEvent('popup'); await link.click();
-        const presentation = await nextTab; await presentation.waitForFunction(()=>window.Reveal?.isReady());
+        const presentation = await nextTab; await presentation.waitForFunction(()=>"Reveal" in window && typeof window.Reveal === "object" && window.Reveal !== null && "isReady" in window.Reveal && typeof window.Reveal.isReady === "function" && window.Reveal.isReady());
         assert.equal(page.url(),`${standalone}/index.html`);
         await presentation.close();
       }

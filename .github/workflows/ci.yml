@@ -126,6 +126,7 @@ jobs:
           quarto run tests/release-composition.ts
           quarto run tests/site-project-native.ts
           quarto run tests/type-boundaries.ts
+          quarto run tests/collection-id-boundary.ts
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
           quarto run tests/site-child-profiles.ts default

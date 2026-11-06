@@ -97,8 +97,16 @@ async function collectImpl(): Promise<void> {
   const nativeOutputs = await publicOutputs(root, outputDir);
   await addressNavigation(outputDir, nativeOutputs);
   if (!destination) return;
+  const id = Deno.env.get("COURSE_SITE_PROJECT");
+  if (!id) {
+    throw diagnostic("SITE.COLLECTION_INVALID", "Не задан идентификатор текущего компонента", {
+      source: root,
+      field: "COURSE_SITE_PROJECT",
+      hint: "В композиции Publisher задаёт идентификатор автоматически.",
+    });
+  }
   const record: Record = {
-    id: Deno.env.get("COURSE_SITE_PROJECT")!,
+    id,
     projectRoot: root,
     outputDir,
     profiles: (Deno.env.get("QUARTO_PROFILE") || "").split(",").filter(Boolean),

@@ -3,7 +3,7 @@ import { dirname, fromFileUrl, join, resolve, toFileUrl } from "stdlib/path";
 const root = dirname(dirname(fromFileUrl(import.meta.url)));
 const imports: Record<string, string> = {};
 for (const name of ["stdlib/path", "stdlib/fs"]) {
-  imports[name] = import.meta.resolve(name).replace("jsr:/", "jsr:");
+  imports[name] = import.meta.resolve(name).replace(/^https:\/\/jsr\.io\/@std\/(path|fs)\/([^/]+)\/mod\.ts$/, "jsr:@std/$1@$2").replace("jsr:/", "jsr:");
 }
 for (const [name, variable, fallback] of [
   ["course-core", "CORE", "quarto-course"],
@@ -24,7 +24,7 @@ for (const [name, variable, fallback] of [
 }
 const coverage: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/coverage.json")));
 if (typeof coverage !== "object" || coverage === null || !("owned" in coverage) || !Array.isArray(coverage.owned) || !coverage.owned.every((file): file is string => typeof file === "string")) throw Error("Неверный typecheck/coverage.json");
-const config = await Deno.makeTempFile({ suffix: ".json" });
+const config = await Deno.makeTempFile({ dir: join(root, "typecheck"), prefix: ".active-", suffix: ".json" });
 try {
   const settings: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/deno.json")));
   if (typeof settings !== "object" || settings === null) throw Error("Неверный typecheck/deno.json");

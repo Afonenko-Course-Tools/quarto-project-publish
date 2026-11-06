@@ -1,3 +1,5 @@
+import { record, text } from "./values.ts";
+import { diagnostic } from "./diagnostics.ts";
 import { createMetrics } from "../observability/bridge.ts";
 const metrics = createMetrics("course-site");
 import { dirname, relative, within } from "./files.ts";
@@ -39,7 +41,7 @@ function scriptText(element: DefaultTreeAdapterTypes.Element): string {
 }
 
 /** Адреса берутся только из текущих native HTML, без второй карты курса. */
-export async function addressNavigation(
+async function addressNavigationImpl(
   stage: string,
   outputs: string[],
   composition = false,
@@ -77,10 +79,12 @@ export async function addressNavigation(
         attribute(element, "type")?.trim().toLowerCase() === "application/json"
       );
       if (contextScript) {
-        const context = JSON.parse(scriptText(contextScript));
+        const raw = record(JSON.parse(scriptText(contextScript)), output, "course-navigation-context");
+        if (!Array.isArray(raw.links)) throw diagnostic("SITE.CONFIG_INVALID", "Navigation links требует список", { source: output, field: "course-navigation-context.links" });
+        const context = { ...raw, links: raw.links.map((value: unknown) => record(value, output, "course-navigation-context.links")) };
         for (const link of context.links) {
           if (link.scope === "course") {
-            link.href = relative(dirname(output), within(stage, link.path))
+            link.href = relative(dirname(output), within(stage, text(link.path, output, "course-navigation-context.links.path")))
               .replaceAll("\\", "/");
           }
         }
@@ -158,8 +162,7 @@ for(const link of document.querySelectorAll('a[href]')){
   }
 }
 
-// @ts-expect-error JS допускает замену function binding; публичная сигнатура сохраняется.
-addressNavigation = metrics.wrapAsync({
+export const addressNavigation = metrics.wrapAsync({
   id: "course-site.infrastructure.navigation.addressNavigation",
   kind: "phase",
-}, addressNavigation);
+}, addressNavigationImpl);

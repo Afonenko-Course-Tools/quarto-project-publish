@@ -22,7 +22,8 @@ export async function assertRejects(
     failed = true;
     if (code) {
       assert(error instanceof Error);
-      assertEquals((error as Error & { code?: string }).code, code);
+      assert("code" in error);
+      assertEquals(error.code, code);
       assertEquals(error.name, "ExtensionDiagnostic");
       for (const value of context) {
         assert(

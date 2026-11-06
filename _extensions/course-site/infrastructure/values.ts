@@ -39,7 +39,7 @@ export function nativeConfig(value: unknown, root: string) {
     website: website && { ...website, title: optionalText(website.title, root, "website.title"), "site-url": optionalText(website["site-url"], root, "website.site-url") },
     book: book && { ...book, title: optionalText(book.title, root, "book.title") },
     course: course && { ...course, view },
-    "course-navigation": navigation && { ...navigation, "course-url": optionalText(navigation["course-url"], root, "course-navigation.course-url") },
+    "course-navigation": navigation && { ...navigation, enabled: navigation.enabled, "course-url": optionalText(navigation["course-url"], root, "course-navigation.course-url") },
     "reference-catalog": catalog && { ...catalog, namespace: text(catalog.namespace, root, "reference-catalog.namespace") },
     "project-download": download,
   };

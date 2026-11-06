@@ -1,3 +1,4 @@
+import { loadSite } from "./results.ts";
 import { assert, assertEquals, assertRejects } from "./support.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
@@ -16,7 +17,7 @@ try {
     stderr: "piped",
   }).output();
   assert(add.success);
-  const { pre } = await import(
+  const { pre } = await loadSite("compose",
     `file://${root}/_extensions/course-site/application/compose.ts`
   );
   Deno.env.delete("QUARTO_PROJECT_RENDER_ALL");
@@ -62,7 +63,7 @@ try {
     qrc,
     'throw new Error("INITIALIZATION_SENTINEL", {cause: "module cause"});\n',
   );
-  const { post } = await import(
+  const { post } = await loadSite("compose",
     `file://${root}/_extensions/course-site/application/compose.ts`
   );
   try {

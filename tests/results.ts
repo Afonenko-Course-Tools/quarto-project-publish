@@ -46,3 +46,19 @@ export function readCommandEvent(value: unknown) {
   const raw = record(value, "trace.jsonl", "event");
   return { ...raw, kind: text(raw.kind, "trace.jsonl", "kind"), args: strings(raw.args, "trace.jsonl", "args"), cwd: text(raw.cwd, "trace.jsonl", "cwd"), exitCode: raw.exitCode };
 }
+
+interface SiteModules {
+  compose: Pick<typeof import("../_extensions/course-site/application/compose.ts"), "pre" | "post">;
+  config: Pick<typeof import("../_extensions/course-site/infrastructure/config.ts"), "workspace">;
+  navigation: Pick<typeof import("../_extensions/course-site/infrastructure/navigation.ts"), "addressNavigation">;
+}
+function isSiteModule<Name extends keyof SiteModules>(name: Name, value: unknown): value is SiteModules[Name] {
+  if (!isRecord(value)) return false;
+  const functions = { compose: ["pre", "post"], config: ["workspace"], navigation: ["addressNavigation"] } satisfies { [Key in keyof SiteModules]: (keyof SiteModules[Key])[] };
+  return functions[name].every(key => typeof value[key] === "function");
+}
+export async function loadSite<Name extends keyof SiteModules>(name: Name, url: string) {
+  const value: unknown = await import(url);
+  assert(isSiteModule(name, value), "Установленный Site не содержит ожидаемых операций: " + url);
+  return value;
+}

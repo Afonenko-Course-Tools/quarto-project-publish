@@ -1,3 +1,4 @@
+import { loadSite } from "./results.ts";
 import { record } from "../_extensions/course-site/infrastructure/values.ts";
 import { copy } from "stdlib/fs";
 import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
@@ -20,10 +21,10 @@ try {
   await Deno.writeTextFile(request.stage + '/reference-catalog.json', '{}');
 }\n`,
   );
-  const { post } = await import(
+  const { post } = await loadSite("compose",
     toFileUrl(join(extension, "application/compose.ts")).href
   );
-  const { workspace } = await import(
+  const { workspace } = await loadSite("config",
     toFileUrl(join(extension, "infrastructure/config.ts")).href
   );
   Deno.env.set("QUARTO_PROFILE", "student");

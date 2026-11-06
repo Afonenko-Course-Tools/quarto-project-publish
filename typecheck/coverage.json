@@ -15,6 +15,7 @@
     "_extensions/course-site/infrastructure/process.ts",
     "_extensions/course-site/infrastructure/values.ts",
     "examples/course/build-info.ts",
+    "tests/collection-id-boundary.ts",
     "tests/command-probe.ts",
     "tests/fixtures.ts",
     "tests/fixtures/command-probe.sh",

@@ -1,3 +1,4 @@
+import { fixture } from "./fixtures.ts";
 import { loadSite } from "./results.ts";
 import { record } from "../_extensions/course-site/infrastructure/values.ts";
 import { copy } from "stdlib/fs";
@@ -14,13 +15,7 @@ try {
   await copy(join(repo, "_extensions/course-site"), extension);
   const qrc = join(root, "_extensions/reference-catalog");
   await Deno.mkdir(qrc, { recursive: true });
-  await Deno.writeTextFile(
-    join(qrc, "public.ts"),
-    `export async function publishReferenceCatalog(request) {
-  await Deno.writeTextFile(request.root + '/qrc-call.json', JSON.stringify(request));
-  await Deno.writeTextFile(request.stage + '/reference-catalog.json', '{}');
-}\n`,
-  );
+  await Deno.writeTextFile(join(qrc, "public.ts"), await fixture("qrc-spy.ts"));
   const { post } = await loadSite("compose",
     toFileUrl(join(extension, "application/compose.ts")).href
   );

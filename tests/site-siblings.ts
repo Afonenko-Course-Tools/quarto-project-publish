@@ -1,3 +1,4 @@
+import { fixture } from "./fixtures.ts";
 import { loadSite } from "./results.ts";
 import { assert, assertEquals, assertRejects } from "./support.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
@@ -31,10 +32,7 @@ try {
     "_extensions/project-download/public.ts",
   );
   await Deno.mkdir(dirname(source), { recursive: true });
-  await Deno.writeTextFile(
-    source,
-    'export function finishDownloads() {} export function prepareNativeDownloads() {} export function resetDownloadRequests() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
-  );
+  await Deno.writeTextFile(source, await fixture("download-sentinel.ts"));
   try {
     await pre(root);
     throw new Error("expected foreign error");
@@ -59,10 +57,7 @@ try {
     "_extensions/reference-catalog/public.ts",
   );
   await Deno.mkdir(dirname(qrc), { recursive: true });
-  await Deno.writeTextFile(
-    qrc,
-    'throw new Error("INITIALIZATION_SENTINEL", {cause: "module cause"});\n',
-  );
+  await Deno.writeTextFile(qrc, await fixture("initialization-sentinel.ts"));
   const { post } = await loadSite("compose",
     `file://${root}/_extensions/course-site/application/compose.ts`
   );

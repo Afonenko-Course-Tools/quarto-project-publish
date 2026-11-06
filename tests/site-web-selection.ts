@@ -1,3 +1,4 @@
+import { fixture } from "./fixtures.ts";
 import { record } from "../_extensions/course-site/infrastructure/values.ts";
 import { readCommandEvent } from "./results.ts";
 import { commandProbe } from "./command-probe.ts";
@@ -40,7 +41,7 @@ try {
   );
   await write(
     "a/slides/count.lua",
-    'function Pandoc(doc) local file = assert(io.open(os.getenv("COURSE_FORMAT_COUNTS"), "a")); file:write(pandoc.utils.stringify(doc.meta.title) .. ":" .. quarto.format.format_identifier()["target-format"] .. "\\n"); file:close() end\n',
+    await fixture("count-formats.lua"),
   );
   await write(
     "a/slides/index.qmd",

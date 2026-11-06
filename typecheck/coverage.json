@@ -3,6 +3,7 @@
     "_extensions/course-site/application/compose.ts",
     "_extensions/course-site/application/sibling-contracts.ts",
     "_extensions/course-site/application/state.ts",
+    "_extensions/course-site/browser/navigation.js",
     "_extensions/course-site/entrypoints/collect.ts",
     "_extensions/course-site/entrypoints/post.ts",
     "_extensions/course-site/entrypoints/pre.ts",
@@ -15,6 +16,26 @@
     "_extensions/course-site/infrastructure/values.ts",
     "examples/course/build-info.ts",
     "tests/command-probe.ts",
+    "tests/fixtures.ts",
+    "tests/fixtures/command-probe.sh",
+    "tests/fixtures/command-probe.ts",
+    "tests/fixtures/count-formats.lua",
+    "tests/fixtures/download-sentinel.ts",
+    "tests/fixtures/functional-env.sh",
+    "tests/fixtures/generate-source.ts",
+    "tests/fixtures/initialization-sentinel.ts",
+    "tests/fixtures/late-failure.ts",
+    "tests/fixtures/live-runner.ts",
+    "tests/fixtures/live-tool.sh",
+    "tests/fixtures/mutate-selection.ts",
+    "tests/fixtures/native-failure.sh",
+    "tests/fixtures/performance-child.ts",
+    "tests/fixtures/performance-tool.sh",
+    "tests/fixtures/process-hook.ts",
+    "tests/fixtures/qrc-spy.ts",
+    "tests/fixtures/restricted-parent.ts",
+    "tests/fixtures/unknown.ts",
+    "tests/fixtures/warning.lua",
     "tests/performance-context.ts",
     "tests/performance-noenv.ts",
     "tests/performance.ts",
@@ -51,10 +72,16 @@
     "tests/site-web-selection.ts",
     "tests/support.ts",
     "tests/type-boundaries.ts",
-    "tools/check-types.ts"
+    "tools/check-types.ts",
+    "typecheck/browser.d.ts"
   ],
   "delegated_to_N3": [
     "_extensions/course-site/observability/bridge.lua",
     "_extensions/course-site/observability/bridge.ts"
-  ]
+  ],
+  "language_gates": {
+    "typescript_javascript": "quarto run tools/check-types.ts",
+    "shell": "shellcheck tests/fixtures/*.sh",
+    "lua": "N0 workspaceLua с Pandoc/Quarto bootstrap"
+  }
 }

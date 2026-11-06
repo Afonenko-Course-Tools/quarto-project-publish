@@ -1,3 +1,4 @@
+import { fixture } from "./fixtures.ts";
 import { readCommandEvent } from "./results.ts";
 import {commandProbe} from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
@@ -89,7 +90,7 @@ await run(["add", repo, "--no-prompt"]);
 if (mode === "warnings") {
   await write(
     "part/warning.lua",
-    "function Pandoc(doc) pandoc.log.warn('NATIVE_WARNING_SENTINEL'); return doc end\n",
+    await fixture("warning.lua"),
   );
   const child = await Deno.readTextFile(join(root, "part/_quarto.yml"));
   await write("part/_quarto.yml", child + "\nfilters: [warning.lua]\n");
@@ -201,7 +202,7 @@ assertEquals(
   await Deno.readTextFile(join(root, "part/_freeze/cache-sentinel")),
   "keep",
 );
-await write("part/fail.ts", "throw new Error('LATE_CHILD_FAILURE');\n");
+await write("part/fail.ts", await fixture("late-failure.ts"));
 const original = await Deno.readTextFile(join(root, "part/_quarto.yml"));
 await write(
   "part/_quarto.yml",
@@ -241,7 +242,7 @@ await run(["render", "index.qmd"], join(root, "part"));
 const currentConfig = await Deno.readTextFile(join(root, "part/_quarto.yml"));
 await write(
   "part/generate.ts",
-  "await Deno.writeTextFile('generated.qmd', '# Fresh generated input\\n');\n",
+  await fixture("generate-source.ts"),
 );
 await write(
   "part/_quarto.yml",

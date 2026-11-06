@@ -1,27 +1,11 @@
+import { fixture, fixtureImports } from "./fixtures.ts";
 import { record } from "../_extensions/course-site/infrastructure/values.ts";
 const root = await Deno.makeTempDir({ prefix: "publisher-live-" });
 function assert(value: unknown, message: string): asserts value { if (!value) throw Error(message); }
 const tool = root + "/quarto-fixture.sh", runner = root + "/runner.ts";
-const module = new URL("../_extensions/course-site/infrastructure/process.ts", import.meta.url).href;
-await Deno.writeTextFile(tool, `#!/usr/bin/bash
-set -eu
-if [[ "$1" == json ]]; then
-  printf '{"native":"точный JSON"}\\n'
-  printf 'JSON_WARNING\\n' >&2
-  exit 0
-fi
-printf 'OUT_FIRST\\n'
-printf 'ERR_FIRST\\n' >&2
-while [[ ! -f "$LIVE_GATE" ]]; do sleep 0.02; done
-printf 'OUT_LAST\\n'
-printf 'ERR_LAST\\n' >&2
-if [[ "$1" == fail ]]; then exit 9; fi
-`);
+await Deno.writeTextFile(tool, await fixture("live-tool.sh"));
 await Deno.chmod(tool, 0o700);
-await Deno.writeTextFile(runner, `import {quarto} from ${JSON.stringify(module)};
-try { const result=await quarto([Deno.args[0]], Deno.cwd(), {}, Deno.args[0]!=="json"); console.log("RESULT:"+JSON.stringify({result})); }
-catch(e) { console.log("RESULT:"+JSON.stringify({name:e.name,tool:e.tool,exitCode:e.exitCode,stdout:e.stdout,stderr:e.stderr,forwarded:e.forwarded,causeCode:e.cause?.code,causeSuccess:e.cause?.success})); }
-`);
+await Deno.writeTextFile(runner, await fixture("live-runner.ts", fixtureImports));
 async function trial(mode: string) {
   const gate = root + "/" + mode + ".gate";
   const child = new Deno.Command(Deno.execPath(), {

@@ -1,3 +1,4 @@
+import { fixture, fixtureImports } from "./fixtures.ts";
 import { readComposition } from "./results.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
@@ -102,21 +103,12 @@ try {
   await put("book/index.qmd", "# Книга\n");
   await put("book/chapter.qmd", "# Native глава\n");
   if (mutant) {
-    await put(
-      "mutate-selection.ts",
-      `const path="_generated/course-site/active.json";const state=JSON.parse(await Deno.readTextFile(path));
-      const mode=${JSON.stringify(mutant)};
-      if(mode==="root-missing") state.ws.selectedSources=[];
-      else if(mode==="missing") state.records[0].record.selectedSources.pop();
-      else if(mode==="unexpected") state.records[0].record.selectedSources.push("foreign.qmd");
-      else throw Error("Неизвестный mutant");
-      await Deno.writeTextFile(path,JSON.stringify(state));`,
-    );
+    await put("mutate-selection.ts", await fixture("mutate-selection.ts", fixtureImports));
     await put(
       "_quarto.yml",
       (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
         "post-render: [quarto run",
-        "post-render: [quarto run mutate-selection.ts, quarto run",
+        `post-render: [quarto run mutate-selection.ts ${mutant}, quarto run`,
       ),
     );
   }

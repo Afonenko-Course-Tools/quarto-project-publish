@@ -1,3 +1,5 @@
+import { fixtureUrl } from "./fixtures.ts";
+import { fromFileUrl } from "stdlib/path";
 import { strict as assert } from 'node:assert';
 import { AsyncLocalStorage } from 'node:async_hooks';
 const root = await Deno.makeTempDir(), key = Symbol.for('course.performance.agent.v1');
@@ -24,10 +26,7 @@ try {
     },
   }});
   const {quarto} = await import('../_extensions/course-site/infrastructure/process.ts?context-test');
-  const args = ['eval', `import {ppid} from 'node:process'; console.log(JSON.stringify([
-    Deno.env.get('COURSE_PERF_PARENT_SPAN_ID') ?? null,
-    Deno.env.get('FUNCTIONAL'), Deno.env.get('FUNCTIONAL_INHERITED'),
-    Deno.env.get('QUARTO_PROFILE'), ppid]));`];
+  const args = ["run", "-A", fromFileUrl(fixtureUrl("performance-child.ts"))];
   const env = {FUNCTIONAL: 'keep', QUARTO_PROFILE: 'student'};
   assert.deepEqual(JSON.parse(await quarto(args, root, env)), [null, 'keep', 'inherited', 'student', Deno.pid]);
   const values = await Promise.all(['parent-a', 'parent-b'].map(parent => contexts.run(parent, async () =>

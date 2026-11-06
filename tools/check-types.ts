@@ -1,6 +1,8 @@
 import { dirname, fromFileUrl, join, resolve, toFileUrl } from "stdlib/path";
 
 const root = dirname(dirname(fromFileUrl(import.meta.url)));
+const scope = Deno.args[0] ?? "--all";
+if (!["--all", "--deno", "--node", "--browser"].includes(scope) || Deno.args.length > 1) throw Error("Укажите --all, --deno, --node или --browser");
 const imports: Record<string, string> = {};
 for (const [name, source] of [["process", "infrastructure/process.ts"], ["diagnostics", "infrastructure/diagnostics.ts"], ["state", "application/state.ts"]]) {
   imports["site-fixture/" + name] = toFileUrl(join(root, "_extensions/course-site", source)).href;
@@ -45,26 +47,28 @@ try {
   const settings: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/deno.json")));
   if (typeof settings !== "object" || settings === null) throw Error("Неверный typecheck/deno.json");
   await Deno.writeTextFile(config, JSON.stringify({ ...settings, imports }));
-  const result = await new Deno.Command(Deno.execPath(), {
-    args: ["check", "--no-lock", "--config", config, ...coverage.owned.filter(file => file.endsWith(".ts") && file !== "typecheck/browser.d.ts").map(file => join(root, file))],
-    cwd: root,
-    stdout: "inherit", stderr: "inherit",
-  }).spawn().status;
-  Deno.exitCode = result.code;
-  if (result.success) {
-    for (const scope of ["node", "browser"]) {
-      const result = await new Deno.Command("node", {
-        args: [join(root, "node_modules/typescript/bin/tsc"), "--project", join(root, "typecheck", scope + ".json")],
-        cwd: root, stdout: "inherit", stderr: "inherit",
-      }).spawn().status;
-      if (!result.success) { Deno.exitCode = result.code; break; }
-    }
+  let exitCode = 0;
+  if (scope === "--all" || scope === "--deno") {
+    const result = await new Deno.Command(Deno.execPath(), {
+      args: ["check", "--no-lock", "--config", config, ...coverage.owned.filter(file => file.endsWith(".ts") && file !== "typecheck/browser.d.ts").map(file => join(root, file))],
+      cwd: root, stdout: "inherit", stderr: "inherit",
+    }).spawn().status;
+    exitCode ||= result.code;
   }
-  if (Deno.exitCode === 0) {
+  for (const target of ["node", "browser"]) {
+    if (scope !== "--all" && scope !== "--" + target) continue;
+    const result = await new Deno.Command("node", {
+      args: [join(root, "node_modules/typescript/bin/tsc"), "--project", join(root, "typecheck", target + ".json")],
+      cwd: root, stdout: "inherit", stderr: "inherit",
+    }).spawn().status;
+    exitCode ||= result.code;
+  }
+  if (scope === "--all" || scope === "--deno") {
     const lint = await new Deno.Command(Deno.execPath(), {
       args: ["lint", "--config", config, ...coverage.owned.filter(file => /\.(ts|js|cjs)$/.test(file)).map(file => join(root, file))],
       cwd: root, stdout: "inherit", stderr: "inherit",
     }).spawn().status;
-    Deno.exitCode = lint.code;
+    exitCode ||= lint.code;
   }
+  Deno.exitCode = exitCode;
 } finally { await Deno.remove(config); }

@@ -80,7 +80,7 @@ function nativeCore(config: NativeConfig): boolean {
   if (config["course-core-runtime"] !== undefined) {
     return config["course-core-runtime"] === "native-ts";
   }
-  const filters = Array.isArray(config.filters)
+  const filters: unknown[] = Array.isArray(config.filters)
     ? config.filters
     : [config.filters];
   return filters.some((filter: unknown) =>

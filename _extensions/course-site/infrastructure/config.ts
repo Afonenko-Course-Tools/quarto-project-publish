@@ -1,4 +1,4 @@
-import { nativeConfig, nativeInspect } from "./values.ts";
+import { isStrings, nativeConfig, nativeInspect } from "./values.ts";
 import { contextualize, diagnostic } from "./diagnostics.ts";
 import {
   inside,
@@ -269,7 +269,7 @@ async function selectedSources(
   inputs: unknown,
 ): Promise<string[]> {
   if (
-    !Array.isArray(inputs) || inputs.some((input) => typeof input !== "string")
+    !isStrings(inputs)
   ) {
     throw diagnostic(
       "SITE.SUBPROJECT_INVALID",

@@ -12,6 +12,9 @@ try {
   Deno.env.set("QUARTO_PROJECT_OUTPUT_DIR", "_site");
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "_site/page.html");
   Deno.env.delete("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES");
+  Deno.env.delete("COURSE_SITE_COLLECTION");
+  await collect(); // Standalone navigation не требует collection/project id.
+  Deno.env.set("COURSE_SITE_COLLECTION", root + "/collection.json");
   await assertRejects(() => collect(), "SITE.COLLECTION_INVALID");
 } finally {
   Deno.chdir(cwd);

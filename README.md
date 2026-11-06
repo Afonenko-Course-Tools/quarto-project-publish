@@ -177,7 +177,20 @@ ID и причины. Неизвестная внутренняя ошибка �
 подтверждают новую пару. Core включается через `filters: [course-core]`, старый
 runtime-флаг не обязателен. Реальный CI, установка и публикация проверяются отдельно.
 
+Строгий gate `npm run check:types` проверяет исходники расширения, тесты,
+обе браузерные CJS-проверки с JSDoc и учебный пример. Конечный перечень хранится
+в `typecheck/coverage.json`; gate отклоняет расхождение с фактическим составом.
+Наблюдаемые bridge-файлы проверяет владелец шаблона Performance. Vendor-код
+остаётся внешней зависимостью. Компиляция использует действительные публичные
+типы соседних Core/PL/Download/QRC/Navigation из checkout рядом с Publisher;
+другие пути задаются через `CORE`, `PL`, `DOWNLOAD`, `QRC`.
+Входы JSON и native inspect проверяются во время исполнения, а типы последующей
+обработки выводятся из проверенных результатов.
+
 ```bash
+npm ci
+npm run check:types
+quarto run tests/type-boundaries.ts
 quarto run tests/performance.ts
 quarto run tests/performance-context.ts
 quarto run tests/site-project-native.ts

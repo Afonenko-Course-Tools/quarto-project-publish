@@ -61,12 +61,22 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '26.10.0'
+      - name: Строгая типизация полного собственного состава
+        working-directory: quarto-project-publish
+        env:
+          CORE: ${{ github.workspace }}/quarto-course
+          PL: ${{ github.workspace }}/quarto-course-prairielearn
+          DOWNLOAD: ${{ github.workspace }}/quarto-project-download
+          QRC: ${{ github.workspace }}/quarto-reference-catalog
+          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
+        run: |
+          npm ci --ignore-scripts
+          npm run check:types
       - name: Зависимости браузерной проверки
         working-directory: quarto-project-publish
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
         run: |
-          npm ci
           npx playwright install --with-deps chromium
       - name: Проверка навигации в браузере
         working-directory: quarto-project-publish
@@ -115,6 +125,7 @@ jobs:
           done
           quarto run tests/release-composition.ts
           quarto run tests/site-project-native.ts
+          quarto run tests/type-boundaries.ts
           quarto run tests/site-paths.ts
           quarto run tests/site-profiles.ts
           quarto run tests/site-child-profiles.ts default

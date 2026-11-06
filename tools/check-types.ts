@@ -44,13 +44,11 @@ const discovered = [...(await Promise.all(["_extensions/course-site", "tests", "
 if (JSON.stringify(discovered) !== JSON.stringify([...coverage.owned, ...coverage.delegated_to_N3].sort())) throw Error("Состав кода изменился: обновите конечный typecheck/coverage.json");
 const config = await Deno.makeTempFile({ dir: root, prefix: ".active-types-", suffix: ".json" });
 try {
-  const settings: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/deno.json")));
-  if (typeof settings !== "object" || settings === null) throw Error("Неверный typecheck/deno.json");
-  await Deno.writeTextFile(config, JSON.stringify({ ...settings, imports }));
+  await Deno.writeTextFile(config, JSON.stringify({ imports }));
   let exitCode = 0;
   if (scope === "--all" || scope === "--deno") {
     const result = await new Deno.Command(Deno.execPath(), {
-      args: ["check", "--no-lock", "--config", config, ...coverage.owned.filter(file => file.endsWith(".ts") && file !== "typecheck/browser.d.ts").map(file => join(root, file))],
+      args: ["check", "--no-lock", "--config", join(root, "typecheck/deno.json"), "--import-map", config, ...coverage.owned.filter(file => file.endsWith(".ts") && file !== "typecheck/browser.d.ts").map(file => join(root, file))],
       cwd: root, stdout: "inherit", stderr: "inherit",
     }).spawn().status;
     exitCode ||= result.code;
@@ -65,7 +63,7 @@ try {
   }
   if (scope === "--all" || scope === "--deno") {
     const lint = await new Deno.Command(Deno.execPath(), {
-      args: ["lint", "--config", config, ...coverage.owned.filter(file => /\.(ts|js|cjs)$/.test(file)).map(file => join(root, file))],
+      args: ["lint", "--config", join(root, "typecheck/deno.json"), ...coverage.owned.filter(file => /\.(ts|js|cjs)$/.test(file)).map(file => join(root, file))],
       cwd: root, stdout: "inherit", stderr: "inherit",
     }).spawn().status;
     exitCode ||= lint.code;

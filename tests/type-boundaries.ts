@@ -10,6 +10,8 @@ try {
   for (const config of [null, [], { ...base, project: { type: "website", "output-dir": 12 } }]) {
     await assertRejects(() => validateConfig(root, config, []), "SITE.CONFIG_INVALID");
   }
+  // Корень полной композиции может только агрегировать namespace дочерних проектов.
+  await validateConfig(root, { ...base, "reference-catalog": {} }, []);
   const collection = { id: "part", projectRoot: root, outputDir: `${root}/_site`, profiles: [], nativeOutputs: [], files: [] };
   for (const value of [null, [], { ...collection, files: [12] }, { ...collection, nativeOutputs: [null] }]) {
     await Deno.writeTextFile(`${root}/collection.json`, JSON.stringify(value));

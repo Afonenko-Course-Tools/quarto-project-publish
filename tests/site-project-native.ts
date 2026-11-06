@@ -1,3 +1,4 @@
+import { readComposition, loadCore } from "./results.ts";
 // Ломается при смешении owner/source identity, утрате native metadata/project origins,
 // student/full ресурсов или при обходе Publisher source-containment guard.
 import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
@@ -156,7 +157,7 @@ for (const view of ["student", "full"]) {
   );
   const fresh = runs.filter((r) => !prior.has(r.name));
   assertEquals(fresh.length, 1);
-  const composition = JSON.parse(
+  const composition = await readComposition(JSON.parse(
     await Deno.readTextFile(
       join(
         root,
@@ -165,18 +166,18 @@ for (const view of ["student", "full"]) {
         "composition.json",
       ),
     ),
-  );
-  assertEquals(composition.nativeOperations.map((r: any) => r.project).sort(), [
+  ));
+  assertEquals(composition.nativeOperations.map((r) => r.project).sort(), [
     "nested/second",
     "part",
     "root",
   ]);
   const operationIds = [];
   for (const [i, owner] of owners.entries()) {
-    const release = composition.nativeOperations.find((row: any) =>
+    const release = composition.nativeOperations.find((row) =>
       row.project === (owner || "root")
     );
-    assertEquals(release.catalog.documents.map((d: any) => d.source), [
+    assertEquals(release.catalog.documents.map((d) => d.source), [
       "index.qmd",
     ]);
     assertEquals(release.course, {
@@ -186,7 +187,7 @@ for (const view of ["student", "full"]) {
     });
     operationIds.push(release.catalog.identity.operation);
     const ownerRoot = join(root, owner);
-    const Core = await import(
+    const Core = await loadCore(
       toFileUrl(
         join(ownerRoot, "_extensions", namespace, "course-core/public.ts"),
       ).href
@@ -196,7 +197,7 @@ for (const view of ["student", "full"]) {
       profiles: [view],
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(ownerRoot, `_output-${view}`),
-    }, async (op: any) => {
+    }, async (op) => {
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
       assertEquals(doc.definitions[`exr-${ids[i]}`].project, "/projects/demo");
@@ -206,7 +207,7 @@ for (const view of ["student", "full"]) {
         directories: ["projects/demo"],
         profiles: [view],
         format: "html",
-      }], async (batch: any) => {
+      }], async (batch) => {
         const context = batch.groups[0].contexts[0];
         assertEquals(context.owner, ownerRoot);
         assertEquals(context.input, join(ownerRoot, "projects/demo"));
@@ -233,7 +234,7 @@ for (const view of ["student", "full"]) {
         );
         const files = new Map(
           inventory.files.map((
-            f: any,
+            f,
           ) => [f.target, new TextDecoder().decode(f.bytes)]),
         );
         assert(

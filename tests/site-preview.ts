@@ -1,3 +1,4 @@
+import { loadCore, readCommandEvent } from "./results.ts";
 import { commandProbe } from "./command-probe.ts";
 /** Installed existing/clean root and component previews, with and without Core. */
 import { join, resolve, toFileUrl } from "stdlib/path";
@@ -26,7 +27,7 @@ async function renders(): Promise<number> {
     throw error;
   }
   return text.split(/\r?\n/).filter((line) => line.trim()).map((line) =>
-    JSON.parse(line)
+    readCommandEvent(JSON.parse(line))
   ).filter((event) => event.kind === "render").length;
 }
 
@@ -54,7 +55,9 @@ async function preview(cwd: string, clean = false): Promise<void> {
     });
   }
   const listener = Deno.listen({ hostname: "127.0.0.1", port: 0 });
-  const port = (listener.addr as Deno.NetAddr).port;
+  const address = listener.addr;
+  assert("port" in address);
+  const port = address.port;
   listener.close();
   const before = await renders();
   const source = join(cwd, "index.qmd");
@@ -147,7 +150,7 @@ async function preview(cwd: string, clean = false): Promise<void> {
   const expected = clean && cwd === root ? (course ? 2 : 1) : 0;
   assertEquals(await renders() - before, expected);
   if (course && !clean) {
-    const Core = await import(
+    const Core = await loadCore(
       toFileUrl(join(cwd, "_extensions/course-core/public.ts")).href
     );
     let refused = "";
@@ -159,7 +162,7 @@ async function preview(cwd: string, clean = false): Promise<void> {
         outputDirectory: join(cwd, "_site-student"),
       }, async () => {});
     } catch (error) {
-      refused = (error as { code?: string }).code ?? String(error);
+      refused = error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : String(error);
     }
     assert(
       ["OPERATION_BINDING", "OPERATION_INCOMPLETE"].includes(refused),

@@ -7,22 +7,15 @@ const actualQuarto = Deno.env.get("QUARTO") || "quarto";
 try {
   const missing = "/nonexistent/final-review-quarto";
   Deno.env.set("QUARTO", missing);
-  let startupFailure:
-    | Error & {
-      tool: string;
-      exitCode: number | null;
-      stdout: string;
-      stderr: string;
-      forwarded: boolean;
-    }
-    | undefined;
+  let startupFailure: unknown;
   try {
     await quarto(["inspect", root], root);
   } catch (error) {
     assert(error instanceof Error);
-    startupFailure = error as typeof startupFailure;
+    startupFailure = error;
   }
-  assert(startupFailure, "missing executable did not fail");
+  assert(startupFailure instanceof Error, "missing executable did not fail");
+  assert("tool" in startupFailure && "exitCode" in startupFailure && "stdout" in startupFailure && "stderr" in startupFailure && "forwarded" in startupFailure);
   assert(
     startupFailure.cause instanceof Deno.errors.NotFound,
     "lost operational NotFound cause",
@@ -81,7 +74,7 @@ await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
   await Deno.chmod(fake, 0o755);
   Deno.env.set("QUARTO", fake);
   try {
-    await quarto(null as unknown as string[], root);
+    await Reflect.apply(quarto, undefined, [null, root]);
     throw new Error("expected invalid internal argument");
   } catch (error) {
     assert(error instanceof Error);
@@ -93,13 +86,8 @@ await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
     throw new Error("expected child failure");
   } catch (error) {
     assert(error instanceof Error);
-    const failure = error as Error & {
-      tool: string;
-      exitCode: number;
-      stdout: string;
-      stderr: string;
-      forwarded: boolean;
-    };
+    const failure = error;
+    assert("tool" in failure && "exitCode" in failure && "stdout" in failure && "stderr" in failure && "forwarded" in failure);
     assertEquals(failure.name, "ExternalToolFailure");
     assertEquals(failure.tool, fake);
     assertEquals(failure.exitCode, 23);

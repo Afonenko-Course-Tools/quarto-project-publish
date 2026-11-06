@@ -1,3 +1,4 @@
+import { readComposition } from "./results.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   core = Deno.env.get("CORE"),
@@ -125,9 +126,9 @@ try {
   const a = await Deno.readFile(archive);
   const runs = join(root, "_generated/course-site/runs");
   const dirs = await Array.fromAsync(Deno.readDir(runs));
-  const composition = JSON.parse(
+  const composition = await readComposition(JSON.parse(
     await Deno.readTextFile(join(runs, dirs[0].name, "composition.json")),
-  );
+  ));
   assert(
     composition.nativeOperations?.some((item: { project: string }) =>
       item.project === "tasks"

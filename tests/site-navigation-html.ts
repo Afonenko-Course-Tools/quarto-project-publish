@@ -23,7 +23,9 @@ async function fixture(
 function targets(html: string): string[] {
   const match = /const targets=(\[[^\n]*\])\.map/.exec(html);
   assert.ok(match, "В индекс добавлен действующий скрипт входов в презентации");
-  return JSON.parse(match[1]);
+  const value: unknown = JSON.parse(match[1]);
+  assert.ok(Array.isArray(value) && value.every(item => typeof item === "string"));
+  return value;
 }
 
 const checks: Array<[string, () => Promise<void>]> = [

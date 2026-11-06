@@ -15,22 +15,22 @@ try {
   }
   Deno.env.set("QUARTO_PROJECT_RENDER_ALL", "1"); Deno.env.set("QUARTO_PROFILE", "student");
   console.error = (...values) => events.push("LOG " + values.join(" "));
-  (Deno as any).Command = class {
+  Object.defineProperty(Deno, "Command", { configurable: true, writable: true, value: class extends originalCommand {
     args: string[]; cwd: string;
-    constructor(_tool: string, options: any) { this.args = options.args; this.cwd = options.cwd; }
-    output() {
+    constructor(tool: string | URL, options: Deno.CommandOptions = {}) { super(tool, options); this.args = [...options.args || []]; this.cwd = options.cwd instanceof URL ? options.cwd.pathname : options.cwd || Deno.cwd(); }
+    override output() {
       assert(this.args[0] === "inspect", "Unexpected captured command " + this.args);
       assert(this.args.length === 4 && this.args[1] === this.cwd && this.args[2] === "--profile" && this.args[3] === "student", "Inspect должен использовать только активный профиль: " + this.args);
       const stage = this.cwd === root ? "Планирование корня" : "Планирование компонента";
       assert(events.some((line) => line.includes(stage + ": " + this.cwd + " — начало")), "Missing live stage before native inspect: " + this.cwd);
       events.push("INSPECT student " + this.cwd);
       if (failTasks && this.cwd === owners[2]) throw sentinel;
-      const config: any = { project: { type: "website", "output-dir": "_site" } };
+      const config: Record<string, unknown> = { project: { type: "website", "output-dir": "_site" } };
       if (this.cwd === root) config.subprojects = owners.slice(1).map((owner) => owner.slice(root.length + 1));
       return Promise.resolve({ success: true, code: 0, signal: null, stdout: new TextEncoder().encode(JSON.stringify({ quarto: { version: "1.11.5" }, config, files: { input: [join(this.cwd, "index.qmd")], resources: [] } })), stderr: new Uint8Array() });
     }
-    spawn() { events.push("RENDER_STOP " + this.cwd); throw Error("STOP_BEFORE_RENDER"); }
-  };
+    override spawn(): never { events.push("RENDER_STOP " + this.cwd); throw Error("STOP_BEFORE_RENDER"); }
+  }});
   let error = "";
   try { await pre(root); } catch (e) { error = String(e); }
   assert(error.includes("STOP_BEFORE_RENDER"), error);
@@ -52,7 +52,7 @@ try {
   assert(events.some((line) => line.includes("Планирование компонента: " + owners[2] + " — ошибка (") && /\d+\.\d с\)/.test(line)), "Missing timed planning failure stage");
   originalError(JSON.stringify({ status: "PASS", inspectCount: 6, failedInspectCount: 3, nativeRender: 0, events: successEvents, failureEvents: events }));
 } finally {
-  (Deno as any).Command = originalCommand; console.error = originalError;
+  Object.defineProperty(Deno, "Command", { configurable: true, writable: true, value: originalCommand }); console.error = originalError;
   if (previous === undefined) Deno.env.delete("QUARTO_PROJECT_RENDER_ALL"); else Deno.env.set("QUARTO_PROJECT_RENDER_ALL", previous);
   if (previousProfile === undefined) Deno.env.delete("QUARTO_PROFILE"); else Deno.env.set("QUARTO_PROFILE", previousProfile);
   await Deno.remove(root, { recursive: true });

@@ -1,3 +1,4 @@
+import { readCommandEvent } from "./results.ts";
 import {commandProbe} from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -52,7 +53,7 @@ try {
     "retain child",
   );
   const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
-    .split("\n").map((line) => JSON.parse(line));
+    .split("\n").map((line) => readCommandEvent(JSON.parse(line)));
   assertEquals(trace.filter((row) => row.kind === "render").length, 0);
   assert(
     !trace.some((row) =>

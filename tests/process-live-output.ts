@@ -1,3 +1,4 @@
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
 const root = await Deno.makeTempDir({ prefix: "publisher-live-" });
 const assert = (value: unknown, message: string) => { if (!value) throw Error(message); };
 const tool = root + "/quarto-fixture.sh", runner = root + "/runner.ts";
@@ -52,9 +53,11 @@ async function trial(mode: string) {
   assert(status.success, "Процесс проверки не завершился");
   const resultLine = stdout.split("\n").find((line) => line.startsWith("RESULT:"));
   assert(resultLine, "Отсутствует результат helper");
-  return { mode, earlyOut, earlyErr, stdout, stderr, result: JSON.parse(resultLine!.slice(7)) };
+  const parsed: unknown = JSON.parse(resultLine!.slice(7));
+  const result = record(parsed, runner, "helper");
+  return { mode, earlyOut, earlyErr, stdout, stderr, result };
 }
-const observations: any[] = [];
+const observations: Awaited<ReturnType<typeof trial>>[] = [];
 const save = async () => { const path=Deno.env.get("PUBLISHER_PROCESS_OBSERVATIONS"); if(path) await Deno.writeTextFile(path, JSON.stringify(observations,null,2)+"\n"); };
 try {
   const live = await trial("render"); observations.push(live); await save();

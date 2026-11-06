@@ -1,3 +1,5 @@
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
+import { readCommandEvent } from "./results.ts";
 import { commandProbe } from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -63,7 +65,7 @@ try {
     .split("\n").sort();
   assertEquals(counts, ["Notes:gfm", "Notes:html", "Slides:revealjs", "Website:html"]);
   const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
-    .split("\n").map((line) => JSON.parse(line));
+    .split("\n").map((line) => readCommandEvent(JSON.parse(line)));
   const childRenders = trace.filter((row) => row.kind === "render");
   assertEquals(childRenders.length, 1);
   assertEquals(childRenders[0].args, ["render", "."]);
@@ -91,10 +93,11 @@ try {
     ),
     "root link unresolved",
   );
-  const catalog = JSON.parse(
+  const catalog: unknown = JSON.parse(
     await Deno.readTextFile(join(root, "_site/reference-catalog.json")),
   );
-  assertEquals(catalog.targets["talk:sec-slide"].page, "a/slides/talk.html");
+  const targets = record(record(catalog, root, "catalog").targets, root, "targets");
+  assertEquals(record(targets["talk:sec-slide"], root, "target").page, "a/slides/talk.html");
   const markdown = await Deno.readTextFile(
     join(root, "_site/a/slides/notes.md"),
   );

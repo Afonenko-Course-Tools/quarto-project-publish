@@ -23,7 +23,19 @@ for (const [name, variable, fallback] of [
   imports[name + "/"] = toFileUrl(extension + "/").href;
 }
 const coverage: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/coverage.json")));
-if (typeof coverage !== "object" || coverage === null || !("owned" in coverage) || !Array.isArray(coverage.owned) || !coverage.owned.every((file): file is string => typeof file === "string")) throw Error("Неверный typecheck/coverage.json");
+if (typeof coverage !== "object" || coverage === null || !("owned" in coverage) || !("delegated_to_N3" in coverage) || !Array.isArray(coverage.owned) || !coverage.owned.every((file): file is string => typeof file === "string") || !Array.isArray(coverage.delegated_to_N3) || !coverage.delegated_to_N3.every((file): file is string => typeof file === "string")) throw Error("Неверный typecheck/coverage.json");
+async function sourceFiles(directory: string): Promise<string[]> {
+  const found: string[] = [];
+  for await (const entry of Deno.readDir(join(root, directory))) {
+    if (["vendor", "node_modules", "_generated", ".quarto", ".git"].includes(entry.name) || directory.startsWith("examples/") && entry.name === "_extensions") continue;
+    const path = directory + "/" + entry.name;
+    if (entry.isDirectory) found.push(...await sourceFiles(path));
+    else if (entry.isFile && /\.(ts|js|cjs|lua)$/.test(path)) found.push(path);
+  }
+  return found;
+}
+const discovered = (await Promise.all(["_extensions/course-site", "tests", "tools", "examples"].map(sourceFiles))).flat().sort();
+if (JSON.stringify(discovered) !== JSON.stringify([...coverage.owned, ...coverage.delegated_to_N3].sort())) throw Error("Состав кода изменился: обновите конечный typecheck/coverage.json");
 const config = await Deno.makeTempFile({ dir: join(root, "typecheck"), prefix: ".active-", suffix: ".json" });
 try {
   const settings: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/deno.json")));
@@ -35,4 +47,9 @@ try {
     stdout: "inherit", stderr: "inherit",
   }).spawn().status;
   if (!result.success) Deno.exit(result.code);
+  const lint = await new Deno.Command(Deno.execPath(), {
+    args: ["lint", "--config", config, ...coverage.owned.filter(file => !file.endsWith(".lua")).map(file => join(root, file))],
+    cwd: root, stdout: "inherit", stderr: "inherit",
+  }).spawn().status;
+  if (!lint.success) Deno.exit(lint.code);
 } finally { await Deno.remove(config); }

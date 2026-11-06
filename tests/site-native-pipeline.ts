@@ -1,3 +1,4 @@
+import { readComposition } from "./results.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   core = Deno.env.get("CORE"),
@@ -211,16 +212,16 @@ try {
     const a = await Deno.readFile(archive);
     const runs = join(root, "_generated/course-site/runs");
     const dirs = await Array.fromAsync(Deno.readDir(runs));
-    const composition = JSON.parse(
+    const composition = await readComposition(JSON.parse(
       await Deno.readTextFile(join(runs, dirs[0].name, "composition.json")),
-    );
+    ));
     assert(
       composition.nativeOperations?.some((item: { project: string }) =>
         item.project === "tasks"
       ),
       "Publisher не проверил actual public operation",
     );
-    const native = composition.nativeOperations.find((item: any) =>
+    const native = composition.nativeOperations.find((item) =>
       item.project === "tasks"
     );
     assert(
@@ -228,12 +229,12 @@ try {
       "Неполный независимый child source set",
     );
     assert(
-      native.catalog.documents.find((d: any) => d.source === "talk.qmd")
+      native.catalog.documents.find((d) => d.source === "talk.qmd")
         ?.format === "revealjs",
       "Потерян actual native format",
     );
     assert(
-      composition.nativeOperations.some((item: any) => item.project === "root"),
+      composition.nativeOperations.some((item) => item.project === "root"),
       "Нет независимого root Core coverage",
     );
     const observations = Deno.env.get("PUBLISHER_PIPELINE_OBSERVATIONS");

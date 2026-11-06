@@ -1,3 +1,4 @@
+import { readCommandEvent } from "./results.ts";
 import {commandProbe} from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -104,7 +105,7 @@ if (mode === "warnings") {
   );
   let calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
     "\n",
-  ).map((line) => JSON.parse(line)).filter((row) => row.kind === "render");
+  ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
   assertEquals(calls.length, 1);
   assert(
     !calls[0].args.includes("--fail-if-warnings"),
@@ -121,7 +122,7 @@ if (mode === "warnings") {
   );
   calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
     "\n",
-  ).map((line) => JSON.parse(line)).filter((row) => row.kind === "render");
+  ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
   assertEquals(calls.length, 2);
   assert(calls[1].exitCode !== 0, "strict warning child succeeded");
   for (
@@ -155,7 +156,7 @@ assertEquals(
 );
 let trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
   "\n",
-).map((line) => JSON.parse(line));
+).map((line) => readCommandEvent(JSON.parse(line)));
 assertEquals(trace.filter((x) => x.kind === "render").length, 1);
 assert(
   (await Deno.readTextFile(join(root, "_site/part/search.json"))).includes(

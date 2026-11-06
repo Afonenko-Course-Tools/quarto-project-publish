@@ -2,6 +2,7 @@
   "owned": [
     "_extensions/course-site/application/compose.ts",
     "_extensions/course-site/application/sibling-contracts.ts",
+    "_extensions/course-site/application/state.ts",
     "_extensions/course-site/entrypoints/collect.ts",
     "_extensions/course-site/entrypoints/post.ts",
     "_extensions/course-site/entrypoints/pre.ts",
@@ -11,6 +12,7 @@
     "_extensions/course-site/infrastructure/files.ts",
     "_extensions/course-site/infrastructure/navigation.ts",
     "_extensions/course-site/infrastructure/process.ts",
+    "_extensions/course-site/infrastructure/values.ts",
     "examples/course/build-info.ts",
     "tests/command-probe.ts",
     "tests/performance-context.ts",
@@ -20,6 +22,7 @@
     "tests/process-live-output.ts",
     "tests/release-composition.ts",
     "tests/release-resources.ts",
+    "tests/results.ts",
     "tests/site-child-profiles.ts",
     "tests/site-collection.ts",
     "tests/site-composed-navigation.browser.cjs",

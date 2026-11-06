@@ -1,3 +1,4 @@
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
@@ -56,10 +57,10 @@ try {
   for await (const directory of Deno.readDir(runs)) {
     for await (const entry of Deno.readDir(join(runs, directory.name))) {
       if (!entry.name.endsWith("-0.json")) continue;
-      const collection = JSON.parse(
+      const collectionValue: unknown = JSON.parse(
         await Deno.readTextFile(join(runs, directory.name, entry.name)),
       );
-      assertEquals(collection.profiles, []);
+      assertEquals(record(collectionValue, root, "collection").profiles, []);
       collections++;
     }
   }

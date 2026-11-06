@@ -8,5 +8,14 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true
+  },
+  "lint": {
+    "rules": {
+      "tags": [],
+      "include": [
+        "no-explicit-any",
+        "ban-ts-comment"
+      ]
+    }
   }
 }

@@ -32,14 +32,15 @@ try {
   await Deno.mkdir(dirname(source), { recursive: true });
   await Deno.writeTextFile(
     source,
-    'export function resetDownloadRequests() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
+    'export function finishDownloads() {} export function prepareNativeDownloads() {} export function resetDownloadRequests() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
   );
   try {
     await pre(root);
     throw new Error("expected foreign error");
   } catch (error) {
     assert(error instanceof Error);
-    assertEquals((error as Error & { code: string }).code, "CORE.SENTINEL");
+    assert("code" in error);
+    assertEquals(error.code, "CORE.SENTINEL");
     assertEquals(error.cause, "original");
     assert(!error.message.includes("SITE.SIBLING_MISSING"));
     assert(error.stack?.includes("resetDownloadRequests"));

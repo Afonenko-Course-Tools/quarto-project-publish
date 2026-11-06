@@ -1,3 +1,4 @@
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
 import { copy } from "stdlib/fs";
 import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -28,14 +29,15 @@ try {
   Deno.env.set("QUARTO_PROFILE", "student");
   Deno.env.delete("QUARTO_PROJECT_OUTPUT_DIR");
   Deno.env.delete("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES");
-  (Deno as any).Command = class {
+  Object.defineProperty(Deno, "Command", { configurable: true, writable: true, value: class extends originalCommand {
     args: string[];
     cwd: string;
-    constructor(_tool: string, options: any) {
-      this.args = options.args;
-      this.cwd = options.cwd;
+    constructor(tool: string | URL, options: Deno.CommandOptions = {}) {
+      super(tool, options);
+      this.args = [...options.args || []];
+      this.cwd = options.cwd instanceof URL ? options.cwd.pathname : options.cwd || Deno.cwd();
     }
-    output() {
+    override output() {
       commands.push(this.args);
       assert(this.args[0] === "inspect", "Лишняя команда Quarto: " + this.args);
       assertEquals(this.args, ["inspect", this.cwd, "--profile", "student"]);
@@ -55,10 +57,10 @@ try {
         stderr: new Uint8Array(),
       });
     }
-    spawn() {
+    override spawn(): never {
       throw Error("Рендер запрещён в адресной проверке");
     }
-  };
+  }});
   for (const scope of ["local", "full"]) {
     const owner = join(root, scope), output = join(owner, "_site");
     const child = join(owner, "child"), childOutput = join(child, "_site");
@@ -107,13 +109,14 @@ try {
     }
     const activePath = join(owner, "_generated/course-site/active.json");
     const activeState = scope === "full"
-      ? JSON.parse(await Deno.readTextFile(activePath))
+      ? record(JSON.parse(await Deno.readTextFile(activePath)), owner, "active")
       : undefined;
     try {
       await post(owner);
-      const request = JSON.parse(
+      const requestValue: unknown = JSON.parse(
         await Deno.readTextFile(join(owner, "qrc-call.json")),
       );
+      const request = record(requestValue, owner, "request");
       assertEquals(request.quarto, scope === "local" ? "1.11.5" : "1.11.6");
       assertEquals(request.scope, scope);
       assertEquals(
@@ -138,23 +141,25 @@ try {
             "Компонент",
           ),
         );
-        const composition = JSON.parse(
+        const compositionValue: unknown = JSON.parse(
           await Deno.readTextFile(
             join(owner, "_generated/course-site/runs/current/composition.json"),
           ),
         );
-        assertEquals(composition.outputs, request.outputs);
-        delete activeState.ws.quartoVersion;
+        assertEquals(record(compositionValue, owner, "composition").outputs, request.outputs);
+        assert(activeState);
+        delete record(activeState.ws, owner, "active.ws").quartoVersion;
         await Deno.writeTextFile(activePath, JSON.stringify(activeState));
         await Deno.remove(join(output, "child"), { recursive: true });
         await Deno.remove(join(owner, "qrc-call.json"));
-        let staleError: any;
+        let staleError: unknown;
         try {
           await post(owner);
         } catch (error) {
           staleError = error;
         }
-        assertEquals(staleError?.code, "SITE.CONFIG_INVALID");
+        assert(staleError instanceof Error && "code" in staleError);
+        assertEquals(staleError.code, "SITE.CONFIG_INVALID");
         assert(String(staleError).includes("quarto.version"));
         for (
           const path of [join(output, "child"), join(owner, "qrc-call.json")]
@@ -175,14 +180,14 @@ try {
     }
   }
   for (version of [undefined, null, 12, "", " \n "]) {
-    let error: any;
+    let error: unknown;
     try {
       await workspace(join(root, "local"));
     } catch (caught) {
       error = caught;
     }
     if (
-      error?.code !== "SITE.CONFIG_INVALID" ||
+      !(error instanceof Error) || !("code" in error) || error.code !== "SITE.CONFIG_INVALID" ||
       !String(error).includes("quarto.version")
     ) {
       failures.push("Не отклонена native версия: " + JSON.stringify(version));
@@ -193,7 +198,7 @@ try {
     "PASS local/full QRC используют native inspect version; неверная версия отклоняется; render/--version отсутствуют",
   );
 } finally {
-  (Deno as any).Command = originalCommand;
+  Object.defineProperty(Deno, "Command", { configurable: true, writable: true, value: originalCommand });
   for (const key of Object.keys(Deno.env.toObject())) {
     if (!(key in saved)) Deno.env.delete(key);
   }

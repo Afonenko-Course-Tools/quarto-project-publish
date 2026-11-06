@@ -1,3 +1,5 @@
+import { readCommandEvent } from "./results.ts";
+import { readComposition, loadCore, readSearch } from "./results.ts";
 import { commandProbe } from "./command-probe.ts";
 import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -152,11 +154,11 @@ assert(
     html.includes("ORDINARY_QUARTO_SOLUTION"),
   "ordinary native Quarto outside bank changed",
 );
-const search = JSON.parse(
+const search = readSearch(JSON.parse(
   await Deno.readTextFile(join(root, "_site-student/search.json")),
-);
+));
 assert(
-  search.some((entry: any) =>
+  search.some((entry) =>
     entry.href.startsWith("part/") && entry.text.includes("PUBLIC_part")
   ),
   "root search missing mounted lesson",
@@ -199,11 +201,11 @@ async function composition(view: string) {
   for await (const directory of Deno.readDir(runs)) {
     if (previousRuns.has(directory.name)) continue;
     try {
-      const value = JSON.parse(
+      const value = await readComposition(JSON.parse(
         await Deno.readTextFile(join(runs, directory.name, "composition.json")),
-      );
+      ));
       if (
-        value.nativeOperations.some((row: any) =>
+        value.nativeOperations.some((row) =>
           row.catalog.identity.profiles.includes(view)
         )
       ) matches.push(value);
@@ -219,17 +221,17 @@ async function composition(view: string) {
 }
 async function assertOwners(view: "student" | "full", resources = false) {
   const current = await composition(view);
-  const lessons = current.nativeOperations.filter((row: any) =>
+  const lessons = current.nativeOperations.filter((row) =>
     ["part", "second"].includes(row.project)
   );
   assertEquals(lessons.length, 2);
   assertEquals(
-    new Set(lessons.map((row: any) => row.catalog.identity.operation)).size,
+    new Set(lessons.map((row) => row.catalog.identity.operation)).size,
     2,
   );
   for (const row of lessons) {
     const id = row.project, owner = join(root, id);
-    assertEquals(row.catalog.documents.map((d: any) => d.source), [
+    assertEquals(row.catalog.documents.map((d) => d.source), [
       "index.qmd",
     ]);
     assertEquals(row.course, {
@@ -237,7 +239,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
       view,
       adapters: [],
     });
-    const selectedIds = row.catalog.documents[0].exercises.map((e: any) => e.id)
+    const selectedIds = row.catalog.documents[0].exercises.map((e) => e.id)
       .sort();
     assertEquals(
       selectedIds,
@@ -245,7 +247,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
         ? [`exr-${id}`, `exr-restricted-${id}`].sort()
         : [`exr-${id}`],
     );
-    const Core = await import(
+    const Core = await loadCore(
       toFileUrl(join(owner, "_extensions/course-core/public.ts")).href
     );
     await Core.withCurrentNativeOperation({
@@ -253,7 +255,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
       profiles: [view],
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(owner, `_site-${view}`),
-    }, async (op: any) => {
+    }, async (op) => {
       assertEquals(op.identity, row.catalog.identity);
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
@@ -297,7 +299,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
         });
         assertEquals(resourceFiles.audience, view);
         assertEquals(
-          resourceFiles.files.map(({ source, target }: any) => ({
+          resourceFiles.files.map(({ source, target }) => ({
             source,
             target,
           })),
@@ -324,7 +326,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
           });
           assertEquals(privateResources.audience, "full");
           assertEquals(
-            privateResources.files.map(({ source, target }: any) => ({
+            privateResources.files.map(({ source, target }) => ({
               source,
               target,
             })),
@@ -433,7 +435,7 @@ if (Deno.args[0] === "rootless") {
   }
   const events = (await Deno.readTextFile(trace)).trim().split("\n").filter(
     Boolean,
-  ).map((line) => JSON.parse(line));
+  ).map((line) => readCommandEvent(JSON.parse(line)));
   assertEquals(events.filter((e) => e.kind === "render").length, 0);
   assert(
     mixed.includes("course.view"),

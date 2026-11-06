@@ -1,3 +1,4 @@
+import { readComposition } from "./results.ts";
 // Настоящие hooks/loader/owner validators; временная installed layout, не полный курс.
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
@@ -232,7 +233,7 @@ try {
     const runs = await Array.fromAsync(
       Deno.readDir(join(root, "_generated/course-site/runs")),
     );
-    const composition = JSON.parse(
+    const composition = await readComposition(JSON.parse(
       await Deno.readTextFile(
         join(
           root,
@@ -241,7 +242,7 @@ try {
           "composition.json",
         ),
       ),
-    );
+    ));
     if (mode === "root-pl") {
       const rootPublication = composition.nativeOperations.find((
         row: { project: string },

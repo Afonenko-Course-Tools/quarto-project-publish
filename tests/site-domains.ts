@@ -254,6 +254,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(owner, `_site-${view}`),
     }, async (op: any) => {
+      assertEquals(op.identity, row.catalog.identity);
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
       assert(
@@ -291,12 +292,19 @@ async function assertOwners(view: "student" | "full", resources = false) {
           !JSON.stringify(condition).includes("WORK_PREVIEW_"),
           "Condition захватило website preview",
         );
-        const inventory = await op.resourceInventory({
+        const resourceFiles = await op.resourceFiles({
           files: [{ source: "asset.svg", target: "asset.svg" }],
         });
-        assertEquals(inventory.operation, op.identity.operation);
+        assertEquals(resourceFiles.audience, view);
+        assertEquals(
+          resourceFiles.files.map(({ source, target }: any) => ({
+            source,
+            target,
+          })),
+          [{ source: "asset.svg", target: "asset.svg" }],
+        );
         assert(
-          new TextDecoder().decode(inventory.files[0].bytes).includes(
+          new TextDecoder().decode(resourceFiles.files[0].bytes).includes(
             `PUBLIC_RESOURCE_${id}`,
           ),
           "Смешаны ресурсы двух owner с одинаковым именем",
@@ -311,11 +319,19 @@ async function assertOwners(view: "student" | "full", resources = false) {
             JSON.stringify(closed).includes(`RESTRICTED_CONDITION_${id}`),
             "Author condition потеряло закрытое условие",
           );
-          const privateInventory = await op.resourceInventory({
+          const privateResources = await op.resourceFiles({
             files: [{ source: "restricted.svg", target: "restricted.svg" }],
           });
+          assertEquals(privateResources.audience, "full");
+          assertEquals(
+            privateResources.files.map(({ source, target }: any) => ({
+              source,
+              target,
+            })),
+            [{ source: "restricted.svg", target: "restricted.svg" }],
+          );
           assert(
-            new TextDecoder().decode(privateInventory.files[0].bytes).includes(
+            new TextDecoder().decode(privateResources.files[0].bytes).includes(
               `RESTRICTED_RESOURCE_${id}`,
             ),
             "Потеряны author bytes",

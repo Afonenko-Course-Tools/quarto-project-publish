@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
@@ -19,6 +21,7 @@
     ]
   },
   "files": [
+    "../tests/playwright.cjs",
     "../tests/site-navigation.browser.cjs",
     "../tests/site-composed-navigation.browser.cjs"
   ]

@@ -41,6 +41,7 @@
     "tests/performance-noenv.ts",
     "tests/performance.ts",
     "tests/planning-progress.ts",
+    "tests/playwright.cjs",
     "tests/process-live-output.ts",
     "tests/release-composition.ts",
     "tests/release-resources.ts",

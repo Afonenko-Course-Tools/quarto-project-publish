@@ -4,8 +4,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-/** @type {typeof import("playwright")} */
-const {chromium} = require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
+const {loadPlaywright} = require('./playwright.cjs');
+const {chromium} = loadPlaywright(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES, 'playwright') : 'playwright');
 const root = path.resolve(process.argv[2]);
 const server = http.createServer((req, res) => {

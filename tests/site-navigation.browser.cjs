@@ -7,8 +7,8 @@ const path = require('node:path');
 const os = require('node:os');
 const http = require('node:http');
 const {execFileSync} = require('node:child_process');
-/** @type {typeof import("playwright")} */
-const playwright = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES || '', 'playwright'));
+const {loadPlaywright} = require('./playwright.cjs');
+const playwright = loadPlaywright(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES || '', 'playwright'));
 const repo = path.resolve(__dirname,'..');
 const navigation = path.resolve(process.env.COURSE_CORE_PROVIDER || path.join(repo,'../quarto-course'));
 const root = fs.mkdtempSync(path.join(os.tmpdir(),'site-navigation-'));

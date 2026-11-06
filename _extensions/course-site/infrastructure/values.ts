@@ -23,14 +23,18 @@ export function strings(value: unknown, root: string, field: string): string[] {
   return value;
 }
 
+function courseView(value: unknown, root: string): "student" | "full" | undefined {
+  if (value === undefined || value === "student" || value === "full") return value;
+  throw diagnostic("SITE.CONFIG_INVALID", "course.view требует student/full", { source: root, field: "course.view" });
+}
+
 /** Проверяются только поля, читаемые Publisher; остальные metadata принадлежат Quarto/соседям. */
 export function nativeConfig(value: unknown, root: string) {
   const raw = record(value, root, "config");
   const section = (name: string) => raw[name] === undefined || raw[name] === false || raw[name] === null ? undefined : record(raw[name], root, name);
   const project = section("project"), website = section("website"), book = section("book"), course = section("course");
   const navigation = section("course-navigation"), catalog = section("reference-catalog"), download = section("project-download");
-  const view = course?.view;
-  if (view !== undefined && view !== "student" && view !== "full") throw diagnostic("SITE.CONFIG_INVALID", "course.view требует student/full", { source: root, field: "course.view" });
+  const view = courseView(course?.view, root);
   return {
     ...raw,
     filters: raw.filters, subprojects: raw.subprojects, "course-site": raw["course-site"],
@@ -40,7 +44,7 @@ export function nativeConfig(value: unknown, root: string) {
     book: book && { ...book, title: optionalText(book.title, root, "book.title") },
     course: course && { ...course, view },
     "course-navigation": navigation && { ...navigation, enabled: navigation.enabled, "course-url": optionalText(navigation["course-url"], root, "course-navigation.course-url") },
-    "reference-catalog": catalog && { ...catalog, namespace: text(catalog.namespace, root, "reference-catalog.namespace") },
+    "reference-catalog": catalog && { ...catalog, namespace: optionalText(catalog.namespace, root, "reference-catalog.namespace") },
     "project-download": download,
   };
 }

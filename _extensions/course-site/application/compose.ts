@@ -439,10 +439,10 @@ async function postImpl(root = Deno.cwd()): Promise<void> {
         stage: ws.output,
         quarto: ws.quartoVersion,
         config: ws.config,
-        members: [{
+        members: ws.config["reference-catalog"].namespace ? [{
           namespace: ws.config["reference-catalog"].namespace,
           format: "html",
-        }],
+        }] : [],
         scope: "local",
         outputs,
       });
@@ -532,9 +532,10 @@ async function postImpl(root = Deno.cwd()): Promise<void> {
         mount: project.mount,
       });
     }
-    if (config["reference-catalog"]) {
+    const namespace = config["reference-catalog"]?.namespace;
+    if (namespace) {
       members.push({
-        namespace: config["reference-catalog"].namespace,
+        namespace,
         format: record.nativeOutputs.some((path: string) =>
             path.endsWith(".html")
           )

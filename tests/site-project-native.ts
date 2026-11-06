@@ -212,6 +212,7 @@ for (const view of ["student", "full"]) {
         const context = batch.groups[0].contexts[0];
         assertEquals(context.owner, ownerRoot);
         assertEquals(context.input, join(ownerRoot, "projects/demo"));
+        assert(context.contract.starter, "Нет author-declared starter");
         assertEquals(context.contract.starter.path, join(context.input, "student"));
         assertEquals(
           context.contract.solutions.reference.path,

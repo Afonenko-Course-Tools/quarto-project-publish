@@ -11,6 +11,8 @@ for (const [name, source] of [["process", "infrastructure/process.ts"], ["diagno
 for (const name of ["stdlib/path", "stdlib/fs"]) {
   imports[name] = import.meta.resolve(name).replace(/^https:\/\/jsr\.io\/@std\/(path|fs)\/([^/]+)\/mod\.ts$/, "jsr:@std/$1@$2").replace("jsr:/", "jsr:");
 }
+const namespaces = new Set<string>();
+const providers = new Map<string, string>();
 for (const [name, variable, fallback] of [
   ["course-core", "CORE", "quarto-course"],
   ["course-prairielearn", "PL", "quarto-course-prairielearn"],
@@ -27,6 +29,11 @@ for (const [name, variable, fallback] of [
   }
   if (!extension) throw Error(`${variable}: public.ts ${name} не найден`);
   imports[name + "/"] = toFileUrl(extension + "/").href;
+  providers.set(name, imports[name + "/"]);
+  namespaces.add(dirname(extension));
+}
+for (const namespace of namespaces) {
+  for (const [name, target] of providers) imports[toFileUrl(join(namespace, name) + "/").href] = target;
 }
 const coverage: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/coverage.json")));
 if (typeof coverage !== "object" || coverage === null || !("owned" in coverage) || !("delegated_to_N3" in coverage) || !Array.isArray(coverage.owned) || !coverage.owned.every((file): file is string => typeof file === "string") || !Array.isArray(coverage.delegated_to_N3) || !coverage.delegated_to_N3.every((file): file is string => typeof file === "string")) throw Error("Неверный typecheck/coverage.json");
@@ -51,6 +58,7 @@ try {
       args: ["check", "--no-lock", "--config", join(root, "typecheck/deno.json"), "--import-map", config, ...coverage.owned.filter(file => file.endsWith(".ts") && file !== "typecheck/browser.d.ts").map(file => join(root, file))],
       cwd: root, stdout: "inherit", stderr: "inherit",
     }).spawn().status;
+    console.log(JSON.stringify({ gate: "deno", exitCode: result.code }));
     exitCode ||= result.code;
   }
   for (const target of ["node", "browser"]) {
@@ -59,6 +67,7 @@ try {
       args: [join(root, "node_modules/typescript/bin/tsc"), "--project", join(root, "typecheck", target + ".json")],
       cwd: root, stdout: "inherit", stderr: "inherit",
     }).spawn().status;
+    console.log(JSON.stringify({ gate: target, exitCode: result.code }));
     exitCode ||= result.code;
   }
   if (scope === "--all" || scope === "--deno") {

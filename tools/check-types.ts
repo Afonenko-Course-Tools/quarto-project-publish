@@ -33,6 +33,6 @@ try {
     args: ["check", "--no-lock", "--config", config, ...coverage.owned.filter(file => !file.endsWith(".lua")).map(file => join(root, file))],
     cwd: root,
     stdout: "inherit", stderr: "inherit",
-  }).output();
+  }).spawn().status;
   if (!result.success) Deno.exit(result.code);
 } finally { await Deno.remove(config); }

@@ -6,7 +6,7 @@ const events: string[] = [];
 let failTasks = false; const sentinel = Error("PLANNING_FAILURE_SENTINEL");
 const originalCommand = Deno.Command, originalError = console.error;
 const previous = Deno.env.get("QUARTO_PROJECT_RENDER_ALL"), previousProfile = Deno.env.get("QUARTO_PROFILE");
-const assert = (value: unknown, message: string) => { if (!value) throw Error(message); };
+function assert(value: unknown, message: string): asserts value { if (!value) throw Error(message); }
 try {
   for (const owner of owners) {
     await Deno.mkdir(owner, { recursive: true });

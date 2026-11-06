@@ -7,9 +7,9 @@ const repo = dirname(dirname(fromFileUrl(import.meta.url))),
 if (!core || !qrc || !download) throw Error("Нужны CORE/QRC/DOWNLOAD");
 const root = await Deno.makeTempDir({ prefix: "site-public-operation-" }),
   ext = "_extensions/Afonenko-Course-Tools";
-const assert = (v: unknown, m: string) => {
+function assert(v: unknown, m: string): asserts v {
   if (!v) throw Error(m);
-};
+}
 async function put(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), text);

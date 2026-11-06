@@ -1,6 +1,6 @@
 import { record } from "../_extensions/course-site/infrastructure/values.ts";
 const root = await Deno.makeTempDir({ prefix: "publisher-live-" });
-const assert = (value: unknown, message: string) => { if (!value) throw Error(message); };
+function assert(value: unknown, message: string): asserts value { if (!value) throw Error(message); }
 const tool = root + "/quarto-fixture.sh", runner = root + "/runner.ts";
 const module = new URL("../_extensions/course-site/infrastructure/process.ts", import.meta.url).href;
 await Deno.writeTextFile(tool, `#!/usr/bin/bash

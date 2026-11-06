@@ -177,6 +177,7 @@ for (const view of ["student", "full"]) {
     const release = composition.nativeOperations.find((row) =>
       row.project === (owner || "root")
     );
+    assert(release, "Нет current owner publication");
     assertEquals(release.catalog.documents.map((d) => d.source), [
       "index.qmd",
     ]);

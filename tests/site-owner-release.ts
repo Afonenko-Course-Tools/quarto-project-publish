@@ -15,7 +15,7 @@ const mode = Deno.args[0] ?? "positive",
   withPL = mode === "pl" || mode === "pl-missing" || mode === "root-pl";
 const root = await Deno.makeTempDir({ prefix: "site-b3-owner-" }),
   ext = "_extensions/Afonenko-Course-Tools";
-function assert(value: unknown, message: string) {
+function assert(value: unknown, message: string): asserts value {
   if (!value) throw Error(message);
 }
 async function put(path: string, text: string) {

@@ -80,7 +80,7 @@
     "_extensions/course-site/observability/bridge.ts"
   ],
   "language_gates": {
-    "typescript_javascript": "quarto run tools/check-types.ts",
+    "typescript_javascript": "quarto run tools/check-types.ts: Deno strict TS + tsc Node/CJS + tsc DOM browser/checkJs",
     "shell": "shellcheck tests/fixtures/*.sh",
     "lua": "N0 workspaceLua с Pandoc/Quarto bootstrap"
   }

@@ -1,18 +1,18 @@
 {
   "lock": false,
-  "nodeModulesDir": "manual",
+  "nodeModulesDir": "none",
   "compilerOptions": {
     "strict": true,
-    "checkJs": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "useUnknownInCatchVariables": true,
     "lib": [
-      "deno.ns",
-      "dom",
-      "dom.iterable",
+      "deno.window",
       "esnext"
+    ],
+    "types": [
+      "npm:@types/node@26.6.6"
     ]
   },
   "lint": {

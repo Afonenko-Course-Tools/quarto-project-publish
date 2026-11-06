@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2023",
+    "noImplicitReturns": true,
+    "useUnknownInCatchVariables": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": []
+  },
+  "files": [
+    "browser.d.ts",
+    "../_extensions/course-site/browser/navigation.js"
+  ]
+}

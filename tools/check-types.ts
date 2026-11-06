@@ -46,12 +46,21 @@ try {
   if (typeof settings !== "object" || settings === null) throw Error("Неверный typecheck/deno.json");
   await Deno.writeTextFile(config, JSON.stringify({ ...settings, imports }));
   const result = await new Deno.Command(Deno.execPath(), {
-    args: ["check", "--no-lock", "--config", config, ...coverage.owned.filter(file => /\.(ts|js|cjs)$/.test(file)).map(file => join(root, file))],
+    args: ["check", "--no-lock", "--config", config, ...coverage.owned.filter(file => file.endsWith(".ts") && file !== "typecheck/browser.d.ts").map(file => join(root, file))],
     cwd: root,
     stdout: "inherit", stderr: "inherit",
   }).spawn().status;
   Deno.exitCode = result.code;
   if (result.success) {
+    for (const scope of ["node", "browser"]) {
+      const result = await new Deno.Command("node", {
+        args: [join(root, "node_modules/typescript/bin/tsc"), "--project", join(root, "typecheck", scope + ".json")],
+        cwd: root, stdout: "inherit", stderr: "inherit",
+      }).spawn().status;
+      if (!result.success) { Deno.exitCode = result.code; break; }
+    }
+  }
+  if (Deno.exitCode === 0) {
     const lint = await new Deno.Command(Deno.execPath(), {
       args: ["lint", "--config", config, ...coverage.owned.filter(file => /\.(ts|js|cjs)$/.test(file)).map(file => join(root, file))],
       cwd: root, stdout: "inherit", stderr: "inherit",

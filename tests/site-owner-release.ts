@@ -42,8 +42,8 @@ try {
         [qrc, "reference-catalog"],
         [download, "project-download"],
         [repo, "course-site"],
-      ]
-    ) await install(source!, name, owner);
+      ] as const
+    ) await install(source, name, owner);
   }
   if (withPL) await install(pl, "course-prairielearn", "tasks");
   if (mode === "root-pl") await install(pl, "course-prairielearn");
@@ -233,12 +233,14 @@ try {
     const runs = await Array.fromAsync(
       Deno.readDir(join(root, "_generated/course-site/runs")),
     );
+    const firstRun = runs[0];
+    assert(firstRun, "Нет сохранённого composition run");
     const composition = await readComposition(JSON.parse(
       await Deno.readTextFile(
         join(
           root,
           "_generated/course-site/runs",
-          runs[0].name,
+          firstRun.name,
           "composition.json",
         ),
       ),

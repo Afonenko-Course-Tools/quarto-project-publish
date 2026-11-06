@@ -79,19 +79,21 @@ try {
       const ws = await workspace(owner),
         run = join(owner, "_generated/course-site/runs/current");
       await Deno.mkdir(run, { recursive: true });
+      const project = ws.projects[0];
+      assert(project, "Нет проекта workspace для inspect fixture");
       await Deno.writeTextFile(
         join(owner, "_generated/course-site/active.json"),
         JSON.stringify({
           ws,
           run,
           records: [{
-            project: ws.projects[0],
+            project,
             config: {
               project: { type: "website" },
               "reference-catalog": { namespace: "child" },
             },
             record: {
-              id: ws.projects[0].id,
+              id: project.id,
               projectRoot: child,
               outputDir: childOutput,
               profiles: ws.profiles,

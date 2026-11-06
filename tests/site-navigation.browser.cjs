@@ -87,7 +87,8 @@ const server = http.createServer((req,res) => {
     assert.ok(address && typeof address !== "string");
     const port = address.port;
     const origin=`http://127.0.0.1:${port}`;
-    browser=await playwright.chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox']});
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+    browser=await playwright.chromium.launch({headless:true,...(executablePath === undefined ? {} : {executablePath}),args:['--no-sandbox']});
     const page=await browser.newPage();
     for (const profile of ['student','full']) {
       run(['render','--profile',profile,'--fail-if-warnings']);
@@ -98,7 +99,7 @@ const server = http.createServer((req,res) => {
       assert.equal(await page.getByRole('link',{name:'Страница',exact:true}).getAttribute('target'),null,'HTML-класс reveal не превращает обычную страницу в презентацию');
       assert.equal(await page.getByRole('link',{name:'Другой сайт',exact:true}).getAttribute('target'),null,'Другой origin не совпадает с локальным Reveal output');
       assert.equal(await page.getByRole('link',{name:'Каталог теории',exact:true}).last().getAttribute('target'),null,'HTML каталог не становится презентацией');
-      for (const [name, href] of [['Доклад по каталогу',`${base}/deck/`],['Доклад с параметрами',`${base}/deck/?view=1#second`]]) {
+      for (const [name, href] of /** @type {const} */ ([['Доклад по каталогу',`${base}/deck/`],['Доклад с параметрами',`${base}/deck/?view=1#second`]])) {
         const link = page.getByRole('link',{name,exact:true});
         assert.equal(await link.getAttribute('target'),'_blank','URL каталога реального Reveal открывается отдельно');
         assert.equal(await link.evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }),href,'Query и fragment авторской ссылки сохраняются');
@@ -142,7 +143,7 @@ const server = http.createServer((req,res) => {
       await page.goto(`${standalone}/index.html`);
       assert.equal(await page.getByRole('link',{name:'Доклад',exact:true}).getAttribute('target'),'_blank');
       assert.equal(await page.getByRole('link',{name:'Обычная ссылка',exact:true}).getAttribute('target'),null);
-      for (const [name, suffix] of [['Краткий доклад','chapters/'],['Краткий доклад с параметрами','chapters/?view=1#second']]) {
+      for (const [name, suffix] of /** @type {const} */ ([['Краткий доклад','chapters/'],['Краткий доклад с параметрами','chapters/?view=1#second']])) {
         const link = page.getByRole('link',{name,exact:true});
         assert.equal(await link.getAttribute('target'),'_blank','Standalone индекс распознаёт URL каталога Reveal');
         assert.equal(await link.evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }),`${standalone}/${suffix}`);

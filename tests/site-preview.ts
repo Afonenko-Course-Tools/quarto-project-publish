@@ -5,11 +5,12 @@ import { join, resolve, toFileUrl } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 
 const positional = Deno.args.filter((arg) => arg !== "--course");
+const fixturePath = positional[0];
 assert(
-  positional.length === 1 && !positional[0].startsWith("--"),
+  positional.length === 1 && fixturePath !== undefined && !fixturePath.startsWith("--"),
   "Usage: quarto run tests/site-preview.ts <fixture-path> [--course]",
 );
-const root = resolve(positional[0]);
+const root = resolve(fixturePath);
 const course = Deno.args.includes("--course");
 const quarto = Deno.env.get("QUARTO") || "quarto";
 // Журнал наблюдения не является authored input текущей операции Core.

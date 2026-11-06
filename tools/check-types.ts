@@ -4,7 +4,7 @@ const root = dirname(dirname(fromFileUrl(import.meta.url)));
 const scope = Deno.args[0] ?? "--all";
 if (!["--all", "--deno", "--node", "--browser"].includes(scope) || Deno.args.length > 1) throw Error("Укажите --all, --deno, --node или --browser");
 const imports: Record<string, string> = {};
-for (const [name, source] of [["process", "infrastructure/process.ts"], ["diagnostics", "infrastructure/diagnostics.ts"], ["state", "application/state.ts"]]) {
+for (const [name, source] of [["process", "infrastructure/process.ts"], ["diagnostics", "infrastructure/diagnostics.ts"], ["state", "application/state.ts"]] as const) {
   imports["site-fixture/" + name] = toFileUrl(join(root, "_extensions/course-site", source)).href;
 }
 
@@ -19,7 +19,7 @@ for (const [name, variable, fallback] of [
   ["project-download", "DOWNLOAD", "quarto-project-download"],
   ["reference-catalog", "QRC", "quarto-reference-catalog"],
   ["course-navigation", "CORE", "quarto-course"],
-]) {
+] as const) {
   const source = Deno.env.get(variable) || join(root, "..", fallback);
   let extension: string | undefined;
   for (const path of [resolve(source, "_extensions", name), resolve(source, "_extensions/Afonenko-Course-Tools", name), resolve(source)]) {
@@ -28,8 +28,9 @@ for (const [name, variable, fallback] of [
     } catch (error) { if (!(error instanceof Deno.errors.NotFound)) throw error; }
   }
   if (!extension) throw Error(`${variable}: public.ts ${name} не найден`);
-  imports[name + "/"] = toFileUrl(extension + "/").href;
-  providers.set(name, imports[name + "/"]);
+  const target = toFileUrl(extension + "/").href;
+  imports[name + "/"] = target;
+  providers.set(name, target);
   namespaces.add(dirname(extension));
 }
 for (const namespace of namespaces) {

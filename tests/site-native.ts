@@ -108,8 +108,10 @@ if (mode === "warnings") {
     "\n",
   ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
   assertEquals(calls.length, 1);
+  const inheritedCall = calls[0];
+  assert(inheritedCall, "Нет inherited child render");
   assert(
-    !calls[0].args.includes("--fail-if-warnings"),
+    !inheritedCall.args.includes("--fail-if-warnings"),
     "root flag unexpectedly forwarded",
   );
   await write(
@@ -125,7 +127,9 @@ if (mode === "warnings") {
     "\n",
   ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
   assertEquals(calls.length, 2);
-  assert(calls[1].exitCode !== 0, "strict warning child succeeded");
+  const strictCall = calls[1];
+  assert(strictCall, "Нет strict child render");
+  assert(strictCall.exitCode !== 0, "strict warning child succeeded");
   for (
     const path of [
       "_generated/course-site/active.json",

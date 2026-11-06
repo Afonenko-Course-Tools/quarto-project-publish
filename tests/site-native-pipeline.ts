@@ -33,15 +33,15 @@ try {
       [download, "project-download"],
       [repo, "course-site"],
       [core, "course-navigation"],
-    ]
-  ) await install(source!, name);
+    ] as const
+  ) await install(source, name);
   for (
     const [source, name] of [
       [core, "course-core"],
       [qrc, "reference-catalog"],
       [download, "project-download"],
-    ]
-  ) await install(source!, name, "tasks");
+    ] as const
+  ) await install(source, name, "tasks");
   await put(
     "_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks, book]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
@@ -204,8 +204,10 @@ try {
     const a = await Deno.readFile(archive);
     const runs = join(root, "_generated/course-site/runs");
     const dirs = await Array.fromAsync(Deno.readDir(runs));
+    const firstRun = dirs[0];
+    assert(firstRun, "Нет сохранённого composition run");
     const composition = await readComposition(JSON.parse(
-      await Deno.readTextFile(join(runs, dirs[0].name, "composition.json")),
+      await Deno.readTextFile(join(runs, firstRun.name, "composition.json")),
     ));
     assert(
       composition.nativeOperations?.some((item: { project: string }) =>

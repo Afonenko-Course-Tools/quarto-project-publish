@@ -50,8 +50,10 @@ try {
   assert.match(await Deno.readTextFile(root + '/index.html'), /course-site-navigation/);
   const navigation = calls.filter(call => call.id === 'course-site.infrastructure.navigation.addressNavigation');
   assert.equal(navigation.length, 1);
-  assert.equal(navigation[0].attributes?.extension_id, 'course-site');
-  assert.equal(navigation[0].document_id, undefined, 'batch не выбирает один документ');
+  const batch = navigation[0];
+  assert.ok(batch, 'Нет события navigation batch');
+  assert.equal(batch.attributes?.extension_id, 'course-site');
+  assert.equal(batch.document_id, undefined, 'batch не выбирает один документ');
   // Отсутствующий агент сохраняет native env и результат команды.
   Reflect.deleteProperty(registry, key);
   const missing = await import('../_extensions/course-site/infrastructure/process.ts?missing-agent-test');

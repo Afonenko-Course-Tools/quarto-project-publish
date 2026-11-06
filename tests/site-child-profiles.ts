@@ -102,6 +102,7 @@ try {
         ));
         assertEquals(composition.nativeOperations.length, 1);
         const release = composition.nativeOperations[0];
+        assert(release, "Нет native operation ребёнка");
         assertEquals(release.project, "core");
         assertEquals(release.catalog.identity.profiles, profiles);
         assertEquals(release.course.id, "lesson");

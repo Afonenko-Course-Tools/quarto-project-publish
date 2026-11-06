@@ -3,7 +3,7 @@ import { addressNavigation } from "../_extensions/course-site/infrastructure/nav
 
 async function fixture(
   pages: Record<string, string>,
-  check: (root: string, outputs: string[]) => Promise<void>,
+  check: (root: string, outputs: [string, ...string[]]) => Promise<void>,
 ) {
   const root = await Deno.makeTempDir({ prefix: "site-navigation-html-" });
   try {
@@ -14,7 +14,9 @@ async function fixture(
       });
       await Deno.writeTextFile(file, text);
     }
-    await check(root, Object.keys(pages).map((path) => `${root}/${path}`));
+    const [first, ...remaining] = Object.keys(pages).map((path) => `${root}/${path}`);
+    assert.ok(first, "HTML fixture должен содержать output");
+    await check(root, [first, ...remaining]);
   } finally {
     await Deno.remove(root, { recursive: true });
   }
@@ -23,7 +25,9 @@ async function fixture(
 function targets(html: string): string[] {
   const match = /const targets=(\[[^\n]*\])\.map/.exec(html);
   assert.ok(match, "В индекс добавлен действующий скрипт входов в презентации");
-  const value: unknown = JSON.parse(match[1]);
+  const payload = match[1];
+  assert.ok(payload, "В navigation script отсутствует targets payload");
+  const value: unknown = JSON.parse(payload);
   assert.ok(Array.isArray(value) && value.every(item => typeof item === "string"));
   return value;
 }

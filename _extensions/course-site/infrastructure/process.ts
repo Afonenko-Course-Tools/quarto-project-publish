@@ -5,7 +5,7 @@ function executableImpl(): string {
 }
 async function liveOutput(command: Deno.Command): Promise<Deno.CommandOutput> {
   const child = command.spawn();
-  const chunks: Uint8Array[][] = [[], []];
+  const chunks: [Uint8Array[], Uint8Array[]] = [[], []];
   let forwardingError: unknown;
   const pump = async (
     stream: ReadableStream<Uint8Array>,

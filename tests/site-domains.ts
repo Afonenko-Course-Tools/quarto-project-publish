@@ -214,10 +214,12 @@ async function composition(view: string) {
     }
   }
   assertEquals(matches.length, 1);
+  const current = matches[0];
+  assert(current, "Нет текущей композиции");
   for await (const directory of Deno.readDir(runs)) {
     previousRuns.add(directory.name);
   }
-  return matches[0];
+  return current;
 }
 async function assertOwners(view: "student" | "full", resources = false) {
   const current = await composition(view);
@@ -239,7 +241,9 @@ async function assertOwners(view: "student" | "full", resources = false) {
       view,
       adapters: [],
     });
-    const selectedIds = row.catalog.documents[0].exercises.map((e) => e.id)
+    const document = row.catalog.documents[0];
+    assert(document, "Нет опубликованного документа owner");
+    const selectedIds = document.exercises.map((e) => e.id)
       .sort();
     assertEquals(
       selectedIds,
@@ -305,8 +309,10 @@ async function assertOwners(view: "student" | "full", resources = false) {
           })),
           [{ source: "asset.svg", target: "asset.svg" }],
         );
+        const resource = resourceFiles.files[0];
+        assert(resource, "Нет current resource bytes");
         assert(
-          new TextDecoder().decode(resourceFiles.files[0].bytes).includes(
+          new TextDecoder().decode(resource.bytes).includes(
             `PUBLIC_RESOURCE_${id}`,
           ),
           "Смешаны ресурсы двух owner с одинаковым именем",
@@ -332,8 +338,10 @@ async function assertOwners(view: "student" | "full", resources = false) {
             })),
             [{ source: "restricted.svg", target: "restricted.svg" }],
           );
+          const privateResource = privateResources.files[0];
+          assert(privateResource, "Нет author resource bytes");
           assert(
-            new TextDecoder().decode(privateResources.files[0].bytes).includes(
+            new TextDecoder().decode(privateResource.bytes).includes(
               `RESTRICTED_RESOURCE_${id}`,
             ),
             "Потеряны author bytes",
@@ -427,9 +435,11 @@ if (Deno.args[0] === "rootless") {
   );
   for (const [i, path] of retainedPaths.entries()) {
     const actual = await Deno.readFile(join(root, path));
+    const previous = retained[i];
+    assert(previous, "Нет сохранённых previous bytes: " + path);
     assert(
-      actual.length === retained[i].length &&
-        actual.every((b, n) => b === retained[i][n]),
+      actual.length === previous.length &&
+        actual.every((b, n) => b === previous[n]),
       "Audience refusal изменил previous bytes: " + path,
     );
   }

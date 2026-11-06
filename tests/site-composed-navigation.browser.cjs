@@ -7,7 +7,9 @@ const http = require('node:http');
 const {loadPlaywright} = require('./playwright.cjs');
 const {chromium} = loadPlaywright(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES, 'playwright') : 'playwright');
-const root = path.resolve(process.argv[2]);
+const fixturePath = process.argv[2];
+assert.ok(fixturePath, 'Укажите путь установленной композиции');
+const root = path.resolve(fixturePath);
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url || '/', 'http://localhost').pathname).replace(/^\/courses\/security/, '');
   let file = path.resolve(root, '.' + pathname);
@@ -26,7 +28,8 @@ const server = http.createServer((req, res) => {
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const port = address.port;
-    browser = await chromium.launch({headless:true, executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args:['--no-sandbox','--disable-dev-shm-usage']});
+    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+    browser = await chromium.launch({headless:true, ...(executablePath === undefined ? {} : {executablePath}), args:['--no-sandbox','--disable-dev-shm-usage']});
     const page = await browser.newPage();
     /** @type {string[]} */
     const errors = []; page.on('pageerror', error => errors.push(error.message));

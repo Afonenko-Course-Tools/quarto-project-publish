@@ -157,12 +157,14 @@ for (const view of ["student", "full"]) {
   );
   const fresh = runs.filter((r) => !prior.has(r.name));
   assertEquals(fresh.length, 1);
+  const currentRun = fresh[0];
+  assert(currentRun, "Нет нового composition run");
   const composition = await readComposition(JSON.parse(
     await Deno.readTextFile(
       join(
         root,
         "_generated/course-site/runs",
-        fresh[0].name,
+        currentRun.name,
         "composition.json",
       ),
     ),
@@ -201,25 +203,34 @@ for (const view of ["student", "full"]) {
     }, async (op) => {
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
-      assertEquals(doc.definitions[`exr-${ids[i]}`].project, "/projects/demo");
-      assertEquals(doc.definitions[`exr-${ids[i]}`]["project-check"], "junit");
+      const definition = doc.definitions[`exr-${ids[i]}`];
+      assert(definition, "Нет определения текущего упражнения");
+      assertEquals(definition.project, "/projects/demo");
+      assertEquals(definition["project-check"], "junit");
       await op.withProjectContexts([{
         owner: ownerRoot,
         directories: ["projects/demo"],
         profiles: [view],
         format: "html",
       }], async (batch) => {
-        const context = batch.groups[0].contexts[0];
+        const group = batch.groups[0];
+        assert(group, "Нет группы project contexts");
+        const context = group.contexts[0];
+        assert(context, "Нет текущего project context");
         assertEquals(context.owner, ownerRoot);
         assertEquals(context.input, join(ownerRoot, "projects/demo"));
         assert(context.contract.starter, "Нет author-declared starter");
         assertEquals(context.contract.starter.path, join(context.input, "student"));
+        const reference = context.contract.solutions.reference;
+        assert(reference, "Нет reference solution");
         assertEquals(
-          context.contract.solutions.reference.path,
+          reference.path,
           join(context.input, "reference"),
         );
+        const publicFile = context.contract.build.files["Public.java"];
+        assert(publicFile, "Нет Public.java в build contract");
         assertEquals(
-          context.contract.build.files["Public.java"].path,
+          publicFile.path,
           join(ownerRoot, "common/Public.java"),
         );
         const plan = await Core.planProject(context, {

@@ -69,11 +69,15 @@ try {
     .split("\n").map((line) => readCommandEvent(JSON.parse(line)));
   const childRenders = trace.filter((row) => row.kind === "render");
   assertEquals(childRenders.length, 1);
-  assertEquals(childRenders[0].args, ["render", "."]);
+  const childRender = childRenders[0];
+  assert(childRender, "Нет child render");
+  assertEquals(childRender.args, ["render", "."]);
   assert(
-    trace.filter((row) => row.kind === "inspect").every((row) =>
-      !row.args[1].endsWith(".qmd")
-    ),
+    trace.filter((row) => row.kind === "inspect").every((row) => {
+      const input = row.args[1];
+      assert(input !== undefined, "Нет пути inspect");
+      return !input.endsWith(".qmd");
+    }),
     "Возвращён document inspect fanout",
   );
   const webpage = await Deno.readTextFile(

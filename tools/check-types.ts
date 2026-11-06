@@ -40,7 +40,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
 }
 const discovered = [...(await Promise.all(["_extensions/course-site", "tests", "tools", "examples"].map(sourceFiles))).flat(), "typecheck/browser.d.ts"].sort();
 if (JSON.stringify(discovered) !== JSON.stringify([...coverage.owned, ...coverage.delegated_to_N3].sort())) throw Error("Состав кода изменился: обновите конечный typecheck/coverage.json");
-const config = await Deno.makeTempFile({ dir: join(root, "typecheck"), prefix: ".active-", suffix: ".json" });
+const config = await Deno.makeTempFile({ dir: root, prefix: ".active-types-", suffix: ".json" });
 try {
   const settings: unknown = JSON.parse(await Deno.readTextFile(join(root, "typecheck/deno.json")));
   if (typeof settings !== "object" || settings === null) throw Error("Неверный typecheck/deno.json");

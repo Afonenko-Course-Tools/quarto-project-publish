@@ -100,6 +100,7 @@ jobs:
           quarto run tests/performance-context.ts
           quarto run tests/performance-noenv.ts
           quarto run tests/planning-progress.ts
+          quarto run tests/site-inspect-version.ts
           quarto run tests/site-native-planning.ts
           quarto run tests/site-native-pipeline.ts
           for mode in missing unexpected root-missing; do

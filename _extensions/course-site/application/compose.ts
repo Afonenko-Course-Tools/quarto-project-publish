@@ -441,7 +441,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
       await publish({
         root,
         stage: ws.output,
-        quarto: (await quarto(["--version"], root)).trim(),
+        quarto: ws.quartoVersion,
         config: ws.config,
         members: [{
           namespace: ws.config["reference-catalog"].namespace,
@@ -483,6 +483,17 @@ export async function post(root = Deno.cwd()): Promise<void> {
         source: root,
         field: "root/output",
         related: [{ source: ws.root }, { source: ws.output }],
+        hint: "Запустите полную сборку заново.",
+      },
+    );
+  }
+  if (typeof ws.quartoVersion !== "string" || !ws.quartoVersion.trim()) {
+    throw diagnostic(
+      "SITE.CONFIG_INVALID",
+      "В активной сборке отсутствует версия native inspect Quarto",
+      {
+        source: root,
+        field: "quarto.version",
         hint: "Запустите полную сборку заново.",
       },
     );
@@ -546,7 +557,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
     await publish({
       root,
       stage: ws.output,
-      quarto: (await quarto(["--version"], root)).trim(),
+      quarto: ws.quartoVersion,
       config: ws.config,
       members,
       scope: "full",

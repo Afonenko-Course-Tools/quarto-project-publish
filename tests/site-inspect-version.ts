@@ -1,0 +1,202 @@
+import { copy } from "stdlib/fs";
+import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
+import { assert, assertEquals } from "./support.ts";
+
+const repo = dirname(dirname(fromFileUrl(import.meta.url)));
+const root = await Deno.makeTempDir({ prefix: "site-inspect-version-" });
+const saved = Deno.env.toObject(), originalCommand = Deno.Command;
+const commands: string[][] = [], failures: string[] = [];
+let version: unknown = "1.11.5";
+try {
+  const extension = join(root, "_extensions/course-site");
+  await copy(join(repo, "_extensions/course-site"), extension);
+  const qrc = join(root, "_extensions/reference-catalog");
+  await Deno.mkdir(qrc, { recursive: true });
+  await Deno.writeTextFile(
+    join(qrc, "public.ts"),
+    `export async function publishReferenceCatalog(request) {
+  await Deno.writeTextFile(request.root + '/qrc-call.json', JSON.stringify(request));
+  await Deno.writeTextFile(request.stage + '/reference-catalog.json', '{}');
+}\n`,
+  );
+  const { post } = await import(
+    toFileUrl(join(extension, "application/compose.ts")).href
+  );
+  const { workspace } = await import(
+    toFileUrl(join(extension, "infrastructure/config.ts")).href
+  );
+  Deno.env.set("QUARTO_PROFILE", "student");
+  Deno.env.delete("QUARTO_PROJECT_OUTPUT_DIR");
+  Deno.env.delete("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES");
+  (Deno as any).Command = class {
+    args: string[];
+    cwd: string;
+    constructor(_tool: string, options: any) {
+      this.args = options.args;
+      this.cwd = options.cwd;
+    }
+    output() {
+      commands.push(this.args);
+      assert(this.args[0] === "inspect", "Лишняя команда Quarto: " + this.args);
+      assertEquals(this.args, ["inspect", this.cwd, "--profile", "student"]);
+      return Promise.resolve({
+        success: true,
+        code: 0,
+        signal: null,
+        stdout: new TextEncoder().encode(JSON.stringify({
+          quarto: { version },
+          config: {
+            project: { type: "website", "output-dir": "_site" },
+            subprojects: ["child"],
+            "reference-catalog": { namespace: "root" },
+          },
+          files: { input: [join(this.cwd, "index.qmd")], resources: [] },
+        })),
+        stderr: new Uint8Array(),
+      });
+    }
+    spawn() {
+      throw Error("Рендер запрещён в адресной проверке");
+    }
+  };
+  for (const scope of ["local", "full"]) {
+    const owner = join(root, scope), output = join(owner, "_site");
+    const child = join(owner, "child"), childOutput = join(child, "_site");
+    await Deno.mkdir(childOutput, { recursive: true });
+    await Deno.mkdir(output, { recursive: true });
+    await Deno.writeTextFile(join(owner, "index.qmd"), "# Корень\n");
+    await Deno.writeTextFile(
+      join(output, "index.html"),
+      "<html><body>Корень</body></html>",
+    );
+    await Deno.writeTextFile(
+      join(childOutput, "index.html"),
+      "<html><body>Компонент</body></html>",
+    );
+    Deno.env.set("QUARTO_PROJECT_RENDER_ALL", scope === "full" ? "1" : "0");
+    Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", join(output, "index.html"));
+    version = scope === "local" ? " 1.11.5\n " : "1.11.6";
+    const before = commands.length;
+    if (scope === "full") {
+      const ws = await workspace(owner),
+        run = join(owner, "_generated/course-site/runs/current");
+      await Deno.mkdir(run, { recursive: true });
+      await Deno.writeTextFile(
+        join(owner, "_generated/course-site/active.json"),
+        JSON.stringify({
+          ws,
+          run,
+          records: [{
+            project: ws.projects[0],
+            config: {
+              project: { type: "website" },
+              "reference-catalog": { namespace: "child" },
+            },
+            record: {
+              id: ws.projects[0].id,
+              projectRoot: child,
+              outputDir: childOutput,
+              profiles: ws.profiles,
+              nativeOutputs: [join(childOutput, "index.html")],
+              files: [join(childOutput, "index.html")],
+              selectedSources: [],
+            },
+          }],
+        }),
+      );
+    }
+    const activePath = join(owner, "_generated/course-site/active.json");
+    const activeState = scope === "full"
+      ? JSON.parse(await Deno.readTextFile(activePath))
+      : undefined;
+    try {
+      await post(owner);
+      const request = JSON.parse(
+        await Deno.readTextFile(join(owner, "qrc-call.json")),
+      );
+      assertEquals(request.quarto, scope === "local" ? "1.11.5" : "1.11.6");
+      assertEquals(request.scope, scope);
+      assertEquals(
+        request.outputs,
+        scope === "local"
+          ? [join(output, "index.html")]
+          : [join(output, "index.html"), join(output, "child/index.html")],
+      );
+      assertEquals(
+        request.members,
+        scope === "local"
+          ? [{ namespace: "root", format: "html" }]
+          : [{ namespace: "child", format: "html" }, {
+            namespace: "root",
+            format: "html",
+          }],
+      );
+      assertEquals(commands.length - before, 1);
+      if (scope === "full") {
+        assert(
+          (await Deno.readTextFile(join(output, "child/index.html"))).includes(
+            "Компонент",
+          ),
+        );
+        const composition = JSON.parse(
+          await Deno.readTextFile(
+            join(owner, "_generated/course-site/runs/current/composition.json"),
+          ),
+        );
+        assertEquals(composition.outputs, request.outputs);
+        delete activeState.ws.quartoVersion;
+        await Deno.writeTextFile(activePath, JSON.stringify(activeState));
+        await Deno.remove(join(output, "child"), { recursive: true });
+        await Deno.remove(join(owner, "qrc-call.json"));
+        let staleError: any;
+        try {
+          await post(owner);
+        } catch (error) {
+          staleError = error;
+        }
+        assertEquals(staleError?.code, "SITE.CONFIG_INVALID");
+        assert(String(staleError).includes("quarto.version"));
+        for (
+          const path of [join(output, "child"), join(owner, "qrc-call.json")]
+        ) {
+          let exists = false;
+          try {
+            await Deno.stat(path);
+            exists = true;
+          } catch (error) {
+            if (!(error instanceof Deno.errors.NotFound)) throw error;
+          }
+          assert(!exists, "State без версии начал mount/QRC: " + path);
+        }
+        assertEquals(commands.length - before, 1);
+      }
+    } catch (error) {
+      failures.push(scope + ": " + error);
+    }
+  }
+  for (version of [undefined, null, 12, "", " \n "]) {
+    let error: any;
+    try {
+      await workspace(join(root, "local"));
+    } catch (caught) {
+      error = caught;
+    }
+    if (
+      error?.code !== "SITE.CONFIG_INVALID" ||
+      !String(error).includes("quarto.version")
+    ) {
+      failures.push("Не отклонена native версия: " + JSON.stringify(version));
+    }
+  }
+  assertEquals(failures, []);
+  console.log(
+    "PASS local/full QRC используют native inspect version; неверная версия отклоняется; render/--version отсутствуют",
+  );
+} finally {
+  (Deno as any).Command = originalCommand;
+  for (const key of Object.keys(Deno.env.toObject())) {
+    if (!(key in saved)) Deno.env.delete(key);
+  }
+  for (const [key, value] of Object.entries(saved)) Deno.env.set(key, value);
+  await Deno.remove(root, { recursive: true });
+}

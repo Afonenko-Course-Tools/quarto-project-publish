@@ -27,7 +27,7 @@ try {
       if (failTasks && this.cwd === owners[2]) throw sentinel;
       const config: any = { project: { type: "website", "output-dir": "_site" } };
       if (this.cwd === root) config.subprojects = owners.slice(1).map((owner) => owner.slice(root.length + 1));
-      return Promise.resolve({ success: true, code: 0, signal: null, stdout: new TextEncoder().encode(JSON.stringify({ config, files: { input: [join(this.cwd, "index.qmd")], resources: [] } })), stderr: new Uint8Array() });
+      return Promise.resolve({ success: true, code: 0, signal: null, stdout: new TextEncoder().encode(JSON.stringify({ quarto: { version: "1.11.5" }, config, files: { input: [join(this.cwd, "index.qmd")], resources: [] } })), stderr: new Uint8Array() });
     }
     spawn() { events.push("RENDER_STOP " + this.cwd); throw Error("STOP_BEFORE_RENDER"); }
   };

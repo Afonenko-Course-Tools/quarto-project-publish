@@ -192,11 +192,20 @@ export async function workspace(root: string) {
   const project = JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
   );
+  const quartoVersion = project.quarto?.version;
+  if (typeof quartoVersion !== "string" || !quartoVersion.trim()) {
+    throw diagnostic(
+      "SITE.CONFIG_INVALID",
+      "Native inspect не вернул версию Quarto",
+      { source: root, field: "quarto.version" },
+    );
+  }
   const config = project.config;
   const override = Deno.env.get("QUARTO_PROJECT_OUTPUT_DIR");
   if (override) config.project["output-dir"] = override;
   return {
     ...await validateConfig(root, config, profiles),
+    quartoVersion: quartoVersion.trim(),
     resources: project.files?.resources || [],
     selectedSources: Deno.env.get("QUARTO_PROJECT_RENDER_ALL") === "1"
       ? await selectedSources(root, project.files?.input)

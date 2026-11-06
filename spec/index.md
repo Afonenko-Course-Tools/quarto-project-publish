@@ -31,7 +31,7 @@ Publisher владеет `subprojects`, размещением native outputs, c
 ## Текущий публичный договор
 
 Core 9 использует native TS по умолчанию. Publisher сохраняет отдельную
-операцию каждого owner и её release proof; обычный проект без Core остаётся
+publication session каждого owner и её catalog/course/inspection; обычный проект без Core остаётся
 самостоятельным. Project/Workspace выводятся из
 конструкторов и действующих TS-операций владельца, отдельные ручные interfaces
 их формы не поддерживаются.

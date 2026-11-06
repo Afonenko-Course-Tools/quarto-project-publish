@@ -42,7 +42,7 @@ try {
   ) await install(source!, name, "tasks");
   await put(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [{path: tasks, to: default}, {path: book, to: default}]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks, book]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
   );
   if (true) {
     const config = await Deno.readTextFile(join(root, "_quarto.yml"));
@@ -61,7 +61,7 @@ try {
   );
   await put(
     "tasks/_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, other.qmd, talk.qmd]\n  pre-render: [quarto run ${ext}/project-download/entrypoints/pre.ts, quarto run ${ext}/course-core/entrypoints/native-pre.ts]\n  post-render: [quarto run ../${ext}/course-site/entrypoints/collect.ts, quarto run ${ext}/course-core/entrypoints/native-post.ts, quarto run ${ext}/project-download/entrypoints/post.ts --native]\nformat:\n  html:\n    theme: cosmo\nwebsite: {title: Задачи, navbar: {}}\nfilters: [course-core, project-download]\ncourse-core-runtime: native-ts\ncourse-core-projection: student\ncourse-core-role: exercise-bank\nproject-download:\n  course-model: true\n  base-url: https://standalone.example/tasks/\ncourse-project:\n  build:\n    files:\n      build.gradle: shared/build.gradle\n      settings.gradle: shared/settings.gradle\n  instructions:\n    gradle: {path: shared/gradle.md}\nreference-catalog:\n  namespace: tasks\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, other.qmd, talk.qmd]\n  pre-render: [quarto run ${ext}/project-download/entrypoints/pre.ts, quarto run ${ext}/course-core/entrypoints/native-pre.ts]\n  post-render: [quarto run ../${ext}/course-site/entrypoints/collect.ts, quarto run ${ext}/course-core/entrypoints/native-post.ts, quarto run ${ext}/project-download/entrypoints/post.ts --native]\nformat:\n  html:\n    theme: cosmo\nwebsite: {title: Задачи, navbar: {}}\nfilters: [course-core, project-download]\ncourse-core-runtime: native-ts\ncourse-core-projection: student\ncourse-core-role: exercise-bank\nproject-download:\n  course-model: true\n  base-url: https://standalone.example/tasks/\ncourse-project:\n  build:\n    files:\n      build.gradle: {path: shared/build.gradle, base: config}\n      settings.gradle: {path: shared/settings.gradle, base: config}\n  instructions:\n    gradle: {path: shared/gradle.md, base: config}\nreference-catalog:\n  namespace: tasks\n`,
   );
   await put("tasks/shared/build.gradle", "plugins { id 'java' }\n");
   await put("tasks/shared/settings.gradle", "rootProject.name='site'\n");
@@ -108,7 +108,6 @@ try {
       if(mode==="root-missing") state.ws.selectedSources=[];
       else if(mode==="missing") state.records[0].record.selectedSources.pop();
       else if(mode==="unexpected") state.records[0].record.selectedSources.push("foreign.qmd");
-      else if(mode==="format") state.records[0].record.to="html";
       else throw Error("Неизвестный mutant");
       await Deno.writeTextFile(path,JSON.stringify(state));`,
     );
@@ -131,9 +130,12 @@ try {
     new TextDecoder().decode(rendered.stderr);
   await Deno.writeTextFile(join(root, "_generated/render.log"), log);
   if (mutant) {
+    const expectedDiagnostic = mutant === "root-missing"
+      ? "RELEASE.EXPECTED_SOURCES_INVALID"
+      : "RELEASE.COVERAGE";
     assert(
-      !rendered.success && log.includes("SITE.CURRENT_RESULT_MISSING"),
-      "Ожидался отказ independent selection/format: " + root + "\n" + log,
+      !rendered.success && log.includes(expectedDiagnostic),
+      "Ожидался отказ Core publication " + expectedDiagnostic + ": " + root + "\n" + log,
     );
     const zip = join(
       root,
@@ -206,22 +208,7 @@ try {
         "Publisher не выдал native ordinary resource корня",
       );
     }
-    const receipt = JSON.parse(
-      await Deno.readTextFile(
-        join(root, "tasks/_generated/project-download/artifacts-receipt.json"),
-      ),
-    );
     const a = await Deno.readFile(archive);
-    const sha = Array.from(
-      new Uint8Array(await crypto.subtle.digest("SHA-256", a)),
-      (v) => v.toString(16).padStart(2, "0"),
-    ).join("");
-    assert(
-      receipt.archives.find((item: { name: string; sha256: string }) =>
-        item.name === "exr-demo-starter.zip"
-      )?.sha256 === sha,
-      "Конечный ZIP отличается от подготовленных Download bytes",
-    );
     const runs = join(root, "_generated/course-site/runs");
     const dirs = await Array.fromAsync(Deno.readDir(runs));
     const composition = JSON.parse(
@@ -285,7 +272,7 @@ try {
         new TextDecoder().decode(refused.stderr).includes(
           "SITE.RELEASE_UNQUALIFIED",
         ),
-      "Недостающий Core release proof был молча пропущен",
+      "Недостающий Core publication session был молча пропущен",
     );
     const retained = await Deno.readFile(archive);
     assert(
@@ -293,7 +280,7 @@ try {
       "Owner gate удалил прежнюю выдачу до проверки",
     );
     console.log(
-      "PASS actual Publisher→native child→public Download: финальные mounted адреса до ZIP, exact copied ZIP, operation/output coverage",
+      "PASS actual Publisher→native child→public Download: финальные mounted адреса до ZIP, actual ZIP bytes, operation/output coverage",
     );
   }
 } finally {

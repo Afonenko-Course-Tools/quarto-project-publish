@@ -46,7 +46,7 @@ profile:
 filters: [course-core, reference-catalog]
 course: {id: portal}
 reference-catalog: {namespace: portal}
-subprojects: [{path: part, to: default}, {path: second, to: default}]
+subprojects: [part, second]
 `,
 );
 await write(
@@ -232,11 +232,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
     assertEquals(row.catalog.documents.map((d: any) => d.source), [
       "index.qmd",
     ]);
-    assertEquals(row.release.proof.documents, [{
-      source: "index.qmd",
-      format: "html",
-    }]);
-    assertEquals(row.release.proof.course, {
+    assertEquals(row.course, {
       id: "shared-course",
       view,
       adapters: [],
@@ -258,10 +254,7 @@ async function assertOwners(view: "student" | "full", resources = false) {
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(owner, `_site-${view}`),
     }, async (op: any) => {
-      assertEquals(
-        await op.validateRelease({ expectedSources: ["index.qmd"] }),
-        row.release.proof,
-      );
+      assertEquals(op.identity, row.catalog.identity);
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
       assert(
@@ -299,12 +292,19 @@ async function assertOwners(view: "student" | "full", resources = false) {
           !JSON.stringify(condition).includes("WORK_PREVIEW_"),
           "Condition захватило website preview",
         );
-        const inventory = await op.resourceInventory({
+        const resourceFiles = await op.resourceFiles({
           files: [{ source: "asset.svg", target: "asset.svg" }],
         });
-        assertEquals(inventory.operation, op.identity.operation);
+        assertEquals(resourceFiles.audience, view);
+        assertEquals(
+          resourceFiles.files.map(({ source, target }: any) => ({
+            source,
+            target,
+          })),
+          [{ source: "asset.svg", target: "asset.svg" }],
+        );
         assert(
-          new TextDecoder().decode(inventory.files[0].bytes).includes(
+          new TextDecoder().decode(resourceFiles.files[0].bytes).includes(
             `PUBLIC_RESOURCE_${id}`,
           ),
           "Смешаны ресурсы двух owner с одинаковым именем",
@@ -319,11 +319,19 @@ async function assertOwners(view: "student" | "full", resources = false) {
             JSON.stringify(closed).includes(`RESTRICTED_CONDITION_${id}`),
             "Author condition потеряло закрытое условие",
           );
-          const privateInventory = await op.resourceInventory({
+          const privateResources = await op.resourceFiles({
             files: [{ source: "restricted.svg", target: "restricted.svg" }],
           });
+          assertEquals(privateResources.audience, "full");
+          assertEquals(
+            privateResources.files.map(({ source, target }: any) => ({
+              source,
+              target,
+            })),
+            [{ source: "restricted.svg", target: "restricted.svg" }],
+          );
           assert(
-            new TextDecoder().decode(privateInventory.files[0].bytes).includes(
+            new TextDecoder().decode(privateResources.files[0].bytes).includes(
               `RESTRICTED_RESOURCE_${id}`,
             ),
             "Потеряны author bytes",
@@ -489,5 +497,5 @@ if (Deno.args[0] === "rootless") {
 console.log(
   `PASS installed ${
     Deno.args[0] || "all"
-  }: owner-local genuine proofs, 2 namespace resources, student/full privacy/search/crossrefs и адресные negative guards`,
+  }: owner-local catalogs, 2 namespace resources, student/full privacy/search/crossrefs и адресные negative guards`,
 );

@@ -55,7 +55,7 @@ try {
     view = author ? "full" : "student";
   await put(
     "_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat: {html: {theme: none}}\nwebsite: {site-url: 'https://pages.example.test/course/'}\nsubprojects: [{path: tasks, to: default}]\nreference-catalog: {namespace: portal}\n`,
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat: {html: {theme: none}}\nwebsite: {site-url: 'https://pages.example.test/course/'}\nsubprojects: [tasks]\nreference-catalog: {namespace: portal}\n`,
   );
   await put("index.qmd", "# Общий сайт\n");
   if (mode === "root-pl") {
@@ -76,18 +76,11 @@ try {
         "\ncourse: {id: no-owner, view: student}\n",
     );
   }
-  const plPre = withPL && mode !== "pl-missing"
-    ? ", quarto run prepare-pl.ts"
-    : "";
-  await put(
-    "tasks/prepare-pl.ts",
-    `import * as Core from './${ext}/course-core/public.ts'; import * as PL from './${ext}/course-prairielearn/public.ts'; await PL.prepareNativeAdapter(Core,{root:Deno.cwd(),projection:'${projection}',outputDirectory:Deno.cwd()+'/_site'});`,
-  );
   await put(
     "tasks/_quarto.yml",
-    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, other.qmd]\n  pre-render: [quarto run ${ext}/project-download/entrypoints/pre.ts, quarto run ${ext}/course-core/entrypoints/native-pre.ts${plPre}]\n  post-render: [quarto run ../${ext}/course-site/entrypoints/collect.ts, quarto run ${ext}/course-core/entrypoints/native-post.ts, quarto run ${ext}/project-download/entrypoints/post.ts --native${
+    `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, other.qmd]\n  pre-render: [quarto run ${ext}/project-download/entrypoints/pre.ts, quarto run ${ext}/course-core/entrypoints/native-pre.ts]\n  post-render: [quarto run ../${ext}/course-site/entrypoints/collect.ts, quarto run ${ext}/course-core/entrypoints/native-post.ts, quarto run ${ext}/project-download/entrypoints/post.ts --native${
       author ? " --author" : ""
-    }]\nformat: {html: {theme: none}}\nfilters: [course-core, project-download]\ncourse-core-runtime: native-ts\ncourse-core-projection: ${projection}\nexercise-bank: true\nproject-download:\n  course-model: true\n  resources: {data: {path: assets, gitignore: false}}\ncourse-project:\n  build:\n    files: {build.gradle: shared/build.gradle, settings.gradle: shared/settings.gradle}\n  instructions:\n    gradle: {path: shared/gradle.md}\n    local: {path: README.local.md}\nreference-catalog: {namespace: tasks}\n`,
+    }]\nformat: {html: {theme: none}}\nfilters: [course-core, project-download]\ncourse-core-runtime: native-ts\ncourse-core-projection: ${projection}\nexercise-bank: true\nproject-download:\n  course-model: true\n  resources: {data: {path: assets, gitignore: false}}\ncourse-project:\n  build:\n    files: {build.gradle: {path: shared/build.gradle, base: config}, settings.gradle: {path: shared/settings.gradle, base: config}}\n  instructions:\n    gradle: {path: shared/gradle.md, base: config}\n    local: {path: README.local.md}\nreference-catalog: {namespace: tasks}\n`,
   );
   for (
     const [path, text] of Object.entries({
@@ -192,10 +185,11 @@ try {
   const expected: Record<string, string> = {
     "document-course": "RELEASE.MIXED_COURSE",
     assessment: "CORE.ASSESSMENT_INVALID",
-    "pl-missing": "RELEASE.ADAPTER_UNQUALIFIED",
+    "pl-missing": "SITE.SIBLING_MISSING",
     "reveal-model": "CONDITION_UNQUALIFIED",
     "inactive-course": "SITE.RELEASE_UNQUALIFIED",
     "author-starter": "DOWNLOAD.STARTER_UNQUALIFIED",
+    "mixed-default": "DOCUMENT_BINDING: native format не квалифицирован",
   };
   if (mode === "author-starter" && rendered.success && Deno.env.get("B3_LOG")) {
     const listed = await new Deno.Command("unzip", {
@@ -223,13 +217,13 @@ try {
     let success = false;
     try {
       await Deno.stat(
-        join(root, "tasks/_generated/project-download/artifacts-receipt.json"),
+        join(root, `_site/tasks/_downloads/exr-demo-${kind}.zip`),
       );
       success = true;
     } catch (e) {
       if (!(e instanceof Deno.errors.NotFound)) throw e;
     }
-    assert(!success, "Отказ создал success receipt");
+    assert(!success, "Отказ создал новый архив");
     console.log(
       JSON.stringify({ mode, expected: expected[mode], status: "PASS" }),
     );
@@ -249,49 +243,28 @@ try {
       ),
     );
     if (mode === "root-pl") {
-      const rootProof = composition.nativeOperations.find((
+      const rootPublication = composition.nativeOperations.find((
         row: { project: string },
-      ) => row.project === "root")?.release;
+      ) => row.project === "root");
       assert(
-        rootProof?.proof.course.id === "root-course" &&
-          rootProof.validationPasses === 2,
-        "Root public Core/C proof без Download не выполнен",
+        rootPublication?.course.id === "root-course" &&
+          rootPublication.inspection?.course.id === "root-course",
+        "Root PL publication без Download не выполнена",
       );
     }
     const current = composition.nativeOperations.find((
       row: { project: string },
     ) => row.project === "tasks");
     assert(
-      current?.release?.proof?.course?.id === "bounded-course",
-      "Нет genuine текущего owner release proof",
+      current?.course?.id === "bounded-course",
+      "Нет текущего owner publication course",
     );
     assert(
-      current.release.proof.documents.length === 2,
-      "Proof потерял owner source coverage",
+      JSON.stringify(current.catalog.documents.map((d: {source: string}) => d.source).sort()) ===
+        JSON.stringify(["index.qmd", "other.qmd"]),
+      "Catalog потерял owner source coverage",
     );
-    assert(
-      current.release.validationPasses === 1,
-      "Download owner должен сообщать один genuine validation pass",
-    );
-    assert(
-      JSON.stringify(current.release.proof.validatedAdapters) ===
-        JSON.stringify(withPL ? ["prairielearn"] : []),
-      "Download proof потерял actual selected adapter validation",
-    );
-    for (
-      const metric of [
-        "inspectCalls",
-        "fullWalks",
-        "sourceHashReads",
-        "sourceHashBytes",
-      ]
-    ) {
-      assert(
-        current.release.metricsBefore[metric] ===
-          current.release.metricsAfter[metric],
-        "Owner validation добавила inspect/discovery/hash: " + metric,
-      );
-    }
+
     const archive = join(
       root,
       "_site/tasks/_downloads",
@@ -345,7 +318,7 @@ try {
         "Обычный reveal resource изменился",
       );}
     console.log(
-      JSON.stringify({ mode, status: "PASS", release: current.release }),
+      JSON.stringify({ mode, status: "PASS", course: current.course }),
     );
   }
 } finally {

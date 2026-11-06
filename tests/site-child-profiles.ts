@@ -24,7 +24,7 @@ async function run(args: string[], cwd = root) {
 try {
   await write(
     "_quarto.yml",
-    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [{path: plain, to: default}, {path: core, to: default}]\n",
+    "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [plain, core]\n",
   );
   await write("index.qmd", "# Root\n");
   for (const part of ["plain", "core"]) {
@@ -102,9 +102,7 @@ try {
         const release = composition.nativeOperations[0];
         assertEquals(release.project, "core");
         assertEquals(release.catalog.identity.profiles, profiles);
-        assertEquals(release.release.proof.course.id, "lesson");
-        assertEquals(release.release.proof.documents.length, 1);
-        assertEquals(release.release.validationPasses, 1);
+        assertEquals(release.course.id, "lesson");
         releases++;
       }
     }

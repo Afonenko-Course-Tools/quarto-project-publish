@@ -30,7 +30,7 @@ await write(
   pre-render: _extensions/course-site/entrypoints/pre.ts
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
-subprojects: [{path: book, to: default}, {path: slides, to: default}]
+subprojects: [book, slides]
 `,
 );
 await write("index.qmd", "# Native formats\n");

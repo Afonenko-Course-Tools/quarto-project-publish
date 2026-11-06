@@ -2,7 +2,6 @@ import { contextualize, diagnostic } from "./diagnostics.ts";
 import {
   inside,
   isAbsolute,
-  join,
   outputDirectory,
   relative,
   resolve,
@@ -13,17 +12,11 @@ import { profileArguments, quarto } from "./process.ts";
 function projectRecord(
   path: string,
   mount: string,
-  to: "default" | "html" | "revealjs",
 ) {
-  return { id: `subproject-${encodeURIComponent(mount)}`, path, mount, to };
+  return { id: `subproject-${encodeURIComponent(mount)}`, path, mount };
 }
 export type Project = ReturnType<typeof projectRecord>;
 export type Workspace = Awaited<ReturnType<typeof workspace>>;
-export async function inspect(root: string, profiles: string[]): Promise<any> {
-  return JSON.parse(
-    await quarto(["inspect", root, ...profileArguments(profiles)], root),
-  ).config;
-}
 export function activeProfiles(): string[] {
   const profiles = (Deno.env.get("QUARTO_PROFILE") || "").split(",").filter(
     Boolean,
@@ -76,30 +69,26 @@ export async function validateConfig(
       },
     );
   }
-  const raw = config.subprojects;
+  const raw: unknown = config.subprojects;
   if (
     !Array.isArray(raw) || !raw.length ||
-    raw.some((item) =>
-      !item || typeof item !== "object" || Array.isArray(item) ||
-      Object.keys(item).length !== 2 || !Object.hasOwn(item, "path") ||
-      !Object.hasOwn(item, "to") ||
-      typeof item.path !== "string" || !item.path ||
-      !["default", "html", "revealjs"].includes(item.to)
+    !raw.every((item: unknown): item is string =>
+      typeof item === "string" && item.length > 0
     )
   ) {
     throw diagnostic(
       "SITE.CONFIG_INVALID",
-      "subprojects должен быть непустым списком {path, to}",
+      "subprojects должен быть непустым списком каталогов",
       {
         source: root,
         field: "subprojects",
         hint:
-          "Например: subprojects: [{path: theory, to: default}]. Допустимы default, html, revealjs.",
+          "Например: subprojects: [theory, tasks, lectures].",
       },
     );
   }
   const projects: Project[] = [];
-  for (const { path: item, to } of raw) {
+  for (const item of raw) {
     if (isAbsolute(item) || /^[a-z][a-z0-9+.-]*:/i.test(item)) {
       throw diagnostic(
         "SITE.SUBPROJECT_INVALID",
@@ -194,7 +183,7 @@ export async function validateConfig(
         );
       }
     }
-    projects.push(projectRecord(path, mount, to));
+    projects.push(projectRecord(path, mount));
   }
   return { root, output, projects, profiles, config };
 }
@@ -203,11 +192,20 @@ export async function workspace(root: string) {
   const project = JSON.parse(
     await quarto(["inspect", root, ...profileArguments(profiles)], root),
   );
+  const quartoVersion = project.quarto?.version;
+  if (typeof quartoVersion !== "string" || !quartoVersion.trim()) {
+    throw diagnostic(
+      "SITE.CONFIG_INVALID",
+      "Native inspect не вернул версию Quarto",
+      { source: root, field: "quarto.version" },
+    );
+  }
   const config = project.config;
   const override = Deno.env.get("QUARTO_PROJECT_OUTPUT_DIR");
   if (override) config.project["output-dir"] = override;
   return {
     ...await validateConfig(root, config, profiles),
+    quartoVersion: quartoVersion.trim(),
     resources: project.files?.resources || [],
     selectedSources: Deno.env.get("QUARTO_PROJECT_RENDER_ALL") === "1"
       ? await selectedSources(root, project.files?.input)
@@ -258,89 +256,6 @@ export function validateAudience(
     );
   }
   return audience;
-}
-
-export async function validateAudienceOutputs(
-  root: string,
-  profiles: string[],
-  selectedOutput: string,
-  view?: "student" | "full",
-  nativeProjection?: "student" | "author",
-  expectedAudience?: "student" | "full",
-  known?: { profiles: string[]; config: any },
-): Promise<void> {
-  const selectedAudience = validateAudience(
-    root,
-    profiles,
-    view,
-    nativeProjection,
-    expectedAudience,
-  );
-  const alternatives = selectedAudience
-    ? ["student", "full"].filter((profile) => profile !== selectedAudience)
-    : ["student", "full"];
-  const alternateOutputs: string[] = [];
-  for (const audience of alternatives) {
-    let present = false;
-    for (const suffix of ["yml", "yaml"]) {
-      try {
-        await Deno.stat(join(root, `_quarto-${audience}.${suffix}`));
-        present = true;
-      } catch (error) {
-        if (!(error instanceof Deno.errors.NotFound)) throw error;
-      }
-    }
-    if (!present) continue;
-    const selection = selectedAudience && profiles.includes(selectedAudience)
-      ? profiles.map((profile) =>
-        profile === selectedAudience ? audience : profile
-      )
-      : [...profiles, audience];
-    const alternate =
-      known && JSON.stringify(known.profiles) === JSON.stringify(selection)
-        ? known.config
-        : await inspect(root, selection);
-    const output = await outputDirectory(
-      root,
-      alternate.project?.["output-dir"] || "_site",
-    );
-    if (
-      alternateOutputs.some((other) =>
-        inside(output, other) || inside(other, output)
-      )
-    ) {
-      throw diagnostic(
-        "SITE.OUTPUT_OVERLAP",
-        "Каталоги student и full пересекаются",
-        {
-          source: root,
-          field: "project.output-dir",
-          related: [...alternateOutputs, output].map((source) => ({ source })),
-          hint: "Задайте отдельные каталоги для каждой аудитории.",
-        },
-      );
-    }
-    alternateOutputs.push(output);
-    // When native defaults/groups select an unknown audience, its output may
-    // equal one canonical projection. The pair must remain disjoint, and a
-    // partial overlap is never safe. Profile filenames do not prove activation:
-    // ordinary metadata-files can use exactly those names.
-    if (
-      (selectedAudience || output !== selectedOutput) &&
-      (inside(output, selectedOutput) || inside(selectedOutput, output))
-    ) {
-      throw diagnostic(
-        "SITE.OUTPUT_OVERLAP",
-        `Выбранный каталог пересекается с результатом ${audience}`,
-        {
-          source: root,
-          field: "project.output-dir",
-          related: [{ source: selectedOutput }, { source: output }],
-          hint: "Разделите каталоги аудиторий.",
-        },
-      );
-    }
-  }
 }
 
 /** Настоящий native project selected set; форматы документов здесь не вычисляются. */

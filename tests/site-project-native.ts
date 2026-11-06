@@ -53,9 +53,9 @@ fail-if-warnings: true
 filters: [course-core]
 course: {id: project-source}
 exercise-bank: true
-${owner ? "" : "subprojects: [{path: part, to: default}, {path: nested/second, to: default}]\n"}course-project:
+${owner ? "" : "subprojects: [part, nested/second]\n"}course-project:
   build:
-    files: {Public.java: common/Public.java}
+    files: {Public.java: {path: common/Public.java, base: config}}
 project-materialization:
   projects:
     exr-${ids[i]}:
@@ -179,11 +179,7 @@ for (const view of ["student", "full"]) {
     assertEquals(release.catalog.documents.map((d: any) => d.source), [
       "index.qmd",
     ]);
-    assertEquals(release.release.proof.documents, [{
-      source: "index.qmd",
-      format: "html",
-    }]);
-    assertEquals(release.release.proof.course, {
+    assertEquals(release.course, {
       id: "project-source",
       view,
       adapters: [],
@@ -201,35 +197,27 @@ for (const view of ["student", "full"]) {
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(ownerRoot, `_output-${view}`),
     }, async (op: any) => {
-      const proof = await op.validateRelease({
-        expectedSources: ["index.qmd"],
-      });
-      assertEquals(proof, release.release.proof);
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
       assertEquals(doc.definitions[`exr-${ids[i]}`].project, "/projects/demo");
       assertEquals(doc.definitions[`exr-${ids[i]}`]["project-check"], "junit");
       await op.withProjectContexts([{
         owner: ownerRoot,
-        inputs: ["projects/demo/native-input.qmd"],
+        directories: ["projects/demo"],
         profiles: [view],
         format: "html",
       }], async (batch: any) => {
         const context = batch.groups[0].contexts[0];
-        assert(
-          context.input.startsWith(ownerRoot + "/projects/demo/"),
-          "Потерян owner проекта",
-        );
-        const rawChecks = context.effectiveMetadata["project-checks"];
-        assertEquals(rawChecks.profiles.junit["source-profile"], "main");
-        assertEquals(rawChecks.profiles.junit.tests, ["tests/*Test.java"]);
-        const rawMaterialization =
-          context.effectiveMetadata["project-materialization"]
-            .projects[`exr-${ids[i]}`];
-        assertEquals(rawMaterialization["include-git"], true);
+        assertEquals(context.owner, ownerRoot);
+        assertEquals(context.input, join(ownerRoot, "projects/demo"));
+        assertEquals(context.contract.starter.path, join(context.input, "student"));
         assertEquals(
-          rawMaterialization["common-files"].map((f: any) => f.audience),
-          ["student", "grading"],
+          context.contract.solutions.reference.path,
+          join(context.input, "reference"),
+        );
+        assertEquals(
+          context.contract.build.files["Public.java"].path,
+          join(ownerRoot, "common/Public.java"),
         );
         const plan = await Core.planProject(context, {
           audience: view === "full" ? "full" : "student",
@@ -312,6 +300,6 @@ try {
   await Deno.remove(external);
 }
 console.log(
-  "PASS installed namespace, root/child/nested owner-local sources, genuine release/project contexts, native metadata/actual materialization, student/full privacy и foreign-source guard",
+  "PASS installed namespace, root/child/nested owner-local sources, owner-local catalog/project contexts, native metadata/actual materialization, student/full privacy и foreign-source guard",
 );
 console.log("FIXTURE " + root);

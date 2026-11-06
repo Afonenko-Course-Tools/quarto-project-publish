@@ -21,37 +21,37 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: c9f23ae0537280e1a94bf2ecc21d6fcbb6766b7c # Course 9.1.2: точный source candidate; независимая приёмка и публикация отдельно
+          ref: c950a962a76a26dc61378fdc16bb80533800596e # Core 9.3.4: согласованный provider текущей Java/SP композиции
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 798f8c0d9f87fd5dcfe9ee85b79df57e647d2f3c # QRC 3.2.0: TS-контракт и сохранённые изменения main
+          ref: 541a44836cf5ec934a101059cbee77c9ff47d134 # QRC 3.2.0: согласованный provider текущей Java/SP композиции
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-project-download
-          ref: b478893595dee945be3202a57daf982d281017f2 # Download 3.4.0: точный source candidate; приёмка и публикация отдельно
+          ref: 9e9a55c483d2b547f047a64fdebc5a5b3f379380 # Download 3.5.0: публичные resetDownloadRequests/prepareNativeDownloads
           path: quarto-project-download
           persist-credentials: false
       - name: Проверить закреплённые Core и QRC
         run: |
-          test "$(git -C quarto-course rev-parse HEAD)" = "c9f23ae0537280e1a94bf2ecc21d6fcbb6766b7c"
-          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "798f8c0d9f87fd5dcfe9ee85b79df57e647d2f3c"
+          test "$(git -C quarto-course rev-parse HEAD)" = "c950a962a76a26dc61378fdc16bb80533800596e"
+          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "541a44836cf5ec934a101059cbee77c9ff47d134"
       - name: Проверить закреплённый Download
         run: |
           git -C quarto-project-download rev-parse HEAD
-          test "$(git -C quarto-project-download rev-parse HEAD)" = "b478893595dee945be3202a57daf982d281017f2"
+          test "$(git -C quarto-project-download rev-parse HEAD)" = "9e9a55c483d2b547f047a64fdebc5a5b3f379380"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course-prairielearn
-          ref: df8bd4aad274d618a782265b1db9c63e9b9a40f9 # C 9.0.1: опубликованный точный исходник; не запуск C CLI
+          ref: c4a474fa443f6ac7e688c5c2805db0a74b9afbd0 # PL 9.0.7: согласованный публичный inspectPublication; не запуск C CLI
           path: quarto-course-prairielearn
           persist-credentials: false
       - name: Проверить закреплённый public validator
-        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "df8bd4aad274d618a782265b1db9c63e9b9a40f9"
+        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "c4a474fa443f6ac7e688c5c2805db0a74b9afbd0"
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
@@ -74,6 +74,11 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
           XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: npm run test:browser
+      - name: HTML-дерево и автономная поставка навигации
+        working-directory: quarto-project-publish
+        run: |
+          quarto run tests/site-navigation-html.ts
+          quarto run tests/site-navigation-installed.ts
       - name: Проверка режима off без доступа к часам
         working-directory: quarto-project-publish
         run: quarto run tests/performance.ts
@@ -95,9 +100,10 @@ jobs:
           quarto run tests/performance-context.ts
           quarto run tests/performance-noenv.ts
           quarto run tests/planning-progress.ts
+          quarto run tests/site-inspect-version.ts
           quarto run tests/site-native-planning.ts
           quarto run tests/site-native-pipeline.ts
-          for mode in missing unexpected format root-missing; do
+          for mode in missing unexpected root-missing; do
             quarto run tests/site-native-pipeline.ts "$mode"
           done
           quarto run tests/site-composed-navigation.ts --web-only

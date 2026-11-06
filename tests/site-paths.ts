@@ -1,9 +1,5 @@
 import { assertEquals, assertRejects } from "./support.ts";
 import { validateConfig } from "../_extensions/course-site/infrastructure/config.ts";
-const intent = (paths: unknown[]) =>
-  paths.map((path) =>
-    typeof path === "string" ? { path, to: "default" } : path
-  );
 const root = await Deno.makeTempDir();
 try {
   for (const path of ["a/slides", "b/slides", "part", "part/nested"]) {
@@ -12,14 +8,14 @@ try {
   await Deno.writeTextFile(`${root}/not-directory.qmd`, "# Source");
   const base = {
     project: { type: "website", "output-dir": "_site" },
-    subprojects: intent(["./a/slides", "b/slides"]),
+    subprojects: ["./a/slides", "b/slides"],
   };
   const result = await validateConfig(root, base, ["student"]);
   assertEquals(result.projects.map((p) => p.mount), ["a/slides", "b/slides"]);
   assertEquals(new Set(result.projects.map((p) => p.id)).size, 2);
   assertEquals(result.profiles, ["student"]);
   await assertRejects(
-    () => validateConfig(root, { ...base, subprojects: intent([]) }, []),
+    () => validateConfig(root, { ...base, subprojects: [] }, []),
     "SITE.CONFIG_INVALID",
     [root, "subprojects"],
   );
@@ -27,7 +23,7 @@ try {
     () =>
       validateConfig(
         root,
-        { ...base, subprojects: intent(["part", "part/nested"]) },
+        { ...base, subprojects: ["part", "part/nested"] },
         [],
       ),
     "SITE.SUBPROJECT_INVALID",
@@ -46,14 +42,14 @@ try {
     () =>
       validateConfig(root, {
         ...base,
-        subprojects: intent(["not-directory.qmd"]),
+        subprojects: ["not-directory.qmd"],
       }, []),
     "SITE.SUBPROJECT_INVALID",
     [root, "not-directory.qmd", "subprojects"],
   );
   await assertRejects(
     () =>
-      validateConfig(root, { ...base, subprojects: intent(["absent"]) }, []),
+      validateConfig(root, { ...base, subprojects: ["absent"] }, []),
     "SITE.SUBPROJECT_INVALID",
     [root, "absent", "subprojects"],
   );
@@ -77,7 +73,7 @@ try {
     ]
   ) {
     await assertRejects(() =>
-      validateConfig(root, { ...base, subprojects: intent(subprojects) }, [])
+      validateConfig(root, { ...base, subprojects }, [])
     );
   }
   await assertRejects(() =>
@@ -96,7 +92,7 @@ try {
     }, [])
   );
   await assertRejects(() =>
-    validateConfig(root, { ...base, subprojects: intent(["linked"]) }, [])
+    validateConfig(root, { ...base, subprojects: ["linked"] }, [])
   );
   console.log(
     "PASS normalized subproject paths, symlinks, overlaps, old syntax rejection and profiles",

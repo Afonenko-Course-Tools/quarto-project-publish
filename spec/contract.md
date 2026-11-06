@@ -9,8 +9,8 @@ status: current
 Текущий ref: **6.0.0** (кандидат); версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
-Корень native проекта объявляет непустой список `subprojects: [{path: theory, to: default}]`; структуру и файловые границы проверяет
-[исполняемый TS-контракт](../_extensions/course-site/infrastructure/config.ts). Каждый элемент содержит только `path` и `to`; прежние строки отклоняются. `to` обязателен: `default|html|revealjs`.
+Корень native проекта объявляет непустой список `subprojects: [theory, tasks, lectures]`; структуру и файловые границы проверяет
+[исполняемый TS-контракт](../_extensions/course-site/infrastructure/config.ts). Каждый элемент — строка с путём каталога; объекты и aliases не поддерживаются. Порядок элементов определяет порядок компонентов.
 Каждый путь относительный и обозначает папку
 самостоятельного проекта. Размещение готовой части повторяет нормализованный путь.
 Повторы, вложенные пересечения источников/outputs и symlink отклоняются до cleanup.
@@ -19,9 +19,11 @@ status: current
 Native Quarto определяет selected sources, эффективные форматы и профили.
 Publisher сохраняет native defaults/groups при отсутствии root profile и записывает
 фактический `QUARTO_PROFILE` post-hook; `files.config` не определяет профиль.
-Student/full outputs не пересекаются. Каждый child получает одну native whole-project команду `render . --to <to>`; `default` выбирает первый формат штатным правилом Quarto, явный `html|revealjs` задаёт формат всей части. Publisher не выполняет N document inspect, не вычисляет effective format и не переходит к per-document render. Невеб-результаты при `default` остаются обычным native поведением, без вымышленного Core release proof.
+Publisher проверяет outputs только выбранной аудитории. Publisher не запускает отдельный inspect неактивных student/full профилей; сохранность старой выдачи другой аудитории при совпадающих или вложенных output-каталогах не гарантируется: cleanup текущей композиции может удалить или перезаписать её. Для одновременного хранения выдач автор задаёт непересекающиеся каталоги. Каждый child получает одну native whole-project команду `render .` с выбранными корнем профилями; конфигурация дочернего Quarto выбирает форматы штатным правилом. Publisher не выполняет N document inspect, не вычисляет effective format и не переходит к per-document render. Невеб-результаты остаются обычным native поведением, без вымышленной Core publication authority.
 
-В full preflight independent project inspect корня и каждого child определяет validated selected sources до cleanup. Root native результат не запрашивается повторно. Точный owner/profile результат можно повторно использовать только внутри этого preflight; другие профили требуют своего native факта. В full post source set actual Core catalog точно равен независимому selected set; output set точно равен текущим HTML outputs, а явный `to` — actual format. Сравнение выполняется в уже существующем live observer до ZIP соответствующего owner; без Download — до ownerRelease, которому передаётся независимый список. Новый Core lease, metadata resolver или authority не создаётся. Partial/preview не сравнивается с полным project set. При отказе успешный composition.json не записывается; внешняя публикация требует rc0.
+Действующий [публичный договор native операции Core](https://github.com/Afonenko-Course-Tools/quarto-course/blob/c950a962a76a26dc61378fdc16bb80533800596e/docs/native-operation-ts.md) поддерживает фактические `html|revealjs`. Child с активным Core и выбранным PDF получает отказ неподдержанного native формата; Publisher не расширяет этот договор и не подменяет выбор формата. Обычные невеб-проекты без Core сохраняют поведение Quarto. Поддержка PDF/Typst отдельным Presentation не означает квалификацию native publication Core.
+
+В full preflight independent project inspect корня и каждого child определяет validated selected sources до cleanup. Root native результат не запрашивается повторно. Точный owner/profile результат можно повторно использовать только внутри этого preflight; он не удостоверяет конфигурацию невыбранных профилей. В full post source set actual Core catalog точно равен независимому selected set; output set точно равен текущим HTML outputs. Сравнение выполняется в едином live publication callback до подготовки ZIP соответствующего owner; с Download и без него Core получает независимый список. Новый Core lease, metadata resolver или authority не создаётся. Partial/preview не сравнивается с полным project set. При отказе успешный composition.json не записывается; внешняя публикация требует rc0.
 
 Явные pre/post/collect hooks передают только текущие outputs успешных native
 процессов. Сохранённые HTML и sidecar другой попытки не включаются автоматически.
@@ -36,7 +38,7 @@ namespace/current outputs/search. Publisher не вводит общий экс�
 [QRC](../../quarto-reference-catalog/docs/contract.md).
 
 В Core 9 Publisher сохраняет отдельную genuine operation каждого владельца.
-Источники в catalog/proof/document остаются относительными к этому owner:
+Источники в catalog/document остаются относительными к этому owner:
 например, root, `part` и `nested/second` имеют собственный `index.qmd` и разные
 operation identities. Mounted URL получает путь компонента в конечном сайте;
 этот URL не переписывает Core source, project root или raw check metadata.
@@ -150,12 +152,14 @@ QRC/Navigation завершают HTML до Core native-post; ZIP создаёт
 Posthoc ZIP rewriting не вызывается. Core catalog проверяет текущие роли и outputs;
 Publisher сохраняет отдельные owner scopes и не объединяет самостоятельные курсы.
 
-Effective per-document course/assessment/adapter гарантии проверяет Core
-validateRelease и actual C public validator в той же operation. Root config не
-заменяет этот proof. Отсутствующий validator даёт owner ADAPTER_UNQUALIFIED;
-coarse SITE.RELEASE_UNQUALIFIED остаётся course без native Core. Ordinary proof
-не предоставляет assignment intent. Открытый generated-resource + release
-membership blocker перечислен в packet; полный выпуск не квалифицирован.
+Effective per-document course/assessment проверяет Core `withNativePublication`.
+При активном PL Publisher вызывает `inspectPublication(publication)`, независимо
+от наличия Download. Full grading/seed qualification остаётся отдельной операцией.
+Plain catalog/course/inspection сохраняются в composition; release proof и
+validation counters удалены. Coarse `SITE.RELEASE_UNQUALIFIED` остаётся course
+без native Core. Publication data не предоставляет assignment intent.
+Native draft публикуется после успешного closing; ранние clean/render/mount effects
+сохраняются без общего rollback. Подробности — публичная композиция.
 Исторические host finalize-conditions/helper удалены. Conditions ZIP создаёт
 Download один раз из текущего Core inventory после окончательного назначения
 адресов; чтение и повторная упаковка старого ZIP больше не поддерживаются.

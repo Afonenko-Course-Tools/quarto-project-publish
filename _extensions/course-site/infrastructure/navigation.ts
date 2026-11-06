@@ -1,6 +1,42 @@
 import { createMetrics } from "../observability/bridge.ts";
 const metrics = createMetrics("course-site");
 import { dirname, relative, within } from "./files.ts";
+// @deno-types="../vendor/parse5/dist/index.d.ts"
+import {
+  defaultTreeAdapter as tree,
+  type DefaultTreeAdapterTypes,
+  html as htmlNames,
+  parse,
+} from "../vendor/parse5/dist/index.js";
+
+function elements(
+  node: DefaultTreeAdapterTypes.Node,
+): DefaultTreeAdapterTypes.Element[] {
+  const found: DefaultTreeAdapterTypes.Element[] = [];
+  const visit = (current: DefaultTreeAdapterTypes.Node) => {
+    if (
+      tree.isElementNode(current) && current.namespaceURI === htmlNames.NS.HTML
+    ) found.push(current);
+    // Содержимое template инертно и находится в отдельном content, не в childNodes.
+    if ("childNodes" in current) {
+      for (const child of current.childNodes) visit(child);
+    }
+  };
+  visit(node);
+  return found;
+}
+
+function attribute(
+  element: DefaultTreeAdapterTypes.Element,
+  name: string,
+): string | undefined {
+  return element.attrs.find((attr) => attr.name === name)?.value;
+}
+
+function scriptText(element: DefaultTreeAdapterTypes.Element): string {
+  return element.childNodes.filter(tree.isTextNode).map((node) => node.value)
+    .join("");
+}
 
 /** Адреса берутся только из текущих native HTML, без второй карты курса. */
 export async function addressNavigation(
@@ -9,31 +45,52 @@ export async function addressNavigation(
   composition = false,
   courseUrl?: string,
 ): Promise<void> {
-  const html = new Map<string, string>();
+  const html = new Map<string, {
+    source: string;
+    elements: DefaultTreeAdapterTypes.Element[];
+  }>();
   for (const output of outputs) {
     within(stage, output);
-    if (output.endsWith(".html")) html.set(output, await Deno.readTextFile(output));
+    if (output.endsWith(".html") && !html.has(output)) {
+      const source = await Deno.readTextFile(output);
+      const document = parse(source, { sourceCodeLocationInfo: true });
+      html.set(output, { source, elements: elements(document) });
+    }
   }
-  const presentations = [...html].filter(([, text]) =>
-    /<div\b[^>]*\bclass="[^"]*\breveal\b/.test(text) && /Reveal\.initialize\s*\(/.test(text)
+  const presentations = [...html].filter(([, page]) =>
+    page.elements.some((element) =>
+      element.tagName === "div" &&
+      attribute(element, "class")?.split(/[\t\n\f\r ]+/).includes("reveal")
+    ) &&
+    page.elements.some((element) =>
+      element.tagName === "script" &&
+      /Reveal\.initialize\s*\(/.test(scriptText(element))
+    )
   ).map(([path]) => path);
-  for (const [output, source] of html) {
-    let text = source;
+  for (const [output, page] of html) {
+    const edits: Array<{ start: number; end: number; text: string }> = [];
     if (composition) {
       // Это payload собственного фильтра Navigation, не чужие metadata/QRC.
-      text = text.replace(
-        /(<script id="course-navigation-context" type="application\/json">)([\s\S]*?)(<\/script>)/,
-        (_match, start, payload, end) => {
-          const context = JSON.parse(payload);
-          for (const link of context.links) {
-            if (link.scope === "course") {
-              link.href = relative(dirname(output), within(stage, link.path))
-                .replaceAll("\\", "/");
-            }
-          }
-          return start + JSON.stringify(context).replaceAll("<", "\\u003c") + end;
-        },
+      const contextScript = page.elements.find((element) =>
+        element.tagName === "script" &&
+        attribute(element, "id") === "course-navigation-context" &&
+        attribute(element, "type")?.trim().toLowerCase() === "application/json"
       );
+      if (contextScript) {
+        const context = JSON.parse(scriptText(contextScript));
+        for (const link of context.links) {
+          if (link.scope === "course") {
+            link.href = relative(dirname(output), within(stage, link.path))
+              .replaceAll("\\", "/");
+          }
+        }
+        const location = contextScript.sourceCodeLocation!;
+        edits.push({
+          start: location.startTag!.endOffset,
+          end: location.endTag?.startOffset ?? location.endOffset,
+          text: JSON.stringify(context).replaceAll("<", "\\u003c"),
+        });
+      }
     }
     // Только штатные страницы index.html получают правило входа в презентации.
     const index = /(^|[\\/])index\.html$/.test(output) &&
@@ -42,7 +99,8 @@ export async function addressNavigation(
       const targets = (index ? presentations : []).map((path) =>
         relative(dirname(output), path).replaceAll("\\", "/")
       );
-      const rootHref = (relative(dirname(output), stage).replaceAll("\\", "/") || ".") + "/";
+      const rootHref =
+        (relative(dirname(output), stage).replaceAll("\\", "/") || ".") + "/";
       const base = composition && courseUrl
         ? JSON.stringify({ courseUrl, rootHref }).replaceAll("<", "\\u003c")
         : "null";
@@ -59,7 +117,9 @@ if(base){
   }
  }
 }
-const targets=${JSON.stringify(targets).replaceAll("<", "\\u003c")}.map(path=>new URL(path,document.baseURI));
+const targets=${
+        JSON.stringify(targets).replaceAll("<", "\\u003c")
+      }.map(path=>new URL(path,document.baseURI));
 for(const link of document.querySelectorAll('a[href]')){
  const url=new URL(link.href,document.baseURI);
  if(targets.some(target=>target.origin===url.origin&&(
@@ -69,12 +129,37 @@ for(const link of document.querySelectorAll('a[href]')){
  }
 }
 })();</script>`;
-      text = text.replace(/<script id="course-site-navigation">[\s\S]*?<\/script>\s*/g, "");
-      text = text.replace(/<\/body>/i, script + "\n</body>");
+      for (const element of page.elements) {
+        if (
+          element.tagName === "script" &&
+          attribute(element, "id") === "course-site-navigation"
+        ) {
+          const location = element.sourceCodeLocation!;
+          edits.push({
+            start: location.startOffset,
+            end: location.endOffset,
+            text: "",
+          });
+        }
+      }
+      const body = page.elements.find((element) => element.tagName === "body")!;
+      const end = body.sourceCodeLocation?.endTag?.startOffset ??
+        body.sourceCodeLocation?.endOffset ?? page.source.length;
+      edits.push({ start: end, end, text: script });
     }
-    if (text !== source) await Deno.writeTextFile(output, text);
+    if (edits.length) {
+      let text = page.source;
+      // Смещения получены от готового HTML-дерева. Остальные байты сохраняются.
+      for (const edit of edits.sort((a, b) => b.start - a.start)) {
+        text = text.slice(0, edit.start) + edit.text + text.slice(edit.end);
+      }
+      if (text !== page.source) await Deno.writeTextFile(output, text);
+    }
   }
 }
 
 // @ts-expect-error JS допускает замену function binding; публичная сигнатура сохраняется.
-addressNavigation = metrics.wrapAsync({id:"course-site.infrastructure.navigation.addressNavigation",kind:"phase"},addressNavigation);
+addressNavigation = metrics.wrapAsync({
+  id: "course-site.infrastructure.navigation.addressNavigation",
+  kind: "phase",
+}, addressNavigation);

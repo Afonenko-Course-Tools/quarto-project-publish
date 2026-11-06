@@ -40,8 +40,8 @@ project:
   post-render: _extensions/course-site/entrypoints/post.ts
 format: html
 subprojects:
-  - {path: theory, to: default}
-  - {path: slides, to: default}
+  - theory
+  - slides
 ```
 
 У каждой части есть собственный `_quarto.yml`, native `output-dir` и post-render hook `../_extensions/course-site/entrypoints/collect.ts`: после QRC
@@ -58,8 +58,8 @@ project:
 format: html
 ```
 
-`subprojects` — непустой список строгих `{path, to}`. `path` — относительный путь папки;
-`to` обязателен: `default`, `html` или `revealjs`. Прежние строки не поддерживаются. Адрес части совпадает
+`subprojects` — непустой упорядоченный список относительных путей каталогов.
+Форматы задаются в конфигурации, профилях и документах дочернего Quarto. Адрес части совпадает
 с её нормализованным путём: `a/slides` публикуется в `a/slides/`. `./tasks` и
 `tasks` обозначают одну часть и не могут входить в список вместе. Вложенные
 пересекающиеся проекты, symlink и пересечение источников/outputs запрещены.
@@ -126,9 +126,9 @@ reference-catalog: {namespace: theory}
 
 ## Native поведение и ошибки
 
-Каждая часть рендерится одной штатной командой `quarto render . --to <to>` с выбранными профилями. `default` сохраняет native выбор первого формата документа, включая смешанный HTML index и Revealjs. `html` или `revealjs` явно выбирают этот native формат для всей части. Publisher не выводит формат из project inspect и не вводит собственную эвристику единственного web-формата. Если HTML/PDF конфигурация ставит PDF первым, автор выбирает `to: html` для веб-публикации; `default` следует настоящему порядку Quarto. Тип book/website, metadata, профили и hooks сохраняются.
+Каждая часть рендерится одной штатной командой `quarto render .` с выбранными профилями. Конфигурация и документы дочернего Quarto выбирают форматы, включая смешанный HTML index и Revealjs. Для веб-публикации HTML/PDF проекта автор выбирает HTML первым в дочерней конфигурации или её профиле. Publisher не выводит формат из project inspect и не вводит собственную эвристику единственного web-формата. Тип book/website, metadata, профили и hooks сохраняются.
 
-До cleanup один project inspect каждого owner независимо определяет selected sources и resources. В полной композиции actual Core catalog должен точно покрывать этот selected set и текущие HTML outputs; явный `to` проверяется по actual Core format. Проверка выполняется внутри существующей live operation до упаковки ZIP соответствующего owner, без нового lease или приватного API. Для `default` формат является только native/Core фактом. Без Core успешная native команда и текущие output paths не объявляются модельным release proof. Partial render/preview сохраняет локальную область.
+До cleanup один project inspect каждого owner независимо определяет selected sources и resources. В полной композиции actual Core catalog должен точно покрывать этот selected set и текущие HTML outputs. Проверка выполняется внутри единой Core publication session до подготовки ZIP соответствующего owner, без нового lease или приватного API. Формат является native/Core фактом. Без Core успешная native команда и текущие output paths не объявляются модельной publication authority. Partial render/preview сохраняет локальную область.
 
 Свежие outputs, ресурсы и search монтируются по путям папок; QRC строго связывает
 текущие HTML и объединяет search. `.quarto`, `_freeze` и кеши движков сохраняются.
@@ -325,3 +325,8 @@ Navigation из того же namespace установленных расшир�
 Состав берётся из `subprojects`; отдельный список ссылок не нужен.
 Правила standalone и явно заданных авторских ссылок сохраняются без включения
 общей композиции. Подробности: [контракт](spec/contract.md#общее-меню-курса-530).
+
+Обычная Native публикация с Download и без него использует единый Core/PL
+маршрут; grading/seed qualification выполняется отдельно. Download публикует
+готовый draft после успешного Core closing. Ранние clean/render/mount effects
+сохраняются без общего rollback. Подробности — [публичная композиция](docs/public-operation.md).

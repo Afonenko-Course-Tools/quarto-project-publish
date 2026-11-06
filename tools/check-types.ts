@@ -46,10 +46,12 @@ try {
     cwd: root,
     stdout: "inherit", stderr: "inherit",
   }).spawn().status;
-  if (!result.success) Deno.exit(result.code);
-  const lint = await new Deno.Command(Deno.execPath(), {
-    args: ["lint", "--config", config, ...coverage.owned.filter(file => !file.endsWith(".lua")).map(file => join(root, file))],
-    cwd: root, stdout: "inherit", stderr: "inherit",
-  }).spawn().status;
-  if (!lint.success) Deno.exit(lint.code);
+  Deno.exitCode = result.code;
+  if (result.success) {
+    const lint = await new Deno.Command(Deno.execPath(), {
+      args: ["lint", "--config", config, ...coverage.owned.filter(file => !file.endsWith(".lua")).map(file => join(root, file))],
+      cwd: root, stdout: "inherit", stderr: "inherit",
+    }).spawn().status;
+    Deno.exitCode = lint.code;
+  }
 } finally { await Deno.remove(config); }

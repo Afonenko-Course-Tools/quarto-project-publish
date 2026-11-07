@@ -187,8 +187,8 @@ runtime-флаг не обязателен. Реальный CI, установ�
 Входы JSON и native inspect проверяются во время исполнения, а типы последующей
 обработки выводятся из проверенных результатов.
 
-`npm run check:types` включает Deno/Node/browser TS и JS. Для двух собственных Lua
-сценариев отдельно выполняется `quarto run tools/check-types.ts --lua`; shell
+`npm run check:types` включает Deno/Node/browser TS и JS. Для двух Lua-сценариев
+и собственного metadata-файла отдельно выполняется `quarto run tools/check-types.ts --lua`; shell
 проверяется командой `shellcheck tests/fixtures/*.sh`. Во всех трёх TS/JS средах
 включены `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`.
 
@@ -197,6 +197,8 @@ Lua использует единый checker `quarto-course-performance@05803ba
 `PERFORMANCE` задаёт другой checkout этой же закреплённой редакции. Тонкий вызов
 передаёт конечный собственный список `--scope`, точное исключение канонического
 bridge и каталог его типов. Собственного движка LuaLS и установщика здесь нет.
+Собственный `typecheck/native.d.lua` именует корневой namespace Pandoc, сохраняя
+методы штатной библиотеки; он входит в проверяемый состав, а не во внешние libraries.
 Каталоги Pandoc/Quarto определяются каноническим checker через `quarto --paths`.
 `LUA_LANGUAGE_SERVER` при необходимости задаёт абсолютный путь к LuaLS 3.19.2.
 Для CI применяется общий `tools/setup-lua-ci.sh` из того же Performance checkout:

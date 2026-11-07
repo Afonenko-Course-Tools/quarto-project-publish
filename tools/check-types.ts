@@ -15,7 +15,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
   }
   return found;
 }
-const discovered = [...(await Promise.all(["_extensions/course-site", "tests", "tools", "examples"].map(sourceFiles))).flat(), "typecheck/browser.d.ts"].sort();
+const discovered = (await Promise.all(["_extensions/course-site", "tests", "tools", "examples", "typecheck"].map(sourceFiles))).flat().sort();
 if (JSON.stringify(discovered) !== JSON.stringify([...coverage.owned, ...coverage.delegated_to_N3].sort())) throw Error("Состав кода изменился: обновите конечный typecheck/coverage.json");
 const bridges = ["_extensions/course-site/observability/bridge.ts", "_extensions/course-site/observability/bridge.lua"];
 if (JSON.stringify([...coverage.delegated_to_N3].sort()) !== JSON.stringify(bridges.sort())) throw Error("Делегированы только два канонических bridge Performance");

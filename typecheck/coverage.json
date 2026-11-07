@@ -75,7 +75,8 @@
     "tests/support.ts",
     "tests/type-boundaries.ts",
     "tools/check-types.ts",
-    "typecheck/browser.d.ts"
+    "typecheck/browser.d.ts",
+    "typecheck/native.d.lua"
   ],
   "delegated_to_N3": [
     "_extensions/course-site/observability/bridge.lua",

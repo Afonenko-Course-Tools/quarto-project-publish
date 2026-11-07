@@ -9,6 +9,11 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
+      PERFORMANCE: ${{ github.workspace }}/quarto-course-performance
+      COURSE_PERFORMANCE_SOURCE: ${{ github.workspace }}/quarto-course-performance
+      LUA_LANGUAGE_SERVER: ${{ runner.temp }}/luals/bin/lua-language-server
     strategy:
       fail-fast: false
       matrix:
@@ -18,6 +23,10 @@ jobs:
         with:
           path: quarto-project-publish
           persist-credentials: false
+      - name: Подготовить доступный кеш Quarto
+        run: |
+          mkdir -p -- "$XDG_CACHE_HOME"
+          test -w "$XDG_CACHE_HOME"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
@@ -55,12 +64,54 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Afonenko-Course-Tools/quarto-course-performance
+          ref: 0781f03a11f461691d7ce116f2c53bb5d8af68d7
+          path: quarto-course-performance
+          persist-credentials: false
+      - name: Проверить закреплённый Performance и установить LuaLS
+        run: |
+          test "$(git -C "$PERFORMANCE" rev-parse HEAD)" = "0781f03a11f461691d7ce116f2c53bb5d8af68d7"
+          bash "$PERFORMANCE/tools/setup-lua-ci.sh" "$RUNNER_TEMP/luals"
+      - name: Установить закреплённый ShellCheck
+        run: |
+          tool_dir="$RUNNER_TEMP/shellcheck-0.11.0"
+          mkdir -- "$tool_dir"
+          curl --fail --location --silent --show-error \
+            https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz \
+            --output "$tool_dir/archive.tar.xz"
+          printf '%s  %s\n' 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198 "$tool_dir/archive.tar.xz" | sha256sum --check --status
+          tar -xJf "$tool_dir/archive.tar.xz" --directory "$tool_dir" --strip-components=1
+          "$tool_dir/shellcheck" --version
+          printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
+      - name: Строгая проверка собственного Lua
+        working-directory: quarto-project-publish
+        run: quarto run tools/check-types.ts --lua
+      - name: ShellCheck и синтаксис каждого собственного shell-файла
+        working-directory: quarto-project-publish
+        run: |
+          shellcheck --severity=style \
+            tests/fixtures/command-probe.sh \
+            tests/fixtures/functional-env.sh \
+            tests/fixtures/live-tool.sh \
+            tests/fixtures/native-failure.sh \
+            tests/fixtures/performance-tool.sh
+          for script in \
+            tests/fixtures/command-probe.sh \
+            tests/fixtures/functional-env.sh \
+            tests/fixtures/live-tool.sh \
+            tests/fixtures/native-failure.sh \
+            tests/fixtures/performance-tool.sh; do
+            bash -n "$script"
+          done
       - name: Восстанавливаемая Markdown-копия и защищённые исходники
         working-directory: quarto-project-publish
         run: timeout --signal=TERM --kill-after=5s 60s quarto run tests/release-resources.ts
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '26.10.0'
+          package-manager-cache: false
       - name: Строгая типизация полного собственного состава
         working-directory: quarto-project-publish
         env:
@@ -68,7 +119,6 @@ jobs:
           PL: ${{ github.workspace }}/quarto-course-prairielearn
           DOWNLOAD: ${{ github.workspace }}/quarto-project-download
           QRC: ${{ github.workspace }}/quarto-reference-catalog
-          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
           npm ci --ignore-scripts
           npm run check:types
@@ -82,7 +132,6 @@ jobs:
         working-directory: quarto-project-publish
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
-          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: npm run test:browser
       - name: HTML-дерево и автономная поставка навигации
         working-directory: quarto-project-publish
@@ -105,7 +154,6 @@ jobs:
           COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
           COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project
-          XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
         run: |
           quarto run tests/performance-context.ts
           quarto run tests/performance-noenv.ts

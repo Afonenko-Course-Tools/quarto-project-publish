@@ -192,7 +192,8 @@ runtime-флаг не обязателен. Реальный CI, установ�
 проверяются командой `shellcheck tests/fixtures/*.sh`. Во всех трёх TS/JS средах
 включены `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`.
 
-Lua проверяется общим инструментом `quarto-course-performance@05803ba2ee66171cec12c5fb9027da2642e5518a`.
+Lua проверяется общим инструментом `quarto-course-performance@0781f03a11f461691d7ce116f2c53bb5d8af68d7`.
+Копии `observability/bridge.ts` и `observability/bridge.lua` перенесены без изменений из этой редакции Performance: Git blob `1f5493b75d3ff39808ab58ded3c31080b748f65f` и `47b0e87e54451afbcbad2e8f6514ca2664350287` соответственно.
 По умолчанию он берётся из соседнего `../quarto-course-performance`; переменная
 `PERFORMANCE` задаёт другой рабочий каталог той же закреплённой редакции.
 Обёртка передаёт конечный собственный список `--scope`, точное исключение

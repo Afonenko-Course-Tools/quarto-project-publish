@@ -106,7 +106,7 @@ const server = http.createServer((req,res) => {
         const rel = (await link.getAttribute('rel') || '').split(/\s+/);
         assert.ok(rel.includes('noopener') && rel.includes('noreferrer'));
         const nextTab = page.waitForEvent('popup'); await link.click();
-        const presentation = await nextTab; await presentation.waitForFunction(()=>"Reveal" in window && typeof window.Reveal === "object" && window.Reveal !== null && "isReady" in window.Reveal && typeof window.Reveal.isReady === "function" && window.Reveal.isReady());
+        const presentation = await nextTab; await presentation.waitForFunction(()=>"Reveal" in window && ((typeof window.Reveal === "object" && window.Reveal !== null) || typeof window.Reveal === "function") && "isReady" in window.Reveal && typeof window.Reveal.isReady === "function" && window.Reveal.isReady());
         assert.equal(page.url(),`${base}/index.html`,'HTML индекс остаётся открытым');
         assert.equal(new URL(presentation.url()).search,new URL(href).search);
         await presentation.close();
@@ -148,7 +148,7 @@ const server = http.createServer((req,res) => {
         assert.equal(await link.getAttribute('target'),'_blank','Standalone индекс распознаёт URL каталога Reveal');
         assert.equal(await link.evaluate(a=>{ if (!(a instanceof HTMLAnchorElement)) throw Error("Ожидалась HTML ссылка"); return a.href; }),`${standalone}/${suffix}`);
         const nextTab = page.waitForEvent('popup'); await link.click();
-        const presentation = await nextTab; await presentation.waitForFunction(()=>"Reveal" in window && typeof window.Reveal === "object" && window.Reveal !== null && "isReady" in window.Reveal && typeof window.Reveal.isReady === "function" && window.Reveal.isReady());
+        const presentation = await nextTab; await presentation.waitForFunction(()=>"Reveal" in window && ((typeof window.Reveal === "object" && window.Reveal !== null) || typeof window.Reveal === "function") && "isReady" in window.Reveal && typeof window.Reveal.isReady === "function" && window.Reveal.isReady());
         assert.equal(page.url(),`${standalone}/index.html`);
         await presentation.close();
       }

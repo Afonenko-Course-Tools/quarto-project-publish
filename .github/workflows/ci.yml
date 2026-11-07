@@ -30,37 +30,37 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course
-          ref: c950a962a76a26dc61378fdc16bb80533800596e # Core 9.3.4: согласованный provider текущей Java/SP композиции
+          ref: 8aba3b47df161c98645f3fc268adefc2e96ef8d3 # Core 9.3.4: согласованный provider текущей Java/SP композиции
           path: quarto-course
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: 541a44836cf5ec934a101059cbee77c9ff47d134 # QRC 3.2.0: согласованный provider текущей Java/SP композиции
+          ref: 0b62c6501d716a634e0d1e3fcc3d21e41142b5a1 # QRC 3.2.0: согласованный provider текущей Java/SP композиции
           path: quarto-reference-catalog
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-project-download
-          ref: 9e9a55c483d2b547f047a64fdebc5a5b3f379380 # Download 3.5.0: публичные resetDownloadRequests/prepareNativeDownloads
+          ref: a621ec302a701d7409616f47675d2df0afb87aca # Download 3.5.0: публичные resetDownloadRequests/prepareNativeDownloads
           path: quarto-project-download
           persist-credentials: false
       - name: Проверить закреплённые Core и QRC
         run: |
-          test "$(git -C quarto-course rev-parse HEAD)" = "c950a962a76a26dc61378fdc16bb80533800596e"
-          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "541a44836cf5ec934a101059cbee77c9ff47d134"
+          test "$(git -C quarto-course rev-parse HEAD)" = "8aba3b47df161c98645f3fc268adefc2e96ef8d3"
+          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "0b62c6501d716a634e0d1e3fcc3d21e41142b5a1"
       - name: Проверить закреплённый Download
         run: |
           git -C quarto-project-download rev-parse HEAD
-          test "$(git -C quarto-project-download rev-parse HEAD)" = "9e9a55c483d2b547f047a64fdebc5a5b3f379380"
+          test "$(git -C quarto-project-download rev-parse HEAD)" = "a621ec302a701d7409616f47675d2df0afb87aca"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Afonenko-Course-Tools/quarto-course-prairielearn
-          ref: c4a474fa443f6ac7e688c5c2805db0a74b9afbd0 # PL 9.0.7: согласованный публичный inspectPublication; не запуск C CLI
+          ref: 8c1f03fb6f137320f1f7c43cab4122a18a9fa052 # PL 9.0.7: согласованный публичный inspectPublication; не запуск C CLI
           path: quarto-course-prairielearn
           persist-credentials: false
       - name: Проверить закреплённый public validator
-        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "c4a474fa443f6ac7e688c5c2805db0a74b9afbd0"
+        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "8c1f03fb6f137320f1f7c43cab4122a18a9fa052"
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}

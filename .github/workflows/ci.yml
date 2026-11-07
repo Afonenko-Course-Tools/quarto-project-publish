@@ -10,10 +10,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      XDG_CACHE_HOME: ${{ runner.temp }}/course-site-cache
+      XDG_CACHE_HOME: ${{ github.workspace }}/.ci/course-site-cache
       PERFORMANCE: ${{ github.workspace }}/quarto-course-performance
       COURSE_PERFORMANCE_SOURCE: ${{ github.workspace }}/quarto-course-performance
-      LUA_LANGUAGE_SERVER: ${{ runner.temp }}/luals/bin/lua-language-server
+      LUA_LANGUAGE_SERVER: ${{ github.workspace }}/.ci/luals/bin/lua-language-server
     strategy:
       fail-fast: false
       matrix:
@@ -73,7 +73,7 @@ jobs:
       - name: Проверить закреплённый Performance и установить LuaLS
         run: |
           test "$(git -C "$PERFORMANCE" rev-parse HEAD)" = "0781f03a11f461691d7ce116f2c53bb5d8af68d7"
-          bash "$PERFORMANCE/tools/setup-lua-ci.sh" "$RUNNER_TEMP/luals"
+          bash "$PERFORMANCE/tools/setup-lua-ci.sh" "$GITHUB_WORKSPACE/.ci/luals"
       - name: Установить закреплённый ShellCheck
         run: |
           tool_dir="$RUNNER_TEMP/shellcheck-0.11.0"

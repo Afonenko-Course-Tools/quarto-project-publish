@@ -1,3 +1,4 @@
+import { readComposition } from "./results.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   core = Deno.env.get("CORE"),
@@ -6,9 +7,9 @@ const repo = dirname(dirname(fromFileUrl(import.meta.url))),
 if (!core || !qrc || !download) throw Error("Нужны CORE/QRC/DOWNLOAD");
 const root = await Deno.makeTempDir({ prefix: "site-public-operation-" }),
   ext = "_extensions/Afonenko-Course-Tools";
-const assert = (v: unknown, m: string) => {
+function assert(v: unknown, m: string): asserts v {
   if (!v) throw Error(m);
-};
+}
 async function put(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), text);
@@ -29,15 +30,15 @@ try {
       [qrc, "reference-catalog"],
       [download, "project-download"],
       [repo, "course-site"],
-    ]
-  ) await install(source!, name);
+    ] as const
+  ) await install(source, name);
   for (
     const [source, name] of [
       [core, "course-core"],
       [qrc, "reference-catalog"],
       [download, "project-download"],
-    ]
-  ) await install(source!, name, "tasks");
+    ] as const
+  ) await install(source, name, "tasks");
   await put(
     "_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: none\nwebsite:\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks]\nreference-catalog:\n  namespace: portal\n`,
@@ -125,9 +126,11 @@ try {
   const a = await Deno.readFile(archive);
   const runs = join(root, "_generated/course-site/runs");
   const dirs = await Array.fromAsync(Deno.readDir(runs));
-  const composition = JSON.parse(
-    await Deno.readTextFile(join(runs, dirs[0].name, "composition.json")),
-  );
+  const firstRun = dirs[0];
+  assert(firstRun, "Нет сохранённого composition run");
+  const composition = await readComposition(JSON.parse(
+    await Deno.readTextFile(join(runs, firstRun.name, "composition.json")),
+  ));
   assert(
     composition.nativeOperations?.some((item: { project: string }) =>
       item.project === "tasks"

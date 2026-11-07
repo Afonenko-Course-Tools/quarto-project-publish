@@ -10,3 +10,7 @@ node_modules/
 
 # Quarto управляет встроенным Deno; локальная проверка не закрепляет его зависимости.
 /deno.lock
+
+/typecheck/.active-*.json
+
+/.active-types-*.json

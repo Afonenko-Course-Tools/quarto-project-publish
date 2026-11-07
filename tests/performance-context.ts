@@ -1,11 +1,13 @@
+import { fixtureUrl } from "./fixtures.ts";
+import { fromFileUrl } from "stdlib/path";
 import { strict as assert } from 'node:assert';
 import { AsyncLocalStorage } from 'node:async_hooks';
 const root = await Deno.makeTempDir(), key = Symbol.for('course.performance.agent.v1');
-const registry = globalThis as unknown as Record<symbol, unknown>;
-const saved = Deno.env.toObject(), previous = registry[key];
+const registry = globalThis;
+const saved = Deno.env.toObject(), previous: unknown = Reflect.get(registry, key);
 const contexts = new AsyncLocalStorage<string>();
 const calls: Array<{id: string; document_id?: string; attributes?: Record<string, unknown>}> = [];
-const wrap = (spec: typeof calls[number], fn: Function) => (...args: unknown[]) => {
+const wrap = <Args extends unknown[], Result>(spec: typeof calls[number], fn: (...args: Args) => Result) => (...args: Args) => {
   calls.push(spec); return fn(...args);
 };
 try {
@@ -13,7 +15,7 @@ try {
   Deno.env.set('QUARTO', Deno.execPath());
   Deno.env.set('COURSE_PERF_PARENT_SPAN_ID', 'stale-parent');
   Deno.env.set('FUNCTIONAL_INHERITED', 'inherited');
-  registry[key] = {abiVersion: 1, metrics: {
+  Reflect.set(registry, key, {abiVersion: 1, metrics: {
     wrapSync: wrap, wrapAsync: wrap, wrapWalk: wrap,
     childEnv(base: Record<string, string>) {
       const env = {...base};
@@ -22,12 +24,9 @@ try {
       if (parent) env.COURSE_PERF_PARENT_SPAN_ID = parent;
       return env;
     },
-  }};
+  }});
   const {quarto} = await import('../_extensions/course-site/infrastructure/process.ts?context-test');
-  const args = ['eval', `import {ppid} from 'node:process'; console.log(JSON.stringify([
-    Deno.env.get('COURSE_PERF_PARENT_SPAN_ID') ?? null,
-    Deno.env.get('FUNCTIONAL'), Deno.env.get('FUNCTIONAL_INHERITED'),
-    Deno.env.get('QUARTO_PROFILE'), ppid]));`];
+  const args = ["run", "-A", fromFileUrl(fixtureUrl("performance-child.ts"))];
   const env = {FUNCTIONAL: 'keep', QUARTO_PROFILE: 'student'};
   assert.deepEqual(JSON.parse(await quarto(args, root, env)), [null, 'keep', 'inherited', 'student', Deno.pid]);
   const values = await Promise.all(['parent-a', 'parent-b'].map(parent => contexts.run(parent, async () =>
@@ -51,10 +50,12 @@ try {
   assert.match(await Deno.readTextFile(root + '/index.html'), /course-site-navigation/);
   const navigation = calls.filter(call => call.id === 'course-site.infrastructure.navigation.addressNavigation');
   assert.equal(navigation.length, 1);
-  assert.equal(navigation[0].attributes?.extension_id, 'course-site');
-  assert.equal(navigation[0].document_id, undefined, 'batch не выбирает один документ');
+  const batch = navigation[0];
+  assert.ok(batch, 'Нет события navigation batch');
+  assert.equal(batch.attributes?.extension_id, 'course-site');
+  assert.equal(batch.document_id, undefined, 'batch не выбирает один документ');
   // Отсутствующий агент сохраняет native env и результат команды.
-  delete registry[key];
+  Reflect.deleteProperty(registry, key);
   const missing = await import('../_extensions/course-site/infrastructure/process.ts?missing-agent-test');
   assert.deepEqual(JSON.parse(await missing.quarto(args, root, env)), ['stale-parent', 'keep', 'inherited', 'student', Deno.pid]);
   Deno.env.set('COURSE_PERF_MODE', 'off');
@@ -72,6 +73,6 @@ try {
 } finally {
   for (const name of Object.keys(Deno.env.toObject())) if (!(name in saved)) Deno.env.delete(name);
   for (const [name, value] of Object.entries(saved)) Deno.env.set(name, value);
-  if (previous === undefined) delete registry[key]; else registry[key] = previous;
+  if (previous === undefined) Reflect.deleteProperty(registry, key); else Reflect.set(registry, key, previous);
   await Deno.remove(root, {recursive: true});
 }

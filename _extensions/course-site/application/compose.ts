@@ -1,3 +1,6 @@
+import { activeState, compositionRecord, readActiveState } from "./state.ts";
+import { isSibling } from "./sibling-contracts.ts";
+import { isRecord, type NativeConfig } from "../infrastructure/values.ts";
 import { createMetrics as __createMetrics } from "../observability/bridge.ts";
 const __metrics = __createMetrics("course-site");
 import { addressNavigation } from "../infrastructure/navigation.ts";
@@ -35,22 +38,11 @@ function ownerSiblings(root: string) {
   const parts = siblings.split("/");
   return join(root, ...parts.slice(parts.lastIndexOf("_extensions")));
 }
-function module<Name extends keyof SiblingModuleMap>(
+async function module<Name extends keyof SiblingModuleMap>(
   name: Name,
   path: "public.ts",
   owner?: string,
-): Promise<SiblingModuleMap[Name]>;
-// Остальные публичные соседи пока сохраняют прежнюю нетипизированную границу.
-function module(
-  name: "reference-catalog" | "course-navigation",
-  path: "public.ts",
-  owner?: string,
-): Promise<any>;
-async function module(
-  name: string,
-  path: string,
-  owner?: string,
-): Promise<any> {
+): Promise<SiblingModuleMap[Name]> {
   const source = join(owner ? ownerSiblings(owner) : siblings, name, path);
   try {
     await Deno.stat(source);
@@ -69,7 +61,9 @@ async function module(
     );
   }
   // An existing module's initialization/import failure belongs to its owner.
-  return await import(toFileUrl(source).href);
+  const value: unknown = await import(toFileUrl(source).href);
+  if (!isSibling(name, value)) throw diagnostic("SITE.SIBLING_INVALID", "Публичный модуль не содержит требуемых операций", { source, id: name, field: "module" });
+  return value;
 }
 const statePath = (root: string) =>
   join(root, "_generated/course-site/active.json");
@@ -82,18 +76,18 @@ async function remove(path: string) {
 }
 // Core 9 использует native TS по умолчанию. Это только выбор технического
 // маршрута: право на выдачу всё равно подтверждает текущая операция Core.
-function nativeCore(config: any): boolean {
+function nativeCore(config: NativeConfig): boolean {
   if (config["course-core-runtime"] !== undefined) {
     return config["course-core-runtime"] === "native-ts";
   }
-  const filters = Array.isArray(config.filters)
+  const filters: unknown[] = Array.isArray(config.filters)
     ? config.filters
     : [config.filters];
-  return filters.some((filter: any) =>
-    filter === "course-core" || filter?.path === "course-core"
+  return filters.some((filter: unknown) =>
+    filter === "course-core" || isRecord(filter) && filter.path === "course-core"
   );
 }
-function releaseQualification(config: any, root: string) {
+function releaseQualification(config: NativeConfig, root: string) {
   if (config.course && !nativeCore(config)) {
     throw diagnostic(
       "SITE.RELEASE_UNQUALIFIED",
@@ -106,10 +100,10 @@ function releaseQualification(config: any, root: string) {
     (config["course-core-runtime"] !== undefined || nativeCore(config)) &&
     ((config["course-core-runtime"] !== undefined &&
       config["course-core-runtime"] !== "native-ts") ||
-      !["student", "author"].includes(
+      !["student", "author"].some(value => value === (
         config["course-core-projection"] ??
-          (config.course?.view === "full" ? "author" : "student"),
-      ))
+          (config.course?.view === "full" ? "author" : "student")
+      )))
   ) {
     throw diagnostic(
       "SITE.NATIVE_UNQUALIFIED",
@@ -118,7 +112,7 @@ function releaseQualification(config: any, root: string) {
     );
   }
 }
-async function coreHook(root: string, config: any, phase: "pre" | "post") {
+async function coreHook(root: string, config: NativeConfig, phase: "pre" | "post") {
   releaseQualification(config, root);
   if (nativeCore(config)) {
     await quarto(
@@ -132,9 +126,11 @@ async function coreHook(root: string, config: any, phase: "pre" | "post") {
     );
   }
 }
-function projection(config: any): "student" | "author" {
-  return config["course-core-projection"] ??
+function projection(config: NativeConfig): "student" | "author" {
+  const value = config["course-core-projection"] ??
     (config.course?.view === "full" ? "author" : "student");
+  if (value !== "student" && value !== "author") throw diagnostic("SITE.NATIVE_UNQUALIFIED", "Неизвестная проекция Core", { field: "course-core-projection" });
+  return value;
 }
 function catalogCoverage(catalog: NativeCatalog, record: NativeSiteRecord) {
   const documents = catalog.documents;
@@ -203,7 +199,7 @@ async function finalizeDownloads(
 }
 async function finalizeDownloadsImpl(
   root: string,
-  config: any,
+  config: NativeConfig,
   record: NativeSiteRecord,
   baseUrl: string | undefined,
   referenceCatalog: unknown,
@@ -261,7 +257,7 @@ async function finalizeDownloadsImpl(
   }
 }
 
-export async function pre(root = Deno.cwd()): Promise<void> {
+async function preImpl(root = Deno.cwd()): Promise<void> {
   const state = statePath(root);
   await safePath(root, state);
   await Deno.mkdir(dirname(state), { recursive: true });
@@ -419,12 +415,12 @@ export async function pre(root = Deno.cwd()): Promise<void> {
       files: collected.files,
       selectedSources: plan.selectedSources,
     };
-    records.push({ project, config, record });
+    records.push(compositionRecord(project, config, record, plan.selectedSources));
   }
-  await Deno.writeTextFile(state, JSON.stringify({ ws, records, run }));
+  await Deno.writeTextFile(state, JSON.stringify(activeState(ws, records, run)));
   await coreHook(root, ws.config, "pre");
 }
-export async function post(root = Deno.cwd()): Promise<void> {
+async function postImpl(root = Deno.cwd()): Promise<void> {
   const state = statePath(root);
   if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
     const ws = await workspace(root);
@@ -443,10 +439,10 @@ export async function post(root = Deno.cwd()): Promise<void> {
         stage: ws.output,
         quarto: ws.quartoVersion,
         config: ws.config,
-        members: [{
+        members: ws.config["reference-catalog"].namespace ? [{
           namespace: ws.config["reference-catalog"].namespace,
           format: "html",
-        }],
+        }] : [],
         scope: "local",
         outputs,
       });
@@ -469,7 +465,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
     );
     return;
   }
-  const { ws, records, run } = JSON.parse(await Deno.readTextFile(state));
+  const { ws, records, run } = readActiveState(JSON.parse(await Deno.readTextFile(state)), root);
   await remove(state);
   if (
     ws.root !== root ||
@@ -500,13 +496,13 @@ export async function post(root = Deno.cwd()): Promise<void> {
   }
   const rootOutputs = await publicOutputs(root, ws.output),
     rootFiles = await files(ws.output);
-  const outputs = [...rootOutputs], searchIndexes: any[] = [];
+  const outputs = [...rootOutputs], searchIndexes: NonNullable<Parameters<SiblingModuleMap["reference-catalog"]["publishReferenceCatalog"]>[0]["searchIndexes"]> = [];
   const rootSearch = join(ws.output, "search.json");
   if (rootFiles.includes(rootSearch)) {
     searchIndexes.push({ path: rootSearch, mount: "" });
   }
   const nativeOperations: (NonNullable<Awaited<ReturnType<typeof finalizeDownloads>>> & { project: string })[] = [];
-  const members = [];
+  const members: Parameters<SiblingModuleMap["reference-catalog"]["publishReferenceCatalog"]>[0]["members"] = [];
   for (const { project, config, record } of records) {
     const mount = join(ws.output, project.mount);
     if (rootFiles.some((path: string) => inside(mount, path))) {
@@ -536,9 +532,10 @@ export async function post(root = Deno.cwd()): Promise<void> {
         mount: project.mount,
       });
     }
-    if (config["reference-catalog"]) {
+    const namespace = config["reference-catalog"]?.namespace;
+    if (namespace) {
       members.push({
-        namespace: config["reference-catalog"].namespace,
+        namespace,
         format: record.nativeOutputs.some((path: string) =>
             path.endsWith(".html")
           )
@@ -576,9 +573,9 @@ export async function post(root = Deno.cwd()): Promise<void> {
       title: ws.config.website?.title || "Курс",
       members: [
         { id: "root", mount: "", title: ws.config.website?.title || "Курс" },
-        ...records.filter(({ record }: any) =>
+        ...records.filter(({ record }) =>
           record.nativeOutputs.some((path: string) => path.endsWith(".html"))
-        ).map(({ project, config }: any) => ({
+        ).map(({ project, config }) => ({
           id: project.id,
           mount: project.mount,
           title: config.book?.title || config.website?.title || project.mount,
@@ -598,7 +595,7 @@ export async function post(root = Deno.cwd()): Promise<void> {
   const baseUrl = ws.config.website?.["site-url"] ||
     ws.config["course-navigation"]?.["course-url"];
   const catalogPath = join(ws.output, "reference-catalog.json");
-  const referenceCatalog = ws.config["reference-catalog"]
+  const referenceCatalog: unknown = ws.config["reference-catalog"]
     ? JSON.parse(await Deno.readTextFile(catalogPath))
     : undefined;
   for (const { project, config, record } of records) {
@@ -638,18 +635,16 @@ export async function post(root = Deno.cwd()): Promise<void> {
       outputs,
       searchIndexes,
       nativeOperations,
-      projects: records.map((r: any) => r.project.id),
+      projects: records.map((r) => r.project.id),
     }),
   );
 }
 
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-pre = __metrics.wrapAsync({
+export const pre = __metrics.wrapAsync({
   id: "course-site.application.compose.pre",
   kind: "phase",
-}, pre);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-post = __metrics.wrapAsync({
+}, preImpl);
+export const post = __metrics.wrapAsync({
   id: "course-site.application.compose.post",
   kind: "phase",
-}, post);
+}, postImpl);

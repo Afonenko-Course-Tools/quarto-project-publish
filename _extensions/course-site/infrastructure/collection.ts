@@ -1,3 +1,4 @@
+import { isRecord, isStrings } from "./values.ts";
 import {createMetrics as __createMetrics} from "../observability/bridge.ts";
 const __metrics=__createMetrics("course-site");
 import { addressNavigation } from "./navigation.ts";
@@ -11,7 +12,7 @@ export interface Record {
   nativeOutputs: string[];
   files: string[];
 }
-export async function publicOutputs(
+async function publicOutputsImpl(
   root: string,
   outputDir: string,
 ): Promise<string[]> {
@@ -74,7 +75,7 @@ export async function publicOutputs(
   }
   return outputs;
 }
-export async function collect(): Promise<void> {
+async function collectImpl(): Promise<void> {
   const destination = Deno.env.get("COURSE_SITE_COLLECTION");
   if (
     !destination && !Deno.env.has("QUARTO_PROJECT_OUTPUT_FILES") &&
@@ -96,8 +97,16 @@ export async function collect(): Promise<void> {
   const nativeOutputs = await publicOutputs(root, outputDir);
   await addressNavigation(outputDir, nativeOutputs);
   if (!destination) return;
+  const id = Deno.env.get("COURSE_SITE_PROJECT");
+  if (!id) {
+    throw diagnostic("SITE.COLLECTION_INVALID", "Не задан идентификатор текущего компонента", {
+      source: root,
+      field: "COURSE_SITE_PROJECT",
+      hint: "В композиции Publisher задаёт идентификатор автоматически.",
+    });
+  }
   const record: Record = {
-    id: Deno.env.get("COURSE_SITE_PROJECT")!,
+    id,
     projectRoot: root,
     outputDir,
     profiles: (Deno.env.get("QUARTO_PROFILE") || "").split(",").filter(Boolean),
@@ -106,7 +115,7 @@ export async function collect(): Promise<void> {
   };
   await Deno.writeTextFile(destination, JSON.stringify(record));
 }
-export async function readCollection(
+async function readCollectionImpl(
   path: string,
   id: string,
   projectRoot: string,
@@ -116,7 +125,7 @@ export async function readCollection(
   // defaults/groups; only explicitly requested profiles are known beforehand.
   nativeProfileContext = false,
 ): Promise<Record> {
-  let value: any;
+  let value: unknown;
   try {
     value = JSON.parse(await Deno.readTextFile(path));
   } catch (cause) {
@@ -140,10 +149,10 @@ export async function readCollection(
     );
   }
   if (
-    value.id !== id || value.projectRoot !== projectRoot ||
+    !isRecord(value) || value.id !== id || value.projectRoot !== projectRoot ||
     value.outputDir !== outputDir ||
-    !Array.isArray(value.profiles) ||
-    value.profiles.some((profile: any) =>
+    !isStrings(value.profiles) ||
+    value.profiles.some((profile: unknown) =>
       typeof profile !== "string" || !/^[\w][\w.-]*$/.test(profile)
     ) || new Set(value.profiles).size !== value.profiles.length ||
     JSON.stringify(
@@ -153,7 +162,8 @@ export async function readCollection(
           )
           : value.profiles,
       ) !== JSON.stringify(profiles) ||
-    !Array.isArray(value.nativeOutputs) || !Array.isArray(value.files)
+    !isStrings(value.nativeOutputs) ||
+    !isStrings(value.files)
   ) {
     throw diagnostic(
       "SITE.COLLECTION_INVALID",
@@ -167,7 +177,8 @@ export async function readCollection(
       },
     );
   }
-  for (const path of [...value.nativeOutputs, ...value.files]) {
+  const current = { id, projectRoot, outputDir, profiles: value.profiles, nativeOutputs: value.nativeOutputs, files: value.files };
+  for (const path of [...current.nativeOutputs, ...current.files]) {
     within(outputDir, path);
     await safePath(projectRoot, path);
     let stat: Deno.FileInfo;
@@ -201,12 +212,9 @@ export async function readCollection(
       );
     }
   }
-  return value;
+  return current;
 }
 
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-publicOutputs=__metrics.wrapAsync({id:"course-site.infrastructure.collection.publicOutputs",kind:"io"},publicOutputs);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-collect=__metrics.wrapAsync({id:"course-site.infrastructure.collection.collect",kind:"io"},collect);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-readCollection=__metrics.wrapAsync({id:"course-site.infrastructure.collection.readCollection",kind:"io"},readCollection);
+export const publicOutputs = __metrics.wrapAsync({id:"course-site.infrastructure.collection.publicOutputs",kind:"io"},publicOutputsImpl);
+export const collect = __metrics.wrapAsync({id:"course-site.infrastructure.collection.collect",kind:"io"},collectImpl);
+export const readCollection = __metrics.wrapAsync({id:"course-site.infrastructure.collection.readCollection",kind:"io"},readCollectionImpl);

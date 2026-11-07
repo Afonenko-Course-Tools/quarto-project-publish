@@ -1,7 +1,7 @@
 import {cleanOutput} from "../_extensions/course-site/infrastructure/files.ts";
 import {join} from "stdlib/path";
 const root=await Deno.makeTempDir({prefix:"publisher-release-"}),output=join(root,"_site");
-const assert=(v:unknown,m:string)=>{if(!v)throw Error(m)};
+function assert(v: unknown, m: string): asserts v { if (!v) throw Error(m); }
 async function write(path:string,text="данные"){await Deno.mkdir(path.substring(0,path.lastIndexOf("/")),{recursive:true});await Deno.writeTextFile(path,text)}
 async function rejects(path:string,resources:string[]=[]){await write(join(output,path));let error;try{await cleanOutput(root,output,resources)}catch(e){error=e}assert(error,"Разрешена опасная очистка: "+path);assert(await Deno.stat(join(output,path)),"Удалён исходник");await Deno.remove(join(output,path));}
 try {

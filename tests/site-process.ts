@@ -1,3 +1,4 @@
+import { fixture, fixtureImports } from "./fixtures.ts";
 import { assert, assertEquals } from "./support.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { quarto } from "../_extensions/course-site/infrastructure/process.ts";
@@ -7,46 +8,23 @@ const actualQuarto = Deno.env.get("QUARTO") || "quarto";
 try {
   const missing = "/nonexistent/final-review-quarto";
   Deno.env.set("QUARTO", missing);
-  let startupFailure:
-    | Error & {
-      tool: string;
-      exitCode: number | null;
-      stdout: string;
-      stderr: string;
-      forwarded: boolean;
-    }
-    | undefined;
+  let startupFailure: unknown;
   try {
     await quarto(["inspect", root], root);
   } catch (error) {
     assert(error instanceof Error);
-    startupFailure = error as typeof startupFailure;
+    startupFailure = error;
   }
-  assert(startupFailure, "missing executable did not fail");
+  assert(startupFailure instanceof Error, "missing executable did not fail");
+  assert("tool" in startupFailure && "exitCode" in startupFailure && "stdout" in startupFailure && "stderr" in startupFailure && "forwarded" in startupFailure);
   assert(
     startupFailure.cause instanceof Deno.errors.NotFound,
     "lost operational NotFound cause",
   );
   const startup = join(root, "startup.ts");
-  await Deno.writeTextFile(
-    startup,
-    `import {quarto} from ${
-      JSON.stringify(
-        `file://${repo}/_extensions/course-site/infrastructure/process.ts`,
-      )
-    };
-import {runHook} from ${
-      JSON.stringify(
-        `file://${repo}/_extensions/course-site/infrastructure/diagnostics.ts`,
-      )
-    };
-await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
-      JSON.stringify(root)
-    }));
-`,
-  );
+  await Deno.writeTextFile(startup, await fixture("process-hook.ts", fixtureImports));
   const startupResult = await new Deno.Command(actualQuarto, {
-    args: ["run", startup],
+    args: ["run", startup, root, "inspect"],
     env: { QUARTO: missing },
     stdout: "piped",
     stderr: "piped",
@@ -74,14 +52,11 @@ await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
     `expected failure leaked wrapper stack: ${startupText}`,
   );
   const fake = join(root, "fake-quarto");
-  await Deno.writeTextFile(
-    fake,
-    '#!/bin/sh\nprintf "CHILD_STDOUT_SENTINEL\\n"\nprintf "CHILD_STDERR_SENTINEL FOREIGN.ID\\n" >&2\nexit 23\n',
-  );
+  await Deno.writeTextFile(fake, await fixture("native-failure.sh"));
   await Deno.chmod(fake, 0o755);
   Deno.env.set("QUARTO", fake);
   try {
-    await quarto(null as unknown as string[], root);
+    await Reflect.apply(quarto, undefined, [null, root]);
     throw new Error("expected invalid internal argument");
   } catch (error) {
     assert(error instanceof Error);
@@ -93,13 +68,8 @@ await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
     throw new Error("expected child failure");
   } catch (error) {
     assert(error instanceof Error);
-    const failure = error as Error & {
-      tool: string;
-      exitCode: number;
-      stdout: string;
-      stderr: string;
-      forwarded: boolean;
-    };
+    const failure = error;
+    assert("tool" in failure && "exitCode" in failure && "stdout" in failure && "stderr" in failure && "forwarded" in failure);
     assertEquals(failure.name, "ExternalToolFailure");
     assertEquals(failure.tool, fake);
     assertEquals(failure.exitCode, 23);
@@ -111,22 +81,9 @@ await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
   Deno.env.set("QUARTO", actualQuarto);
   for (const forward of [false, true]) {
     const script = join(root, `forward-${forward}.ts`);
-    await Deno.writeTextFile(
-      script,
-      `import {quarto} from ${
-        JSON.stringify(
-          `file://${repo}/_extensions/course-site/infrastructure/process.ts`,
-        )
-      };\nimport {runHook} from ${
-        JSON.stringify(
-          `file://${repo}/_extensions/course-site/infrastructure/diagnostics.ts`,
-        )
-      };\nawait runHook(() => quarto(["render", "."], ${
-        JSON.stringify(root)
-      }, {}, ${forward}));\n`,
-    );
+    await Deno.writeTextFile(script, await fixture("process-hook.ts", fixtureImports));
     const result = await new Deno.Command(actualQuarto, {
-      args: ["run", script],
+      args: ["run", script, root, "render", String(forward)],
       env: { QUARTO: fake },
       stdout: "piped",
       stderr: "piped",
@@ -139,14 +96,7 @@ await runHook(() => quarto(["inspect", ${JSON.stringify(root)}], ${
     assert(!text.includes("SITE."), `foreign ID was reclassified: ${text}`);
   }
   const unknown = join(root, "unknown.ts");
-  await Deno.writeTextFile(
-    unknown,
-    `import {runHook} from ${
-      JSON.stringify(
-        `file://${repo}/_extensions/course-site/infrastructure/diagnostics.ts`,
-      )
-    };\nfunction internalFailure() { throw new Error("INTERNAL_STACK_SENTINEL"); }\nawait runHook(async () => internalFailure());\n`,
-  );
+  await Deno.writeTextFile(unknown, await fixture("unknown.ts", fixtureImports));
   const result = await new Deno.Command(actualQuarto, {
     args: ["run", unknown],
     stdout: "piped",

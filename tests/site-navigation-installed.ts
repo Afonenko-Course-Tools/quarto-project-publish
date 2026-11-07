@@ -1,3 +1,4 @@
+import { loadSite } from "./results.ts";
 import { strict as assert } from "node:assert";
 import { cp } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
@@ -9,7 +10,7 @@ try {
   await cp(new URL("../_extensions/course-site/", import.meta.url), extension, {
     recursive: true,
   });
-  const { addressNavigation } = await import(
+  const { addressNavigation } = await loadSite("navigation",
     pathToFileURL(`${extension}/infrastructure/navigation.ts`).href
   );
   const output = `${root}/_site`;

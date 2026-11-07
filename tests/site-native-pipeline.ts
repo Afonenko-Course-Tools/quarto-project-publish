@@ -1,3 +1,5 @@
+import { fixture, fixtureImports } from "./fixtures.ts";
+import { readComposition } from "./results.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   core = Deno.env.get("CORE"),
@@ -7,9 +9,9 @@ if (!core || !qrc || !download) throw Error("Нужны CORE/QRC/DOWNLOAD");
 const mutant = Deno.args[0];
 const root = await Deno.makeTempDir({ prefix: "site-native-pipeline-" }),
   ext = "_extensions/Afonenko-Course-Tools";
-const assert = (v: unknown, m: string) => {
+function assert(v: unknown, m: string): asserts v {
   if (!v) throw Error(m);
-};
+}
 async function put(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), text);
@@ -31,15 +33,15 @@ try {
       [download, "project-download"],
       [repo, "course-site"],
       [core, "course-navigation"],
-    ]
-  ) await install(source!, name);
+    ] as const
+  ) await install(source, name);
   for (
     const [source, name] of [
       [core, "course-core"],
       [qrc, "reference-catalog"],
       [download, "project-download"],
-    ]
-  ) await install(source!, name, "tasks");
+    ] as const
+  ) await install(source, name, "tasks");
   await put(
     "_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks, book]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
@@ -101,21 +103,12 @@ try {
   await put("book/index.qmd", "# Книга\n");
   await put("book/chapter.qmd", "# Native глава\n");
   if (mutant) {
-    await put(
-      "mutate-selection.ts",
-      `const path="_generated/course-site/active.json";const state=JSON.parse(await Deno.readTextFile(path));
-      const mode=${JSON.stringify(mutant)};
-      if(mode==="root-missing") state.ws.selectedSources=[];
-      else if(mode==="missing") state.records[0].record.selectedSources.pop();
-      else if(mode==="unexpected") state.records[0].record.selectedSources.push("foreign.qmd");
-      else throw Error("Неизвестный mutant");
-      await Deno.writeTextFile(path,JSON.stringify(state));`,
-    );
+    await put("mutate-selection.ts", await fixture("mutate-selection.ts", fixtureImports));
     await put(
       "_quarto.yml",
       (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
         "post-render: [quarto run",
-        "post-render: [quarto run mutate-selection.ts, quarto run",
+        `post-render: [quarto run mutate-selection.ts ${mutant}, quarto run`,
       ),
     );
   }
@@ -211,29 +204,32 @@ try {
     const a = await Deno.readFile(archive);
     const runs = join(root, "_generated/course-site/runs");
     const dirs = await Array.fromAsync(Deno.readDir(runs));
-    const composition = JSON.parse(
-      await Deno.readTextFile(join(runs, dirs[0].name, "composition.json")),
-    );
+    const firstRun = dirs[0];
+    assert(firstRun, "Нет сохранённого composition run");
+    const composition = await readComposition(JSON.parse(
+      await Deno.readTextFile(join(runs, firstRun.name, "composition.json")),
+    ));
     assert(
       composition.nativeOperations?.some((item: { project: string }) =>
         item.project === "tasks"
       ),
       "Publisher не проверил actual public operation",
     );
-    const native = composition.nativeOperations.find((item: any) =>
+    const native = composition.nativeOperations.find((item) =>
       item.project === "tasks"
     );
+    assert(native, "Нет current tasks publication");
     assert(
       native.catalog.documents.length === 3,
       "Неполный независимый child source set",
     );
     assert(
-      native.catalog.documents.find((d: any) => d.source === "talk.qmd")
+      native.catalog.documents.find((d) => d.source === "talk.qmd")
         ?.format === "revealjs",
       "Потерян actual native format",
     );
     assert(
-      composition.nativeOperations.some((item: any) => item.project === "root"),
+      composition.nativeOperations.some((item) => item.project === "root"),
       "Нет независимого root Core coverage",
     );
     const observations = Deno.env.get("PUBLISHER_PIPELINE_OBSERVATIONS");

@@ -1,26 +1,11 @@
+import { fixture, fixtureImports } from "./fixtures.ts";
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
 const root = await Deno.makeTempDir({ prefix: "publisher-live-" });
-const assert = (value: unknown, message: string) => { if (!value) throw Error(message); };
+function assert(value: unknown, message: string): asserts value { if (!value) throw Error(message); }
 const tool = root + "/quarto-fixture.sh", runner = root + "/runner.ts";
-const module = new URL("../_extensions/course-site/infrastructure/process.ts", import.meta.url).href;
-await Deno.writeTextFile(tool, `#!/usr/bin/bash
-set -eu
-if [[ "$1" == json ]]; then
-  printf '{"native":"точный JSON"}\\n'
-  printf 'JSON_WARNING\\n' >&2
-  exit 0
-fi
-printf 'OUT_FIRST\\n'
-printf 'ERR_FIRST\\n' >&2
-while [[ ! -f "$LIVE_GATE" ]]; do sleep 0.02; done
-printf 'OUT_LAST\\n'
-printf 'ERR_LAST\\n' >&2
-if [[ "$1" == fail ]]; then exit 9; fi
-`);
+await Deno.writeTextFile(tool, await fixture("live-tool.sh"));
 await Deno.chmod(tool, 0o700);
-await Deno.writeTextFile(runner, `import {quarto} from ${JSON.stringify(module)};
-try { const result=await quarto([Deno.args[0]], Deno.cwd(), {}, Deno.args[0]!=="json"); console.log("RESULT:"+JSON.stringify({result})); }
-catch(e) { console.log("RESULT:"+JSON.stringify({name:e.name,tool:e.tool,exitCode:e.exitCode,stdout:e.stdout,stderr:e.stderr,forwarded:e.forwarded,causeCode:e.cause?.code,causeSuccess:e.cause?.success})); }
-`);
+await Deno.writeTextFile(runner, await fixture("live-runner.ts", fixtureImports));
 async function trial(mode: string) {
   const gate = root + "/" + mode + ".gate";
   const child = new Deno.Command(Deno.execPath(), {
@@ -52,9 +37,11 @@ async function trial(mode: string) {
   assert(status.success, "Процесс проверки не завершился");
   const resultLine = stdout.split("\n").find((line) => line.startsWith("RESULT:"));
   assert(resultLine, "Отсутствует результат helper");
-  return { mode, earlyOut, earlyErr, stdout, stderr, result: JSON.parse(resultLine!.slice(7)) };
+  const parsed: unknown = JSON.parse(resultLine!.slice(7));
+  const result = record(parsed, runner, "helper");
+  return { mode, earlyOut, earlyErr, stdout, stderr, result };
 }
-const observations: any[] = [];
+const observations: Awaited<ReturnType<typeof trial>>[] = [];
 const save = async () => { const path=Deno.env.get("PUBLISHER_PROCESS_OBSERVATIONS"); if(path) await Deno.writeTextFile(path, JSON.stringify(observations,null,2)+"\n"); };
 try {
   const live = await trial("render"); observations.push(live); await save();

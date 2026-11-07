@@ -1,3 +1,5 @@
+import { fixture } from "./fixtures.ts";
+import { loadSite } from "./results.ts";
 import { assert, assertEquals, assertRejects } from "./support.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
@@ -16,7 +18,7 @@ try {
     stderr: "piped",
   }).output();
   assert(add.success);
-  const { pre } = await import(
+  const { pre } = await loadSite("compose",
     `file://${root}/_extensions/course-site/application/compose.ts`
   );
   Deno.env.delete("QUARTO_PROJECT_RENDER_ALL");
@@ -30,16 +32,14 @@ try {
     "_extensions/project-download/public.ts",
   );
   await Deno.mkdir(dirname(source), { recursive: true });
-  await Deno.writeTextFile(
-    source,
-    'export function resetDownloadRequests() { const error = new Error("CORE_SENTINEL", {cause: "original"}); error.name = "ExtensionDiagnostic"; Object.assign(error, {code: "CORE.SENTINEL"}); throw error; }\n',
-  );
+  await Deno.writeTextFile(source, await fixture("download-sentinel.ts"));
   try {
     await pre(root);
     throw new Error("expected foreign error");
   } catch (error) {
     assert(error instanceof Error);
-    assertEquals((error as Error & { code: string }).code, "CORE.SENTINEL");
+    assert("code" in error);
+    assertEquals(error.code, "CORE.SENTINEL");
     assertEquals(error.cause, "original");
     assert(!error.message.includes("SITE.SIBLING_MISSING"));
     assert(error.stack?.includes("resetDownloadRequests"));
@@ -57,11 +57,8 @@ try {
     "_extensions/reference-catalog/public.ts",
   );
   await Deno.mkdir(dirname(qrc), { recursive: true });
-  await Deno.writeTextFile(
-    qrc,
-    'throw new Error("INITIALIZATION_SENTINEL", {cause: "module cause"});\n',
-  );
-  const { post } = await import(
+  await Deno.writeTextFile(qrc, await fixture("initialization-sentinel.ts"));
+  const { post } = await loadSite("compose",
     `file://${root}/_extensions/course-site/application/compose.ts`
   );
   try {

@@ -1,0 +1,4 @@
+#!/bin/sh
+printf 'CHILD_STDOUT_SENTINEL\n'
+printf 'CHILD_STDERR_SENTINEL FOREIGN.ID\n' >&2
+exit 23

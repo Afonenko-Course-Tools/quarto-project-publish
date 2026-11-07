@@ -1,3 +1,4 @@
+import { readComposition, loadCore } from "./results.ts";
 // Ломается при смешении owner/source identity, утрате native metadata/project origins,
 // student/full ресурсов или при обходе Publisher source-containment guard.
 import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
@@ -156,27 +157,30 @@ for (const view of ["student", "full"]) {
   );
   const fresh = runs.filter((r) => !prior.has(r.name));
   assertEquals(fresh.length, 1);
-  const composition = JSON.parse(
+  const currentRun = fresh[0];
+  assert(currentRun, "Нет нового composition run");
+  const composition = await readComposition(JSON.parse(
     await Deno.readTextFile(
       join(
         root,
         "_generated/course-site/runs",
-        fresh[0].name,
+        currentRun.name,
         "composition.json",
       ),
     ),
-  );
-  assertEquals(composition.nativeOperations.map((r: any) => r.project).sort(), [
+  ));
+  assertEquals(composition.nativeOperations.map((r) => r.project).sort(), [
     "nested/second",
     "part",
     "root",
   ]);
   const operationIds = [];
   for (const [i, owner] of owners.entries()) {
-    const release = composition.nativeOperations.find((row: any) =>
+    const release = composition.nativeOperations.find((row) =>
       row.project === (owner || "root")
     );
-    assertEquals(release.catalog.documents.map((d: any) => d.source), [
+    assert(release, "Нет current owner publication");
+    assertEquals(release.catalog.documents.map((d) => d.source), [
       "index.qmd",
     ]);
     assertEquals(release.course, {
@@ -186,7 +190,7 @@ for (const view of ["student", "full"]) {
     });
     operationIds.push(release.catalog.identity.operation);
     const ownerRoot = join(root, owner);
-    const Core = await import(
+    const Core = await loadCore(
       toFileUrl(
         join(ownerRoot, "_extensions", namespace, "course-core/public.ts"),
       ).href
@@ -196,27 +200,37 @@ for (const view of ["student", "full"]) {
       profiles: [view],
       projection: view === "full" ? "author" : "student",
       outputDirectory: join(ownerRoot, `_output-${view}`),
-    }, async (op: any) => {
+    }, async (op) => {
       const doc = op.document({ source: "index.qmd" });
       assertEquals(doc.context.input, "index.qmd");
-      assertEquals(doc.definitions[`exr-${ids[i]}`].project, "/projects/demo");
-      assertEquals(doc.definitions[`exr-${ids[i]}`]["project-check"], "junit");
+      const definition = doc.definitions[`exr-${ids[i]}`];
+      assert(definition, "Нет определения текущего упражнения");
+      assertEquals(definition.project, "/projects/demo");
+      assertEquals(definition["project-check"], "junit");
       await op.withProjectContexts([{
         owner: ownerRoot,
         directories: ["projects/demo"],
         profiles: [view],
         format: "html",
-      }], async (batch: any) => {
-        const context = batch.groups[0].contexts[0];
+      }], async (batch) => {
+        const group = batch.groups[0];
+        assert(group, "Нет группы project contexts");
+        const context = group.contexts[0];
+        assert(context, "Нет текущего project context");
         assertEquals(context.owner, ownerRoot);
         assertEquals(context.input, join(ownerRoot, "projects/demo"));
+        assert(context.contract.starter, "Нет author-declared starter");
         assertEquals(context.contract.starter.path, join(context.input, "student"));
+        const reference = context.contract.solutions.reference;
+        assert(reference, "Нет reference solution");
         assertEquals(
-          context.contract.solutions.reference.path,
+          reference.path,
           join(context.input, "reference"),
         );
+        const publicFile = context.contract.build.files["Public.java"];
+        assert(publicFile, "Нет Public.java в build contract");
         assertEquals(
-          context.contract.build.files["Public.java"].path,
+          publicFile.path,
           join(ownerRoot, "common/Public.java"),
         );
         const plan = await Core.planProject(context, {
@@ -233,7 +247,7 @@ for (const view of ["student", "full"]) {
         );
         const files = new Map(
           inventory.files.map((
-            f: any,
+            f,
           ) => [f.target, new TextDecoder().decode(f.bytes)]),
         );
         assert(

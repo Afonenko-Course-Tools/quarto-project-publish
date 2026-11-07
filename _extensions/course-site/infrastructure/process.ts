@@ -1,11 +1,11 @@
 import {createMetrics as __createMetrics} from "../observability/bridge.ts";
 const __metrics=__createMetrics("course-site");
-export function executable(): string {
+function executableImpl(): string {
   return Deno.env.get("QUARTO") || "quarto";
 }
 async function liveOutput(command: Deno.Command): Promise<Deno.CommandOutput> {
   const child = command.spawn();
-  const chunks: Uint8Array[][] = [[], []];
+  const chunks: [Uint8Array[], Uint8Array[]] = [[], []];
   let forwardingError: unknown;
   const pump = async (
     stream: ReadableStream<Uint8Array>,
@@ -40,7 +40,9 @@ async function liveOutput(command: Deno.Command): Promise<Deno.CommandOutput> {
   ]);
   for (const result of results) if (result.status === "rejected") throw result.reason;
   if (forwardingError !== undefined) throw forwardingError;
-  const status = (results[2] as PromiseFulfilledResult<Deno.CommandStatus>).value;
+  const statusResult = results[2];
+  if (statusResult.status === "rejected") throw statusResult.reason;
+  const status = statusResult.value;
   const concatenate = (parts: Uint8Array[]) => {
     const value = new Uint8Array(parts.reduce((size, part) => size + part.length, 0));
     let offset = 0;
@@ -49,7 +51,7 @@ async function liveOutput(command: Deno.Command): Promise<Deno.CommandOutput> {
   };
   return { ...status, stdout: concatenate(chunks[0]), stderr: concatenate(chunks[1]) };
 }
-export async function quarto(
+async function quartoImpl(
   args: string[],
   cwd: string,
   env: Record<string, string> = {},
@@ -110,13 +112,10 @@ export async function quarto(
   }
   return out;
 }
-export function profileArguments(profiles: string[]): string[] {
+function profileArgumentsImpl(profiles: string[]): string[] {
   return profiles.length ? ["--profile", profiles.join(",")] : [];
 }
 
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-executable=__metrics.wrapSync({id:"course-site.infrastructure.process.executable",kind:"command"},executable);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-quarto=__metrics.wrapAsync({id:"course-site.infrastructure.process.quarto",kind:"command"},quarto);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-profileArguments=__metrics.wrapSync({id:"course-site.infrastructure.process.profileArguments",kind:"command"},profileArguments);
+export const executable = __metrics.wrapSync({id:"course-site.infrastructure.process.executable",kind:"command"},executableImpl);
+export const quarto = __metrics.wrapAsync({id:"course-site.infrastructure.process.quarto",kind:"command"},quartoImpl);
+export const profileArguments = __metrics.wrapSync({id:"course-site.infrastructure.process.profileArguments",kind:"command"},profileArgumentsImpl);

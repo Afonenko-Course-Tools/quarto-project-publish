@@ -1,3 +1,5 @@
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
+import { readComposition } from "./results.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
@@ -88,18 +90,19 @@ try {
   for await (const directory of Deno.readDir(runs)) {
     for await (const entry of Deno.readDir(join(runs, directory.name))) {
       if (entry.name.endsWith("-0.json")) {
-        const collection = JSON.parse(
+        const collectionValue: unknown = JSON.parse(
           await Deno.readTextFile(join(runs, directory.name, entry.name)),
         );
-        assertEquals(collection.profiles, profiles);
+        assertEquals(record(collectionValue, root, "collection").profiles, profiles);
         collections++;
       }
       if (entry.name === "composition.json") {
-        const composition = JSON.parse(
+        const composition = await readComposition(JSON.parse(
           await Deno.readTextFile(join(runs, directory.name, entry.name)),
-        );
+        ));
         assertEquals(composition.nativeOperations.length, 1);
         const release = composition.nativeOperations[0];
+        assert(release, "Нет native operation ребёнка");
         assertEquals(release.project, "core");
         assertEquals(release.catalog.identity.profiles, profiles);
         assertEquals(release.course.id, "lesson");

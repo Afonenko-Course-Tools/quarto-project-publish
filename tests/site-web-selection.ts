@@ -1,3 +1,6 @@
+import { fixture } from "./fixtures.ts";
+import { record } from "../_extensions/course-site/infrastructure/values.ts";
+import { readCommandEvent } from "./results.ts";
 import { commandProbe } from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -38,7 +41,7 @@ try {
   );
   await write(
     "a/slides/count.lua",
-    'function Pandoc(doc) local file = assert(io.open(os.getenv("COURSE_FORMAT_COUNTS"), "a")); file:write(pandoc.utils.stringify(doc.meta.title) .. ":" .. quarto.format.format_identifier()["target-format"] .. "\\n"); file:close() end\n',
+    await fixture("count-formats.lua"),
   );
   await write(
     "a/slides/index.qmd",
@@ -63,14 +66,18 @@ try {
     .split("\n").sort();
   assertEquals(counts, ["Notes:gfm", "Notes:html", "Slides:revealjs", "Website:html"]);
   const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
-    .split("\n").map((line) => JSON.parse(line));
+    .split("\n").map((line) => readCommandEvent(JSON.parse(line)));
   const childRenders = trace.filter((row) => row.kind === "render");
   assertEquals(childRenders.length, 1);
-  assertEquals(childRenders[0].args, ["render", "."]);
+  const childRender = childRenders[0];
+  assert(childRender, "Нет child render");
+  assertEquals(childRender.args, ["render", "."]);
   assert(
-    trace.filter((row) => row.kind === "inspect").every((row) =>
-      !row.args[1].endsWith(".qmd")
-    ),
+    trace.filter((row) => row.kind === "inspect").every((row) => {
+      const input = row.args[1];
+      assert(input !== undefined, "Нет пути inspect");
+      return !input.endsWith(".qmd");
+    }),
     "Возвращён document inspect fanout",
   );
   const webpage = await Deno.readTextFile(
@@ -91,10 +98,11 @@ try {
     ),
     "root link unresolved",
   );
-  const catalog = JSON.parse(
+  const catalog: unknown = JSON.parse(
     await Deno.readTextFile(join(root, "_site/reference-catalog.json")),
   );
-  assertEquals(catalog.targets["talk:sec-slide"].page, "a/slides/talk.html");
+  const targets = record(record(catalog, root, "catalog").targets, root, "targets");
+  assertEquals(record(targets["talk:sec-slide"], root, "target").page, "a/slides/talk.html");
   const markdown = await Deno.readTextFile(
     join(root, "_site/a/slides/notes.md"),
   );

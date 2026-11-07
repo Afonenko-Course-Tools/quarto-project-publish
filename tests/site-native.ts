@@ -1,3 +1,5 @@
+import { fixture } from "./fixtures.ts";
+import { readCommandEvent } from "./results.ts";
 import {commandProbe} from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
@@ -88,7 +90,7 @@ await run(["add", repo, "--no-prompt"]);
 if (mode === "warnings") {
   await write(
     "part/warning.lua",
-    "function Pandoc(doc) pandoc.log.warn('NATIVE_WARNING_SENTINEL'); return doc end\n",
+    await fixture("warning.lua"),
   );
   const child = await Deno.readTextFile(join(root, "part/_quarto.yml"));
   await write("part/_quarto.yml", child + "\nfilters: [warning.lua]\n");
@@ -104,10 +106,12 @@ if (mode === "warnings") {
   );
   let calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
     "\n",
-  ).map((line) => JSON.parse(line)).filter((row) => row.kind === "render");
+  ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
   assertEquals(calls.length, 1);
+  const inheritedCall = calls[0];
+  assert(inheritedCall, "Нет inherited child render");
   assert(
-    !calls[0].args.includes("--fail-if-warnings"),
+    !inheritedCall.args.includes("--fail-if-warnings"),
     "root flag unexpectedly forwarded",
   );
   await write(
@@ -121,9 +125,11 @@ if (mode === "warnings") {
   );
   calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
     "\n",
-  ).map((line) => JSON.parse(line)).filter((row) => row.kind === "render");
+  ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
   assertEquals(calls.length, 2);
-  assert(calls[1].exitCode !== 0, "strict warning child succeeded");
+  const strictCall = calls[1];
+  assert(strictCall, "Нет strict child render");
+  assert(strictCall.exitCode !== 0, "strict warning child succeeded");
   for (
     const path of [
       "_generated/course-site/active.json",
@@ -155,7 +161,7 @@ assertEquals(
 );
 let trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
   "\n",
-).map((line) => JSON.parse(line));
+).map((line) => readCommandEvent(JSON.parse(line)));
 assertEquals(trace.filter((x) => x.kind === "render").length, 1);
 assert(
   (await Deno.readTextFile(join(root, "_site/part/search.json"))).includes(
@@ -200,7 +206,7 @@ assertEquals(
   await Deno.readTextFile(join(root, "part/_freeze/cache-sentinel")),
   "keep",
 );
-await write("part/fail.ts", "throw new Error('LATE_CHILD_FAILURE');\n");
+await write("part/fail.ts", await fixture("late-failure.ts"));
 const original = await Deno.readTextFile(join(root, "part/_quarto.yml"));
 await write(
   "part/_quarto.yml",
@@ -240,7 +246,7 @@ await run(["render", "index.qmd"], join(root, "part"));
 const currentConfig = await Deno.readTextFile(join(root, "part/_quarto.yml"));
 await write(
   "part/generate.ts",
-  "await Deno.writeTextFile('generated.qmd', '# Fresh generated input\\n');\n",
+  await fixture("generate-source.ts"),
 );
 await write(
   "part/_quarto.yml",

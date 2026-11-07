@@ -11,12 +11,12 @@ import {
   toFileUrl,
 } from "stdlib/path";
 export { dirname, fromFileUrl, isAbsolute, join, relative, resolve, toFileUrl };
-export function inside(root: string, path: string): boolean {
+function insideImpl(root: string, path: string): boolean {
   const rel = relative(root, path);
   return !isAbsolute(rel) && rel !== ".." && !rel.startsWith("../") &&
     !rel.startsWith("..\\");
 }
-export function within(root: string, path: string): string {
+function withinImpl(root: string, path: string): string {
   const full = resolve(root, path);
   if (full === resolve(root) || !inside(root, full)) {
     throw diagnostic(
@@ -32,7 +32,7 @@ export function within(root: string, path: string): string {
   }
   return full;
 }
-export async function safePath(root: string, path: string): Promise<void> {
+async function safePathImpl(root: string, path: string): Promise<void> {
   if (!inside(root, path)) {
     throw diagnostic(
       "SITE.SUBPROJECT_INVALID",
@@ -69,7 +69,7 @@ export async function safePath(root: string, path: string): Promise<void> {
     }
   }
 }
-export async function files(root: string): Promise<string[]> {
+async function filesImpl(root: string): Promise<string[]> {
   const result: string[] = [];
   for await (const entry of Deno.readDir(root)) {
     const path = join(root, entry.name);
@@ -90,7 +90,7 @@ export async function files(root: string): Promise<string[]> {
   }
   return result.sort();
 }
-export async function outputDirectory(
+async function outputDirectoryImpl(
   root: string,
   name: string,
 ): Promise<string> {
@@ -123,7 +123,7 @@ export async function outputDirectory(
   }
   return output;
 }
-export async function cleanOutput(
+async function cleanOutputImpl(
   root: string,
   output: string,
   resources: string[] = [],
@@ -192,7 +192,7 @@ export async function cleanOutput(
   }
   await Deno.mkdir(output, { recursive: true });
 }
-export async function copyFiles(
+async function copyFilesImpl(
   source: string,
   destination: string,
   paths: string[],
@@ -236,17 +236,10 @@ export async function copyFiles(
   }
 }
 
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-inside=__metrics.wrapSync({id:"course-site.infrastructure.files.inside",kind:"io"},inside);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-within=__metrics.wrapSync({id:"course-site.infrastructure.files.within",kind:"io"},within);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-safePath=__metrics.wrapAsync({id:"course-site.infrastructure.files.safePath",kind:"io"},safePath);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-files=__metrics.wrapAsync({id:"course-site.infrastructure.files.files",kind:"io"},files);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-outputDirectory=__metrics.wrapAsync({id:"course-site.infrastructure.files.outputDirectory",kind:"io"},outputDirectory);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-cleanOutput=__metrics.wrapAsync({id:"course-site.infrastructure.files.cleanOutput",kind:"io"},cleanOutput);
-// @ts-expect-error JS допускает замену function binding; сигнатура публичного API сохраняется.
-copyFiles=__metrics.wrapAsync({id:"course-site.infrastructure.files.copyFiles",kind:"io"},copyFiles);
+export const inside = __metrics.wrapSync({id:"course-site.infrastructure.files.inside",kind:"io"},insideImpl);
+export const within = __metrics.wrapSync({id:"course-site.infrastructure.files.within",kind:"io"},withinImpl);
+export const safePath = __metrics.wrapAsync({id:"course-site.infrastructure.files.safePath",kind:"io"},safePathImpl);
+export const files = __metrics.wrapAsync({id:"course-site.infrastructure.files.files",kind:"io"},filesImpl);
+export const outputDirectory = __metrics.wrapAsync({id:"course-site.infrastructure.files.outputDirectory",kind:"io"},outputDirectoryImpl);
+export const cleanOutput = __metrics.wrapAsync({id:"course-site.infrastructure.files.cleanOutput",kind:"io"},cleanOutputImpl);
+export const copyFiles = __metrics.wrapAsync({id:"course-site.infrastructure.files.copyFiles",kind:"io"},copyFilesImpl);

@@ -1,3 +1,5 @@
+import { record, text } from "./values.ts";
+import { diagnostic } from "./diagnostics.ts";
 import { createMetrics } from "../observability/bridge.ts";
 const metrics = createMetrics("course-site");
 import { dirname, relative, within } from "./files.ts";
@@ -8,6 +10,11 @@ import {
   html as htmlNames,
   parse,
 } from "../vendor/parse5/dist/index.js";
+
+let browserProgram: Promise<string> | undefined;
+function navigationProgram() {
+  return browserProgram ??= Deno.readTextFile(new URL("../browser/navigation.js", import.meta.url));
+}
 
 function elements(
   node: DefaultTreeAdapterTypes.Node,
@@ -39,7 +46,7 @@ function scriptText(element: DefaultTreeAdapterTypes.Element): string {
 }
 
 /** Адреса берутся только из текущих native HTML, без второй карты курса. */
-export async function addressNavigation(
+async function addressNavigationImpl(
   stage: string,
   outputs: string[],
   composition = false,
@@ -77,10 +84,12 @@ export async function addressNavigation(
         attribute(element, "type")?.trim().toLowerCase() === "application/json"
       );
       if (contextScript) {
-        const context = JSON.parse(scriptText(contextScript));
+        const raw = record(JSON.parse(scriptText(contextScript)), output, "course-navigation-context");
+        if (!Array.isArray(raw.links)) throw diagnostic("SITE.CONFIG_INVALID", "Navigation links требует список", { source: output, field: "course-navigation-context.links" });
+        const context = { ...raw, links: raw.links.map((value: unknown) => record(value, output, "course-navigation-context.links")) };
         for (const link of context.links) {
           if (link.scope === "course") {
-            link.href = relative(dirname(output), within(stage, link.path))
+            link.href = relative(dirname(output), within(stage, text(link.path, output, "course-navigation-context.links.path")))
               .replaceAll("\\", "/");
           }
         }
@@ -104,31 +113,10 @@ export async function addressNavigation(
       const base = composition && courseUrl
         ? JSON.stringify({ courseUrl, rootHref }).replaceAll("<", "\\u003c")
         : "null";
-      const script = `<script id="course-site-navigation">(function(){
-const base=${base};
-if(base){
- const course=new URL(base.courseUrl); course.pathname=course.pathname.replace(/\\/$/,'')+'/';
- const root=new URL(base.rootHref,document.baseURI);
- for(const link of document.querySelectorAll('#quarto-header a[href],#quarto-sidebar a[href],.quarto-navbar a[href],.quarto-sidebar a[href]')){
-  const url=new URL(link.href,document.baseURI);
-  if(url.origin===course.origin&&url.pathname.startsWith(course.pathname)){
-   let path=url.pathname.slice(course.pathname.length); if(!path||path.endsWith('/')) path+='index.html';
-   link.href=new URL(path+url.search+url.hash,root).href;
-  }
- }
-}
-const targets=${
-        JSON.stringify(targets).replaceAll("<", "\\u003c")
-      }.map(path=>new URL(path,document.baseURI));
-for(const link of document.querySelectorAll('a[href]')){
- const url=new URL(link.href,document.baseURI);
- if(targets.some(target=>target.origin===url.origin&&(
-  target.pathname===url.pathname || target.pathname.endsWith('/index.html')&&target.pathname.slice(0,-'index.html'.length)===url.pathname
- ))){
-  link.target='_blank'; link.rel=[...new Set([...link.rel.split(/\\s+/).filter(Boolean),'noopener','noreferrer'])].join(' ');
- }
-}
-})();</script>`;
+      const program = await navigationProgram();
+      const script = '<script id="course-site-navigation">' + program
+        .replace(/__SITE_BASE__|__SITE_TARGETS__/g, token => token === "__SITE_BASE__" ? base : JSON.stringify(targets).replaceAll("<", "\\u003c")) + '</script>';
+
       for (const element of page.elements) {
         if (
           element.tagName === "script" &&
@@ -158,8 +146,7 @@ for(const link of document.querySelectorAll('a[href]')){
   }
 }
 
-// @ts-expect-error JS допускает замену function binding; публичная сигнатура сохраняется.
-addressNavigation = metrics.wrapAsync({
+export const addressNavigation = metrics.wrapAsync({
   id: "course-site.infrastructure.navigation.addressNavigation",
   kind: "phase",
-}, addressNavigation);
+}, addressNavigationImpl);

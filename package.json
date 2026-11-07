@@ -2,9 +2,12 @@
   "name": "quarto-project-publish-tests",
   "private": true,
   "scripts": {
-    "test:browser": "node tests/site-navigation.browser.cjs"
+    "test:browser": "node tests/site-navigation.browser.cjs",
+    "check:types": "quarto run tools/check-types.ts"
   },
   "devDependencies": {
-    "playwright": "1.62.1"
+    "playwright": "1.62.1",
+    "@types/node": "26.6.6",
+    "typescript": "6.0.3"
   }
 }

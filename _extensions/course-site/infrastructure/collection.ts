@@ -1,6 +1,6 @@
 import { isRecord, isStrings } from "./values.ts";
-import {createMetrics as __createMetrics} from "../observability/bridge.ts";
-const __metrics=__createMetrics("course-site");
+import { createMetrics as __createMetrics } from "../observability/bridge.ts";
+const __metrics = __createMetrics("course-site");
 import { addressNavigation } from "./navigation.ts";
 import { diagnostic } from "./diagnostics.ts";
 import { files, resolve, safePath, within } from "./files.ts";
@@ -99,11 +99,15 @@ async function collectImpl(): Promise<void> {
   if (!destination) return;
   const id = Deno.env.get("COURSE_SITE_PROJECT");
   if (!id) {
-    throw diagnostic("SITE.COLLECTION_INVALID", "Не задан идентификатор текущего компонента", {
-      source: root,
-      field: "COURSE_SITE_PROJECT",
-      hint: "В композиции Publisher задаёт идентификатор автоматически.",
-    });
+    throw diagnostic(
+      "SITE.COLLECTION_INVALID",
+      "Не задан идентификатор текущего компонента",
+      {
+        source: root,
+        field: "COURSE_SITE_PROJECT",
+        hint: "В композиции Publisher задаёт идентификатор автоматически.",
+      },
+    );
   }
   const record: Record = {
     id,
@@ -120,11 +124,10 @@ async function readCollectionImpl(
   id: string,
   projectRoot: string,
   outputDir: string,
-  profiles: string[],
-  // Quarto's post-render environment is the authority for implicit child
-  // defaults/groups; only explicitly requested profiles are known beforehand.
-  nativeProfileContext = false,
+  context: { profiles: string[]; nativeProfileContext: boolean },
 ): Promise<Record> {
+  // Native post-render профили подтверждают неявные defaults/groups.
+  const { profiles, nativeProfileContext } = context;
   let value: unknown;
   try {
     value = JSON.parse(await Deno.readTextFile(path));
@@ -177,7 +180,14 @@ async function readCollectionImpl(
       },
     );
   }
-  const current = { id, projectRoot, outputDir, profiles: value.profiles, nativeOutputs: value.nativeOutputs, files: value.files };
+  const current = {
+    id,
+    projectRoot,
+    outputDir,
+    profiles: value.profiles,
+    nativeOutputs: value.nativeOutputs,
+    files: value.files,
+  };
   for (const path of [...current.nativeOutputs, ...current.files]) {
     within(outputDir, path);
     await safePath(projectRoot, path);
@@ -215,6 +225,31 @@ async function readCollectionImpl(
   return current;
 }
 
-export const publicOutputs = __metrics.wrapAsync({id:"course-site.infrastructure.collection.publicOutputs",kind:"io"},publicOutputsImpl);
-export const collect = __metrics.wrapAsync({id:"course-site.infrastructure.collection.collect",kind:"io"},collectImpl);
-export const readCollection = __metrics.wrapAsync({id:"course-site.infrastructure.collection.readCollection",kind:"io"},readCollectionImpl);
+export const publicOutputs = __metrics.wrapAsync({
+  id: "course-site.infrastructure.collection.publicOutputs",
+  kind: "io",
+}, publicOutputsImpl);
+export const collect = __metrics.wrapAsync({
+  id: "course-site.infrastructure.collection.collect",
+  kind: "io",
+}, collectImpl);
+const observedReadCollection = __metrics.wrapAsync({
+  id: "course-site.infrastructure.collection.readCollection",
+  kind: "io",
+}, readCollectionImpl);
+export async function readCollection(
+  ...[path, id, projectRoot, outputDir, profiles, nativeProfileContext = false]:
+    [
+      path: string,
+      id: string,
+      projectRoot: string,
+      outputDir: string,
+      profiles: string[],
+      nativeProfileContext?: boolean,
+    ]
+): Promise<Record> {
+  return await observedReadCollection(path, id, projectRoot, outputDir, {
+    profiles,
+    nativeProfileContext,
+  });
+}

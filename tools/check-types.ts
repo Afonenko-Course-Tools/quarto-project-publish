@@ -11,7 +11,7 @@ async function sourceFiles(directory: string): Promise<string[]> {
     if (["vendor", "node_modules", "_generated", ".quarto", ".git"].includes(entry.name) || directory.startsWith("examples/") && entry.name === "_extensions") continue;
     const path = directory + "/" + entry.name;
     if (entry.isDirectory) found.push(...await sourceFiles(path));
-    else if (entry.isFile && /\.(ts|js|cjs|lua|sh)$/.test(path)) found.push(path);
+    else if (entry.isFile && /\.(ts|js|cjs|mjs|lua|sh)$/.test(path)) found.push(path);
   }
   return found;
 }
@@ -73,6 +73,13 @@ if (scope === "--lua") {
       }).spawn().status;
       console.log(JSON.stringify({ gate: "deno", exitCode: result.code }));
       exitCode ||= result.code;
+    }
+    if (scope === "--all" || scope === "--node") {
+      for (const file of coverage.owned.filter(file => file.endsWith(".mjs"))) {
+        const result = await new Deno.Command("node", { args: ["--check", join(root, file)], cwd: root,
+          stdout: "inherit", stderr: "inherit" }).spawn().status;
+        exitCode ||= result.code;
+      }
     }
     for (const target of ["node", "browser"]) {
       if (scope !== "--all" && scope !== "--" + target) continue;

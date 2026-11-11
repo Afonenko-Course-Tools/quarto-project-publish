@@ -1,8 +1,8 @@
 import {copy} from "stdlib/fs";
-import {join} from "stdlib/path";
+import {join,fromFileUrl} from "stdlib/path";
 const root=await Deno.makeTempDir({prefix:"publisher-repeat-"});
 try{
- await copy(new URL('../_extensions',import.meta.url).pathname,join(root,'_extensions'));
+ await copy(fromFileUrl(new URL('../_extensions',import.meta.url)),join(root,'_extensions'));
  await Deno.mkdir(join(root,'part'));
  await Deno.writeTextFile(join(root,'_quarto.yml'),`project:
   type: website

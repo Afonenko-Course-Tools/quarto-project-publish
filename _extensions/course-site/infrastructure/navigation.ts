@@ -1,4 +1,4 @@
-import { record, text } from "./values.ts";
+import { parseJson, record, text } from "./values.ts";
 import { diagnostic } from "./diagnostics.ts";
 import { createMetrics } from "../observability/bridge.ts";
 const metrics = createMetrics("course-site");
@@ -13,7 +13,9 @@ import {
 
 let browserProgram: Promise<string> | undefined;
 function navigationProgram() {
-  return browserProgram ??= Deno.readTextFile(new URL("../browser/navigation.js", import.meta.url));
+  return browserProgram ??= Deno.readTextFile(
+    new URL("../browser/navigation.js", import.meta.url),
+  );
 }
 
 function elements(
@@ -45,6 +47,58 @@ function scriptText(element: DefaultTreeAdapterTypes.Element): string {
     .join("");
 }
 
+function navigationContextEdits(
+  stage: string,
+  output: string,
+  page: { elements: DefaultTreeAdapterTypes.Element[] },
+): Array<{ start: number; end: number; text: string }> {
+  const edits: Array<{ start: number; end: number; text: string }> = [];
+  // Это payload собственного фильтра Navigation, не чужие metadata/QRC.
+  const contextScript = page.elements.find((element) =>
+    element.tagName === "script" &&
+    attribute(element, "id") === "course-navigation-context" &&
+    attribute(element, "type")?.trim().toLowerCase() === "application/json"
+  );
+  if (contextScript) {
+    const raw = record(
+      parseJson(scriptText(contextScript), output, "course-navigation-context"),
+      output,
+      "course-navigation-context",
+    );
+    if (!Array.isArray(raw.links)) {
+      throw diagnostic(
+        "SITE.CONFIG_INVALID",
+        "Navigation links требует список",
+        { source: output, field: "course-navigation-context.links" },
+      );
+    }
+    const context = {
+      ...raw,
+      links: raw.links.map((value: unknown) =>
+        record(value, output, "course-navigation-context.links")
+      ),
+    };
+    for (const link of context.links) {
+      if (link.scope === "course") {
+        link.href = relative(
+          dirname(output),
+          within(
+            stage,
+            text(link.path, output, "course-navigation-context.links.path"),
+          ),
+        )
+          .replaceAll("\\", "/");
+      }
+    }
+    const location = contextScript.sourceCodeLocation!;
+    edits.push({
+      start: location.startTag!.endOffset,
+      end: location.endTag?.startOffset ?? location.endOffset,
+      text: JSON.stringify(context).replaceAll("<", "\\u003c"),
+    });
+  }
+  return edits;
+}
 /** Адреса берутся только из текущих native HTML, без второй карты курса. */
 async function addressNavigationImpl(
   stage: string,
@@ -77,29 +131,7 @@ async function addressNavigationImpl(
   for (const [output, page] of html) {
     const edits: Array<{ start: number; end: number; text: string }> = [];
     if (composition) {
-      // Это payload собственного фильтра Navigation, не чужие metadata/QRC.
-      const contextScript = page.elements.find((element) =>
-        element.tagName === "script" &&
-        attribute(element, "id") === "course-navigation-context" &&
-        attribute(element, "type")?.trim().toLowerCase() === "application/json"
-      );
-      if (contextScript) {
-        const raw = record(JSON.parse(scriptText(contextScript)), output, "course-navigation-context");
-        if (!Array.isArray(raw.links)) throw diagnostic("SITE.CONFIG_INVALID", "Navigation links требует список", { source: output, field: "course-navigation-context.links" });
-        const context = { ...raw, links: raw.links.map((value: unknown) => record(value, output, "course-navigation-context.links")) };
-        for (const link of context.links) {
-          if (link.scope === "course") {
-            link.href = relative(dirname(output), within(stage, text(link.path, output, "course-navigation-context.links.path")))
-              .replaceAll("\\", "/");
-          }
-        }
-        const location = contextScript.sourceCodeLocation!;
-        edits.push({
-          start: location.startTag!.endOffset,
-          end: location.endTag?.startOffset ?? location.endOffset,
-          text: JSON.stringify(context).replaceAll("<", "\\u003c"),
-        });
-      }
+      edits.push(...navigationContextEdits(stage, output, page));
     }
     // Только штатные страницы index.html получают правило входа в презентации.
     const index = /(^|[\\/])index\.html$/.test(output) &&
@@ -115,7 +147,14 @@ async function addressNavigationImpl(
         : "null";
       const program = await navigationProgram();
       const script = '<script id="course-site-navigation">' + program
-        .replace(/__SITE_BASE__|__SITE_TARGETS__/g, token => token === "__SITE_BASE__" ? base : JSON.stringify(targets).replaceAll("<", "\\u003c")) + '</script>';
+        .replace(
+          /__SITE_BASE__|__SITE_TARGETS__/g,
+          (token) =>
+            token === "__SITE_BASE__"
+              ? base
+              : JSON.stringify(targets).replaceAll("<", "\\u003c"),
+        ) +
+        "</script>";
 
       for (const element of page.elements) {
         if (

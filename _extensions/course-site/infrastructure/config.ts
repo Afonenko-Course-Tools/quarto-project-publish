@@ -1,4 +1,4 @@
-import { isStrings, nativeConfig, nativeInspect } from "./values.ts";
+import { isStrings, nativeConfig, nativeInspect, parseJson } from "./values.ts";
 import { contextualize, diagnostic } from "./diagnostics.ts";
 import {
   inside,
@@ -84,8 +84,7 @@ export async function validateConfig(
       {
         source: root,
         field: "subprojects",
-        hint:
-          "Например: subprojects: [theory, tasks, lectures].",
+        hint: "Например: subprojects: [theory, tasks, lectures].",
       },
     );
   }
@@ -191,9 +190,14 @@ export async function validateConfig(
 }
 export async function workspace(root: string) {
   const profiles = activeProfiles();
-  const project = nativeInspect(JSON.parse(
-    await quarto(["inspect", root, ...profileArguments(profiles)], root),
-  ), root);
+  const project = nativeInspect(
+    parseJson(
+      await quarto(["inspect", root, ...profileArguments(profiles)], root),
+      root,
+      "inspect",
+    ),
+    root,
+  );
   const quartoVersion = project.quarto?.version;
   if (typeof quartoVersion !== "string" || !quartoVersion.trim()) {
     throw diagnostic(
@@ -205,7 +209,12 @@ export async function workspace(root: string) {
   const config = project.config;
   const override = Deno.env.get("QUARTO_PROJECT_OUTPUT_DIR");
   if (override) {
-    if (!config.project) throw diagnostic("SITE.CONFIG_INVALID", "Не задан project", { source: root, field: "project" });
+    if (!config.project) {
+      throw diagnostic("SITE.CONFIG_INVALID", "Не задан project", {
+        source: root,
+        field: "project",
+      });
+    }
     config.project["output-dir"] = override;
   }
   return {
@@ -315,9 +324,14 @@ async function selectedSources(
   return selected;
 }
 export async function inspectProject(root: string, profiles: string[]) {
-  const project = nativeInspect(JSON.parse(
-    await quarto(["inspect", root, ...profileArguments(profiles)], root),
-  ), root);
+  const project = nativeInspect(
+    parseJson(
+      await quarto(["inspect", root, ...profileArguments(profiles)], root),
+      root,
+      "inspect",
+    ),
+    root,
+  );
   return {
     config: project.config,
     selectedSources: await selectedSources(root, project.files?.input),

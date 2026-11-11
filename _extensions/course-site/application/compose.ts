@@ -1,6 +1,10 @@
 import { activeState, compositionRecord, readActiveState } from "./state.ts";
 import { isSibling } from "./sibling-contracts.ts";
-import { isRecord, type NativeConfig } from "../infrastructure/values.ts";
+import {
+  isRecord,
+  type NativeConfig,
+  parseJson,
+} from "../infrastructure/values.ts";
 import { createMetrics as __createMetrics } from "../observability/bridge.ts";
 const __metrics = __createMetrics("course-site");
 import { addressNavigation } from "../infrastructure/navigation.ts";
@@ -18,6 +22,7 @@ import {
   resolve,
   safePath,
   toFileUrl,
+  validateOutputCleanup,
 } from "../infrastructure/files.ts";
 import {
   inspectProject,
@@ -28,9 +33,9 @@ import { profileArguments, quarto } from "../infrastructure/process.ts";
 import { publicOutputs, readCollection } from "../infrastructure/collection.ts";
 import type {
   NativeCatalog,
+  NativeSiteRecord,
   PreparedDownloads,
   PublicationInspection,
-  NativeSiteRecord,
   SiblingModuleMap,
 } from "./sibling-contracts.ts";
 const siblings = dirname(dirname(dirname(fromFileUrl(import.meta.url))));
@@ -62,7 +67,13 @@ async function module<Name extends keyof SiblingModuleMap>(
   }
   // An existing module's initialization/import failure belongs to its owner.
   const value: unknown = await import(toFileUrl(source).href);
-  if (!isSibling(name, value)) throw diagnostic("SITE.SIBLING_INVALID", "Публичный модуль не содержит требуемых операций", { source, id: name, field: "module" });
+  if (!isSibling(name, value)) {
+    throw diagnostic(
+      "SITE.SIBLING_INVALID",
+      "Публичный модуль не содержит требуемых операций",
+      { source, id: name, field: "module" },
+    );
+  }
   return value;
 }
 const statePath = (root: string) =>
@@ -84,7 +95,8 @@ function nativeCore(config: NativeConfig): boolean {
     ? config.filters
     : [config.filters];
   return filters.some((filter: unknown) =>
-    filter === "course-core" || isRecord(filter) && filter.path === "course-core"
+    filter === "course-core" ||
+    isRecord(filter) && filter.path === "course-core"
   );
 }
 function releaseQualification(config: NativeConfig, root: string) {
@@ -100,10 +112,12 @@ function releaseQualification(config: NativeConfig, root: string) {
     (config["course-core-runtime"] !== undefined || nativeCore(config)) &&
     ((config["course-core-runtime"] !== undefined &&
       config["course-core-runtime"] !== "native-ts") ||
-      !["student", "author"].some(value => value === (
-        config["course-core-projection"] ??
-          (config.course?.view === "full" ? "author" : "student")
-      )))
+      !["student", "author"].some((value) =>
+        value === (
+          config["course-core-projection"] ??
+            (config.course?.view === "full" ? "author" : "student")
+        )
+      ))
   ) {
     throw diagnostic(
       "SITE.NATIVE_UNQUALIFIED",
@@ -112,7 +126,11 @@ function releaseQualification(config: NativeConfig, root: string) {
     );
   }
 }
-async function coreHook(root: string, config: NativeConfig, phase: "pre" | "post") {
+async function coreHook(
+  root: string,
+  config: NativeConfig,
+  phase: "pre" | "post",
+) {
   releaseQualification(config, root);
   if (nativeCore(config)) {
     await quarto(
@@ -129,7 +147,11 @@ async function coreHook(root: string, config: NativeConfig, phase: "pre" | "post
 function projection(config: NativeConfig): "student" | "author" {
   const value = config["course-core-projection"] ??
     (config.course?.view === "full" ? "author" : "student");
-  if (value !== "student" && value !== "author") throw diagnostic("SITE.NATIVE_UNQUALIFIED", "Неизвестная проекция Core", { field: "course-core-projection" });
+  if (value !== "student" && value !== "author") {
+    throw diagnostic("SITE.NATIVE_UNQUALIFIED", "Неизвестная проекция Core", {
+      field: "course-core-projection",
+    });
+  }
   return value;
 }
 function catalogCoverage(catalog: NativeCatalog, record: NativeSiteRecord) {
@@ -201,11 +223,15 @@ async function finalizeDownloadsImpl(
   root: string,
   config: NativeConfig,
   record: NativeSiteRecord,
-  baseUrl: string | undefined,
-  referenceCatalog: unknown,
-  catalogBaseUrl: string | undefined,
-  destinationDirectory?: string,
+  destination: {
+    baseUrl?: string | undefined;
+    referenceCatalog?: unknown;
+    catalogBaseUrl?: string | undefined;
+    destinationDirectory?: string | undefined;
+  },
 ) {
+  const { baseUrl, referenceCatalog, catalogBaseUrl, destinationDirectory } =
+    destination;
   if (!nativeCore(config)) {
     if (config["project-download"]) {
       const Download = await module("project-download", "public.ts", root);
@@ -220,43 +246,91 @@ async function finalizeDownloadsImpl(
   const Core = await module("course-core", "public.ts", root);
   const pending: { draft?: PreparedDownloads } = {};
   try {
-    const snapshot = await Core.withNativePublication({
-      root,
-      profiles: record.profiles,
-      projection: projection(config),
-      outputDirectory: record.outputDir,
-    }, record.selectedSources ? { expectedSources: record.selectedSources } : undefined,
-    async (publication) => {
-      catalogCoverage(publication.catalog, record);
-      let inspection: PublicationInspection | undefined;
-      if (publication.course.adapters.includes("prairielearn")) {
-        const PL = await module("course-prairielearn", "public.ts", root);
-        inspection = await PL.inspectPublication(publication);
-      }
-      if (config["project-download"]) {
-        const Download = await module("project-download", "public.ts", root);
-        // Сохранить handle до await outer closing: catch должен видеть draft.
-        pending.draft = await Download.prepareNativeDownloads(publication, {
-          destinationDirectory,
-          baseUrl,
-          referenceCatalog,
-          catalogBaseUrl,
-        });
-      }
-      return {
-        catalog: publication.catalog,
-        course: publication.course,
-        ...(inspection ? { inspection } : {}),
-      };
-    });
+    const snapshot = await Core.withNativePublication(
+      {
+        root,
+        profiles: record.profiles,
+        projection: projection(config),
+        outputDirectory: record.outputDir,
+      },
+      record.selectedSources
+        ? { expectedSources: record.selectedSources }
+        : undefined,
+      async (publication) => {
+        catalogCoverage(publication.catalog, record);
+        let inspection: PublicationInspection | undefined;
+        if (publication.course.adapters.includes("prairielearn")) {
+          const PL = await module("course-prairielearn", "public.ts", root);
+          inspection = await PL.inspectPublication(publication);
+        }
+        if (config["project-download"]) {
+          const Download = await module("project-download", "public.ts", root);
+          // Сохранить handle до await outer closing: catch должен видеть draft.
+          pending.draft = await Download.prepareNativeDownloads(publication, {
+            destinationDirectory,
+            baseUrl,
+            referenceCatalog,
+            catalogBaseUrl,
+          });
+        }
+        return {
+          catalog: publication.catalog,
+          course: publication.course,
+          ...(inspection ? { inspection } : {}),
+        };
+      },
+    );
     await pending.draft?.publish();
     return snapshot;
   } catch (cause) {
-    try { await pending.draft?.discard(); } catch { /* Cleanup не маскирует primary cause. */ }
+    try {
+      await pending.draft?.discard();
+    } catch { /* Cleanup не маскирует primary cause. */ }
     throw cause;
   }
 }
 
+function validateDestinations(
+  ws: Awaited<ReturnType<typeof workspace>>,
+  inspected: {
+    project: Awaited<ReturnType<typeof workspace>>["projects"][number];
+    output: string;
+  }[],
+) {
+  for (const { project, output } of inspected) {
+    for (const other of ws.projects) {
+      if (
+        inside(output, other.path) ||
+        inside(other.path, output) && other.path !== project.path
+      ) {
+        throw diagnostic(
+          "SITE.OUTPUT_OVERLAP",
+          "Результат компонента пересекается с источником другого компонента",
+          {
+            source: project.path,
+            id: project.id,
+            field: "project.output-dir",
+            related: [{ source: output }, { source: other.path, id: other.id }],
+            hint: "Разделите исходники и результаты проектов.",
+          },
+        );
+      }
+    }
+    if (inside(output, ws.output) || inside(ws.output, output)) {
+      throw diagnostic(
+        "SITE.OUTPUT_OVERLAP",
+        "Каталоги результата компонента и корня пересекаются",
+        {
+          source: project.path,
+          id: project.id,
+          field: "project.output-dir",
+          related: [{ source: output }, { source: ws.output }],
+          hint: "Выберите независимые каталоги результата.",
+        },
+      );
+    }
+  }
+}
 async function preImpl(root = Deno.cwd()): Promise<void> {
   const state = statePath(root);
   await safePath(root, state);
@@ -272,9 +346,10 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
   );
   if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
     if (ws.config["project-download"]) {
-      await (await module("project-download", "public.ts")).resetDownloadRequests(
-        root,
-      );
+      await (await module("project-download", "public.ts"))
+        .resetDownloadRequests(
+          root,
+        );
     }
     await coreHook(root, ws.config, "pre");
     return;
@@ -293,8 +368,10 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
   const inspected = [];
   // Validate all selected destinations before deleting any output.
   for (const project of ws.projects) {
-    const plan = await progress("Планирование компонента", project.path, () =>
-      inspectProject(project.path, ws.profiles)
+    const plan = await progress(
+      "Планирование компонента",
+      project.path,
+      () => inspectProject(project.path, ws.profiles),
     );
     const config = plan.config;
     releaseQualification(config, project.path);
@@ -333,38 +410,9 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
     );
     inspected.push({ project, config, output, plan });
   }
-  for (const { project, output } of inspected) {
-    for (const other of ws.projects) {
-      if (
-        inside(output, other.path) ||
-        inside(other.path, output) && other.path !== project.path
-      ) {
-        throw diagnostic(
-          "SITE.OUTPUT_OVERLAP",
-          "Результат компонента пересекается с источником другого компонента",
-          {
-            source: project.path,
-            id: project.id,
-            field: "project.output-dir",
-            related: [{ source: output }, { source: other.path, id: other.id }],
-            hint: "Разделите исходники и результаты проектов.",
-          },
-        );
-      }
-    }
-    if (inside(output, ws.output) || inside(ws.output, output)) {
-      throw diagnostic(
-        "SITE.OUTPUT_OVERLAP",
-        "Каталоги результата компонента и корня пересекаются",
-        {
-          source: project.path,
-          id: project.id,
-          field: "project.output-dir",
-          related: [{ source: output }, { source: ws.output }],
-          hint: "Выберите независимые каталоги результата.",
-        },
-      );
-    }
+  validateDestinations(ws, inspected);
+  for (const { project, output, plan } of inspected) {
+    await validateOutputCleanup(project.path, output, plan.resources);
   }
   await cleanOutput(root, ws.output, [
     ...ws.resources || [],
@@ -377,6 +425,7 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
   }
   const records = [];
   for (const { project, config, output, plan } of inspected) {
+    // Предыдущий child render мог изменить содержимое этого каталога.
     await cleanOutput(project.path, output, plan.resources);
     const collection = join(run, `${project.id}-0.json`);
     await progress("Рендер", project.path, () =>
@@ -415,58 +464,64 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
       files: collected.files,
       selectedSources: plan.selectedSources,
     };
-    records.push(compositionRecord(project, config, record, plan.selectedSources));
+    records.push(
+      compositionRecord(project, config, record, plan.selectedSources),
+    );
   }
-  await Deno.writeTextFile(state, JSON.stringify(activeState(ws, records, run)));
+  await Deno.writeTextFile(
+    state,
+    JSON.stringify(activeState(ws, records, run)),
+  );
   await coreHook(root, ws.config, "pre");
 }
-async function postImpl(root = Deno.cwd()): Promise<void> {
-  const state = statePath(root);
-  if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
-    const ws = await workspace(root);
-    const outputs = (Deno.env.has("QUARTO_PROJECT_OUTPUT_FILES") ||
-        Deno.env.get("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES"))
-      ? await publicOutputs(root, ws.output)
-      : [];
-    if (!outputs.length) return;
-    if (ws.config["reference-catalog"]) {
-      const { publishReferenceCatalog: publish } = await module(
-        "reference-catalog",
-        "public.ts",
-      );
-      await publish({
-        root,
-        stage: ws.output,
-        quarto: ws.quartoVersion,
-        config: ws.config,
-        members: ws.config["reference-catalog"].namespace ? [{
+async function postLocal(root: string) {
+  const ws = await workspace(root);
+  const outputs = (Deno.env.has("QUARTO_PROJECT_OUTPUT_FILES") ||
+      Deno.env.get("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES"))
+    ? await publicOutputs(root, ws.output)
+    : [];
+  if (!outputs.length) return;
+  if (ws.config["reference-catalog"]) {
+    const { publishReferenceCatalog: publish } = await module(
+      "reference-catalog",
+      "public.ts",
+    );
+    await publish({
+      root,
+      stage: ws.output,
+      quarto: ws.quartoVersion,
+      config: ws.config,
+      members: ws.config["reference-catalog"].namespace
+        ? [{
           namespace: ws.config["reference-catalog"].namespace,
           format: "html",
-        }] : [],
-        scope: "local",
-        outputs,
-      });
-    }
-    await addressNavigation(ws.output, outputs);
-    await coreHook(root, ws.config, "post");
-    await finalizeDownloads(
-      root,
-      ws.config,
-      {
-        projectRoot: root,
-        outputDir: ws.output,
-        profiles: ws.profiles,
-        nativeOutputs: outputs,
-      },
-      ws.config.website?.["site-url"] ||
-        ws.config["course-navigation"]?.["course-url"],
-      undefined,
-      undefined,
-    );
-    return;
+        }]
+        : [],
+      scope: "local",
+      outputs,
+    });
   }
-  const { ws, records, run } = readActiveState(JSON.parse(await Deno.readTextFile(state)), root);
-  await remove(state);
+  await addressNavigation(ws.output, outputs);
+  await coreHook(root, ws.config, "post");
+  await finalizeDownloads(
+    root,
+    ws.config,
+    {
+      projectRoot: root,
+      outputDir: ws.output,
+      profiles: ws.profiles,
+      nativeOutputs: outputs,
+    },
+    {
+      baseUrl: ws.config.website?.["site-url"] ||
+        ws.config["course-navigation"]?.["course-url"],
+    },
+  );
+}
+function validateActiveWorkspace(
+  ws: Awaited<ReturnType<typeof workspace>>,
+  root: string,
+) {
   if (
     ws.root !== root ||
     ws.output !==
@@ -494,15 +549,43 @@ async function postImpl(root = Deno.cwd()): Promise<void> {
       },
     );
   }
+}
+async function postImpl(root = Deno.cwd()): Promise<void> {
+  const state = statePath(root);
+  if (Deno.env.get("QUARTO_PROJECT_RENDER_ALL") !== "1") {
+    await postLocal(root);
+    return;
+  }
+  const { ws, records, run } = readActiveState(
+    parseJson(
+      await Deno.readTextFile(state),
+      state,
+      "active",
+      "SITE.COLLECTION_INVALID",
+    ),
+    root,
+  );
+  await remove(state);
+  validateActiveWorkspace(ws, root);
   const rootOutputs = await publicOutputs(root, ws.output),
     rootFiles = await files(ws.output);
-  const outputs = [...rootOutputs], searchIndexes: NonNullable<Parameters<SiblingModuleMap["reference-catalog"]["publishReferenceCatalog"]>[0]["searchIndexes"]> = [];
+  const outputs = [...rootOutputs],
+    searchIndexes: NonNullable<
+      Parameters<
+        SiblingModuleMap["reference-catalog"]["publishReferenceCatalog"]
+      >[0]["searchIndexes"]
+    > = [];
   const rootSearch = join(ws.output, "search.json");
   if (rootFiles.includes(rootSearch)) {
     searchIndexes.push({ path: rootSearch, mount: "" });
   }
-  const nativeOperations: (NonNullable<Awaited<ReturnType<typeof finalizeDownloads>>> & { project: string })[] = [];
-  const members: Parameters<SiblingModuleMap["reference-catalog"]["publishReferenceCatalog"]>[0]["members"] = [];
+  const nativeOperations:
+    (NonNullable<Awaited<ReturnType<typeof finalizeDownloads>>> & {
+      project: string;
+    })[] = [];
+  const members: Parameters<
+    SiblingModuleMap["reference-catalog"]["publishReferenceCatalog"]
+  >[0]["members"] = [];
   for (const { project, config, record } of records) {
     const mount = join(ws.output, project.mount);
     if (rootFiles.some((path: string) => inside(mount, path))) {
@@ -596,19 +679,25 @@ async function postImpl(root = Deno.cwd()): Promise<void> {
     ws.config["course-navigation"]?.["course-url"];
   const catalogPath = join(ws.output, "reference-catalog.json");
   const referenceCatalog: unknown = ws.config["reference-catalog"]
-    ? JSON.parse(await Deno.readTextFile(catalogPath))
+    ? parseJson(
+      await Deno.readTextFile(catalogPath),
+      catalogPath,
+      "reference-catalog",
+    )
     : undefined;
   for (const { project, config, record } of records) {
     const catalog = await finalizeDownloads(
       project.path,
       config,
       record,
-      baseUrl
-        ? new URL(project.mount.replace(/\\/g, "/") + "/", baseUrl).href
-        : undefined,
-      referenceCatalog,
-      baseUrl,
-      join(ws.output, project.mount),
+      {
+        baseUrl: baseUrl
+          ? new URL(project.mount.replace(/\\/g, "/") + "/", baseUrl).href
+          : undefined,
+        referenceCatalog,
+        catalogBaseUrl: baseUrl,
+        destinationDirectory: join(ws.output, project.mount),
+      },
     );
     if (catalog) nativeOperations.push({ project: project.mount, ...catalog });
   }
@@ -622,9 +711,7 @@ async function postImpl(root = Deno.cwd()): Promise<void> {
       nativeOutputs: rootOutputs,
       selectedSources: ws.selectedSources,
     },
-    baseUrl,
-    referenceCatalog,
-    baseUrl,
+    { baseUrl, referenceCatalog, catalogBaseUrl: baseUrl },
   );
   if (rootCatalog) {
     nativeOperations.push({ project: "root", ...rootCatalog });

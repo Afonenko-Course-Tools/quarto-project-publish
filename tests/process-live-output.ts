@@ -27,7 +27,7 @@ async function trial(mode: string) {
     if (error) stderr += decoder.decode(); else stdout += decoder.decode();
   };
   const readers = Promise.all([read(child.stdout, false), read(child.stderr, true)]);
-  let timer: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   if (mode !== "json" && mode !== "missing") await Promise.race([first, new Promise<void>((resolve) => timer = setTimeout(resolve, 5000))]);
   if (timer !== undefined) clearTimeout(timer);
   released = true;

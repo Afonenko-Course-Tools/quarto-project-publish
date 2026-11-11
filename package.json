@@ -3,11 +3,16 @@
   "private": true,
   "scripts": {
     "test:browser": "node tests/site-navigation.browser.cjs",
-    "check:types": "quarto run tools/check-types.ts"
+    "check:types": "quarto run tools/check-types.ts",
+    "check-quality": "node tools/check-quality.mjs",
+    "check-quality:controls": "node tools/check-quality-controls.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1",
     "@types/node": "26.6.6",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "dependency-cruiser": "18.7.2",
+    "eslint": "^9.39.1",
+    "typescript-eslint": "^8.72.2"
   }
 }

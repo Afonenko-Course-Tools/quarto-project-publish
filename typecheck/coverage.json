@@ -37,6 +37,7 @@
     "tests/fixtures/restricted-parent.ts",
     "tests/fixtures/unknown.ts",
     "tests/fixtures/warning.lua",
+    "tests/native-cache-currentness.ts",
     "tests/performance-context.ts",
     "tests/performance-noenv.ts",
     "tests/performance.ts",
@@ -74,6 +75,8 @@
     "tests/site-web-selection.ts",
     "tests/support.ts",
     "tests/type-boundaries.ts",
+    "tools/check-quality-controls.mjs",
+    "tools/check-quality.mjs",
     "tools/check-types.ts",
     "typecheck/browser.d.ts",
     "typecheck/native.d.lua"
@@ -85,6 +88,6 @@
   "language_gates": {
     "typescript_javascript": "quarto run tools/check-types.ts: Deno strict TS + tsc Node/CJS + tsc DOM browser/checkJs",
     "shell": "shellcheck tests/fixtures/*.sh",
-    "lua": "quarto run tools/check-types.ts --lua: единый закреплённый checker Performance"
+    "lua": "quarto run tools/check-types.ts --lua: \u0435\u0434\u0438\u043d\u044b\u0439 \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0451\u043d\u043d\u044b\u0439 checker Performance"
   }
 }

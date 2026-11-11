@@ -1,5 +1,5 @@
 import { dirname, fromFileUrl, join } from "stdlib/path";
-import { assert } from "./support.ts";
+import { assert, isRevealHtml } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   root = await Deno.makeTempDir({ prefix: "course-site-formats-" });
 const quarto = Deno.env.get("QUARTO") || "quarto";
@@ -79,12 +79,12 @@ const mixedHtml = await Deno.readTextFile(
 );
 assert(
   mixedHtml.includes("Website HTML beside Reveal") &&
-    !mixedHtml.includes("reveal.js"),
+    !isRevealHtml(mixedHtml),
   "document HTML front matter was forced to Reveal",
 );
 const talk = await Deno.readTextFile(join(root, "_site/slides/talk.html"));
 assert(
-  talk.includes("Visible Slide") && talk.includes("reveal.js"),
+  talk.includes("Visible Slide") && isRevealHtml(talk),
   "native reveal output missing",
 );
 const script = Array.from(talk.matchAll(/src="([^"]*reveal\.js)"/g))[0]?.[1];

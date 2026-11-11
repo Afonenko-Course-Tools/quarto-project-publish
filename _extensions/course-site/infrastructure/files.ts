@@ -1,5 +1,5 @@
-import {createMetrics as __createMetrics} from "../observability/bridge.ts";
-const __metrics=__createMetrics("course-site");
+import { createMetrics as __createMetrics } from "../observability/bridge.ts";
+const __metrics = __createMetrics("course-site");
 import { contextualize, diagnostic } from "./diagnostics.ts";
 import {
   dirname,
@@ -123,11 +123,33 @@ async function outputDirectoryImpl(
   }
   return output;
 }
-async function cleanOutputImpl(
+async function recoverableMarkdownCopy(
+  root: string,
+  output: string,
+  file: string,
+): Promise<boolean> {
+  let recoverableMarkdown = false;
+  const source = resolve(root, relative(output, file));
+  if (inside(root, source) && !inside(output, source)) {
+    await safePath(root, source);
+    try {
+      if ((await Deno.lstat(source)).isFile) {
+        const original = await Deno.readFile(source);
+        const copied = await Deno.readFile(file);
+        recoverableMarkdown = original.length === copied.length &&
+          original.every((byte, index) => byte === copied[index]);
+      }
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) throw error;
+    }
+  }
+  return recoverableMarkdown;
+}
+async function validateOutputCleanupImpl(
   root: string,
   output: string,
   resources: string[] = [],
-): Promise<void> {
+): Promise<boolean> {
   await outputDirectory(root, output);
   const copiedResources = new Set<string>();
   for (const resource of resources) {
@@ -135,8 +157,10 @@ async function cleanOutputImpl(
     if (!inside(root, source) || inside(output, source)) continue;
     await safePath(root, source);
     try {
-      if ((await Deno.lstat(source)).isFile &&
-          !/\.(qmd|ipynb|rmd|ya?ml)$/i.test(source)) {
+      if (
+        (await Deno.lstat(source)).isFile &&
+        !/\.(qmd|ipynb|rmd|ya?ml)$/i.test(source)
+      ) {
         copiedResources.add(join(output, relative(root, source)));
       }
     } catch (error) {
@@ -150,20 +174,7 @@ async function cleanOutputImpl(
       );
       let recoverableMarkdown = false;
       if (!protectedPath && /\.md$/i.test(file) && !copiedResources.has(file)) {
-        const source = resolve(root, relative(output, file));
-        if (inside(root, source) && !inside(output, source)) {
-          await safePath(root, source);
-          try {
-            if ((await Deno.lstat(source)).isFile) {
-              const original = await Deno.readFile(source);
-              const copied = await Deno.readFile(file);
-              recoverableMarkdown = original.length === copied.length &&
-                original.every((byte, index) => byte === copied[index]);
-            }
-          } catch (error) {
-            if (!(error instanceof Deno.errors.NotFound)) throw error;
-          }
-        }
+        recoverableMarkdown = await recoverableMarkdownCopy(root, output, file);
       }
       if (
         (/\.(qmd|md|ipynb|Rmd|ya?ml)$/i.test(file) &&
@@ -186,9 +197,24 @@ async function cleanOutputImpl(
         );
       }
     }
-    await Deno.remove(output, { recursive: true });
   } catch (e) {
-    if (!(e instanceof Deno.errors.NotFound)) throw e;
+    // Удалять можно только каталог, обход которого завершился.
+    if (e instanceof Deno.errors.NotFound) return false;
+    throw e;
+  }
+  return true;
+}
+async function cleanOutputImpl(
+  root: string,
+  output: string,
+  resources: string[] = [],
+): Promise<void> {
+  if (await validateOutputCleanup(root, output, resources)) {
+    try {
+      await Deno.remove(output, { recursive: true });
+    } catch (e) {
+      if (!(e instanceof Deno.errors.NotFound)) throw e;
+    }
   }
   await Deno.mkdir(output, { recursive: true });
 }
@@ -236,10 +262,35 @@ async function copyFilesImpl(
   }
 }
 
-export const inside = __metrics.wrapSync({id:"course-site.infrastructure.files.inside",kind:"io"},insideImpl);
-export const within = __metrics.wrapSync({id:"course-site.infrastructure.files.within",kind:"io"},withinImpl);
-export const safePath = __metrics.wrapAsync({id:"course-site.infrastructure.files.safePath",kind:"io"},safePathImpl);
-export const files = __metrics.wrapAsync({id:"course-site.infrastructure.files.files",kind:"io"},filesImpl);
-export const outputDirectory = __metrics.wrapAsync({id:"course-site.infrastructure.files.outputDirectory",kind:"io"},outputDirectoryImpl);
-export const cleanOutput = __metrics.wrapAsync({id:"course-site.infrastructure.files.cleanOutput",kind:"io"},cleanOutputImpl);
-export const copyFiles = __metrics.wrapAsync({id:"course-site.infrastructure.files.copyFiles",kind:"io"},copyFilesImpl);
+export const inside = __metrics.wrapSync({
+  id: "course-site.infrastructure.files.inside",
+  kind: "io",
+}, insideImpl);
+export const within = __metrics.wrapSync({
+  id: "course-site.infrastructure.files.within",
+  kind: "io",
+}, withinImpl);
+export const safePath = __metrics.wrapAsync({
+  id: "course-site.infrastructure.files.safePath",
+  kind: "io",
+}, safePathImpl);
+export const files = __metrics.wrapAsync({
+  id: "course-site.infrastructure.files.files",
+  kind: "io",
+}, filesImpl);
+export const outputDirectory = __metrics.wrapAsync({
+  id: "course-site.infrastructure.files.outputDirectory",
+  kind: "io",
+}, outputDirectoryImpl);
+export const validateOutputCleanup = __metrics.wrapAsync({
+  id: "course-site.infrastructure.files.validateOutputCleanup",
+  kind: "io",
+}, validateOutputCleanupImpl);
+export const cleanOutput = __metrics.wrapAsync({
+  id: "course-site.infrastructure.files.cleanOutput",
+  kind: "io",
+}, cleanOutputImpl);
+export const copyFiles = __metrics.wrapAsync({
+  id: "course-site.infrastructure.files.copyFiles",
+  kind: "io",
+}, copyFilesImpl);

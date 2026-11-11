@@ -1,5 +1,5 @@
 import { dirname, fromFileUrl, join } from "stdlib/path";
-import { assert } from "./support.ts";
+import { assert, isRevealHtml } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const root = await Deno.makeTempDir({ prefix: "site-effective-native-" });
 const write = async (path: string, text: string) => {
@@ -64,11 +64,11 @@ try {
   await write("part/slides.qmd", "# Native слайды\n");
   const actual = await render(["full"]);
   assert(
-    !actual.index.includes("reveal.js") && actual.index.includes("Native HTML"),
+    !isRevealHtml(actual.index) && actual.index.includes("Native HTML"),
     "Дочерний document format или mounted HTML потерян",
   );
   assert(
-    actual.slides.includes("reveal.js") && actual.slides.includes("Native слайды"),
+    isRevealHtml(actual.slides) && actual.slides.includes("Native слайды"),
     "Формат из профиля дочернего Quarto или mounted Revealjs потерян",
   );
   console.log("PASS mounted child HTML/Revealjs from native document and profile formats");

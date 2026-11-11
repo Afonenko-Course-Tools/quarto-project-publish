@@ -123,11 +123,11 @@ async function outputDirectoryImpl(
   }
   return output;
 }
-async function cleanOutputImpl(
+async function validateOutputCleanupImpl(
   root: string,
   output: string,
   resources: string[] = [],
-): Promise<void> {
+): Promise<boolean> {
   await outputDirectory(root, output);
   const copiedResources = new Set<string>();
   for (const resource of resources) {
@@ -186,9 +186,24 @@ async function cleanOutputImpl(
         );
       }
     }
-    await Deno.remove(output, { recursive: true });
   } catch (e) {
-    if (!(e instanceof Deno.errors.NotFound)) throw e;
+    // Удалять можно только каталог, обход которого завершился.
+    if (e instanceof Deno.errors.NotFound) return false;
+    throw e;
+  }
+  return true;
+}
+async function cleanOutputImpl(
+  root: string,
+  output: string,
+  resources: string[] = [],
+): Promise<void> {
+  if (await validateOutputCleanup(root, output, resources)) {
+    try {
+      await Deno.remove(output, { recursive: true });
+    } catch (e) {
+      if (!(e instanceof Deno.errors.NotFound)) throw e;
+    }
   }
   await Deno.mkdir(output, { recursive: true });
 }
@@ -241,5 +256,6 @@ export const within = __metrics.wrapSync({id:"course-site.infrastructure.files.w
 export const safePath = __metrics.wrapAsync({id:"course-site.infrastructure.files.safePath",kind:"io"},safePathImpl);
 export const files = __metrics.wrapAsync({id:"course-site.infrastructure.files.files",kind:"io"},filesImpl);
 export const outputDirectory = __metrics.wrapAsync({id:"course-site.infrastructure.files.outputDirectory",kind:"io"},outputDirectoryImpl);
+export const validateOutputCleanup = __metrics.wrapAsync({id:"course-site.infrastructure.files.validateOutputCleanup",kind:"io"},validateOutputCleanupImpl);
 export const cleanOutput = __metrics.wrapAsync({id:"course-site.infrastructure.files.cleanOutput",kind:"io"},cleanOutputImpl);
 export const copyFiles = __metrics.wrapAsync({id:"course-site.infrastructure.files.copyFiles",kind:"io"},copyFilesImpl);

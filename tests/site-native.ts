@@ -175,6 +175,65 @@ if (mode === "smoke") {
   );
   Deno.exit(0);
 }
+{
+  const rootConfigPath = join(root, "_quarto.yml");
+  const rootConfig = await Deno.readTextFile(rootConfigPath);
+  await Deno.writeTextFile(
+    rootConfigPath,
+    rootConfig.replace("subprojects: [part]", "subprojects: [part, late]"),
+  );
+  await write(
+    "late/_quarto.yml",
+    "project: {type: website, output-dir: _output, render: [index.qmd]}\nformat: html\n",
+  );
+  await write("late/index.qmd", "# Late\n");
+  const draftPath = "late/_output/draft.qmd";
+  const draft = "# Защищённый черновик\r\n\r\nИсходные байты.\r\n";
+  await write(draftPath, draft);
+  const previousOutputs = [
+    ["_site/previous.html", "Прежняя выдача корня"],
+    ["part/_output/default/previous.html", "Прежняя выдача первой части"],
+  ] as const;
+  for (const [path, contents] of previousOutputs) await write(path, contents);
+
+  const refused = await run(
+    ["run", "_extensions/course-site/entrypoints/pre.ts"],
+    root,
+    false,
+    {
+      QUARTO_PROJECT_RENDER_ALL: "1",
+      QUARTO_PROFILE: "",
+      QUARTO_PROJECT_OUTPUT_DIR: "",
+    },
+  );
+  assert(
+    refused.includes("[SITE.OUTPUT_OVERLAP]") &&
+      refused.includes(join(root, draftPath)),
+    refused,
+  );
+  assertEquals(
+    [...await Deno.readFile(join(root, draftPath))],
+    [...new TextEncoder().encode(draft)],
+  );
+  for (const [path, contents] of previousOutputs) {
+    assertEquals(await Deno.readTextFile(join(root, path)), contents);
+  }
+  const preflightTrace = (await Deno.readTextFile(join(root, "trace.jsonl")))
+    .trim().split("\n").slice(trace.length)
+    .map((line) => readCommandEvent(JSON.parse(line)));
+  assertEquals(preflightTrace.map((event) => event.kind), [
+    "inspect",
+    "inspect",
+    "inspect",
+  ]);
+
+  await Deno.writeTextFile(rootConfigPath, rootConfig);
+  await Deno.remove(join(root, "late"), { recursive: true });
+  console.log(
+    "PASS защищённый draft.qmd последней части сохраняет обе прежние выдачи без child render",
+  );
+  if (mode === "preflight") Deno.exit(0);
+}
 await write("part/.quarto/cache-sentinel", "keep");
 await write("part/_freeze/cache-sentinel", "keep");
 await write("part/_output/default/stale.html", "OLD");

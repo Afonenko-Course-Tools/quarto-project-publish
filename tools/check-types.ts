@@ -76,8 +76,8 @@ if (scope === "--lua") {
     }
     for (const target of ["node", "browser"]) {
       if (scope !== "--all" && scope !== "--" + target) continue;
-      const result = await new Deno.Command("node", {
-        args: [join(root, "node_modules/typescript/bin/tsc"), "--project", join(root, "typecheck", target + ".json")],
+      const result = await new Deno.Command(Deno.env.get("TSC") || "tsc", {
+        args: ["--project", join(root, "typecheck", target + ".json")],
         cwd: root, stdout: "inherit", stderr: "inherit",
       }).spawn().status;
       console.log(JSON.stringify({ gate: target, exitCode: result.code }));

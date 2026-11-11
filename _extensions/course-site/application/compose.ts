@@ -18,6 +18,7 @@ import {
   resolve,
   safePath,
   toFileUrl,
+  validateOutputCleanup,
 } from "../infrastructure/files.ts";
 import {
   inspectProject,
@@ -366,6 +367,9 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
       );
     }
   }
+  for (const { project, output, plan } of inspected) {
+    await validateOutputCleanup(project.path, output, plan.resources);
+  }
   await cleanOutput(root, ws.output, [
     ...ws.resources || [],
     ...inspected.flatMap(({ plan }) => plan.resources || []),
@@ -377,6 +381,7 @@ async function preImpl(root = Deno.cwd()): Promise<void> {
   }
   const records = [];
   for (const { project, config, output, plan } of inspected) {
+    // Предыдущий child render мог изменить содержимое этого каталога.
     await cleanOutput(project.path, output, plan.resources);
     const collection = join(run, `${project.id}-0.json`);
     await progress("Рендер", project.path, () =>

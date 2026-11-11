@@ -28,5 +28,12 @@ executable engine/freeze остаются областью отдельной м
 
 Полный production quality gate проверяет все 14 собственных TS файлов и один
 browser JS, unsafe типы, structural budgets и зависимости без baseline.
-Полный paired замер Java/SP оформляется на согласованном immutable составе;
-время малой mutation matrix не выдаётся за ускорение полного курса.
+Восемь полных native Java/SP cold/warm сборок на immutable составе завершились
+успешно. Все 141/27 ZIP и catalog/search совпадают побайтно; исходные файлы
+сохранены. Измеренный startup выигрыш относится к квалифицированному Pandoc Core,
+а не к одному Publisher или малой mutation matrix. Raw HTML и source assets
+сохранены, attribute order проверен полным DOM, изменённые две копии Reveal
+plugin сопоставлены собственному рецензированному source Core. Прежний QRC
+cold/warm rel drift обнаружен, исправлен у владельца и повторно проверен на
+реальном SP. Подробности и границы — общий `matched/final-summary.json` кампании;
+hosted/installed выпуск отдельно этим документом не объявляется.

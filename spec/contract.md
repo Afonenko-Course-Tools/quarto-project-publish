@@ -6,7 +6,7 @@ status: current
 
 # Контракт Publisher
 
-Текущий ref: **6.0.0** (кандидат); версия пакета задаётся
+Текущий ref: **6.1.0** (кандидат); версия пакета задаётся
 `_extensions/course-site/_extension.yml`.
 
 Корень native проекта объявляет непустой список `subprojects: [theory, tasks, lectures]`; структуру и файловые границы проверяет
@@ -21,7 +21,7 @@ Publisher сохраняет native defaults/groups при отсутствии 
 фактический `QUARTO_PROFILE` post-hook; `files.config` не определяет профиль.
 Publisher проверяет outputs только выбранной аудитории. Publisher не запускает отдельный inspect неактивных student/full профилей; сохранность старой выдачи другой аудитории при совпадающих или вложенных output-каталогах не гарантируется: cleanup текущей композиции может удалить или перезаписать её. Для одновременного хранения выдач автор задаёт непересекающиеся каталоги. Каждый child получает одну native whole-project команду `render .` с выбранными корнем профилями; конфигурация дочернего Quarto выбирает форматы штатным правилом. Publisher не выполняет N document inspect, не вычисляет effective format и не переходит к per-document render. Невеб-результаты остаются обычным native поведением, без вымышленной Core publication authority.
 
-Действующий [публичный договор native операции Core](https://github.com/Afonenko-Course-Tools/quarto-course/blob/c950a962a76a26dc61378fdc16bb80533800596e/docs/native-operation-ts.md) поддерживает фактические `html|revealjs`. Child с активным Core и выбранным PDF получает отказ неподдержанного native формата; Publisher не расширяет этот договор и не подменяет выбор формата. Обычные невеб-проекты без Core сохраняют поведение Quarto. Поддержка PDF/Typst отдельным Presentation не означает квалификацию native publication Core.
+Действующий [публичный договор native операции Core](../tests/dependencies/core/docs/native-operation-ts.md) поддерживает фактические `html|revealjs`. Child с активным Core и выбранным PDF получает отказ неподдержанного native формата; Publisher не расширяет этот договор и не подменяет выбор формата. Обычные невеб-проекты без Core сохраняют поведение Quarto. Поддержка PDF/Typst отдельным Presentation не означает квалификацию native publication Core.
 
 До первой очистки Publisher проверяет пути и защищённое содержимое всех
 выбранных каталогов результатов корня и частей. При отказе этой проверки
@@ -38,8 +38,8 @@ Core/QRC опциональны и определяются в sibling installat
 Core сохраняет самостоятельные области identity проектов, QRC получает явные
 namespace/current outputs/search. Publisher не вводит общий экспортный банк
 и не переопределяет public resource policy Core. Правила учебной модели принадлежат
-[Core](../../quarto-course/spec/index.md), адресация —
-[QRC](../../quarto-reference-catalog/docs/contract.md).
+[Core](../tests/dependencies/core/spec/index.md), адресация —
+[QRC](../tests/dependencies/qrc/docs/contract.md).
 
 В Core 9 Publisher сохраняет отдельную genuine operation каждого владельца.
 Источники в catalog/document остаются относительными к этому owner:

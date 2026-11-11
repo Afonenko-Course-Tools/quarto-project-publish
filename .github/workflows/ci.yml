@@ -1,4 +1,4 @@
-name: Проверка course-site 6.0.0
+name: Проверка course-site
 on:
   pull_request:
   push:
@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       XDG_CACHE_HOME: ${{ github.workspace }}/.ci/course-site-cache
-      PERFORMANCE: ${{ github.workspace }}/quarto-course-performance
-      COURSE_PERFORMANCE_SOURCE: ${{ github.workspace }}/quarto-course-performance
+      PERFORMANCE: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/performance
+      COURSE_PERFORMANCE_SOURCE: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/performance
       LUA_LANGUAGE_SERVER: ${{ github.workspace }}/.ci/luals/bin/lua-language-server
     strategy:
       fail-fast: false
@@ -23,6 +23,11 @@ jobs:
         with:
           path: quarto-project-publish
           persist-credentials: false
+      - name: Подготовить native Git dependencies и записать фактические HEAD
+        working-directory: quarto-project-publish
+        run: |
+          git submodule update --init
+          git submodule foreach 'git rev-parse HEAD'
       - name: Настроить HTTPS зеркало Ubuntu
         run: |
           test -f /etc/apt/apt-mirrors.txt
@@ -33,55 +38,14 @@ jobs:
         run: |
           mkdir -p -- "$XDG_CACHE_HOME"
           test -w "$XDG_CACHE_HOME"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: Afonenko-Course-Tools/quarto-course
-          ref: 5c2b551724471ff7637aad1068f22c5f7998a687 # Core 9.3.4: согласованный provider текущей Java/SP композиции
-          path: quarto-course
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: Afonenko-Course-Tools/quarto-reference-catalog
-          ref: f23797829c42b8333d5ba02469b64531f394911d # QRC 3.2.0: согласованный provider текущей Java/SP композиции
-          path: quarto-reference-catalog
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: Afonenko-Course-Tools/quarto-project-download
-          ref: cb00715252d46b3758a8ac2d24a893a2602d6315 # Download 3.5.0: публичные resetDownloadRequests/prepareNativeDownloads
-          path: quarto-project-download
-          persist-credentials: false
-      - name: Проверить закреплённые Core и QRC
-        run: |
-          test "$(git -C quarto-course rev-parse HEAD)" = "5c2b551724471ff7637aad1068f22c5f7998a687"
-          test "$(git -C quarto-reference-catalog rev-parse HEAD)" = "f23797829c42b8333d5ba02469b64531f394911d"
-      - name: Проверить закреплённый Download
-        run: |
-          git -C quarto-project-download rev-parse HEAD
-          test "$(git -C quarto-project-download rev-parse HEAD)" = "cb00715252d46b3758a8ac2d24a893a2602d6315"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: Afonenko-Course-Tools/quarto-course-prairielearn
-          ref: 7e30f5d8a1cfeb0cef78ba72fa11a53cb92a20c1 # PL 9.0.7: согласованный публичный inspectPublication; не запуск C CLI
-          path: quarto-course-prairielearn
-          persist-credentials: false
-      - name: Проверить закреплённый public validator
-        run: test "$(git -C quarto-course-prairielearn rev-parse HEAD)" = "7e30f5d8a1cfeb0cef78ba72fa11a53cb92a20c1"
       - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed
         with:
           deno-version: v2.7.14
       - uses: quarto-dev/quarto-actions/setup@8a96df13519ee81fd526f2dfca5962811136661b
         with:
           version: ${{ matrix.quarto }}
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          repository: Afonenko-Course-Tools/quarto-course-performance
-          ref: bfbe23f819dfe4c7d5e5487f669c14d8e6c9846e
-          path: quarto-course-performance
-          persist-credentials: false
-      - name: Проверить закреплённый Performance и установить LuaLS
+      - name: Установить инструменты Performance
         run: |
-          test "$(git -C "$PERFORMANCE" rev-parse HEAD)" = "bfbe23f819dfe4c7d5e5487f669c14d8e6c9846e"
           bash "$PERFORMANCE/tools/setup-mv-ci.sh" "$RUNNER_TEMP/course-gnu-mv" >> "$GITHUB_PATH"
           bash "$PERFORMANCE/tools/setup-lua-ci.sh" "$GITHUB_WORKSPACE/.ci/luals"
       - name: Установить закреплённый ShellCheck
@@ -125,10 +89,10 @@ jobs:
       - name: Строгая типизация полного собственного состава
         working-directory: quarto-project-publish
         env:
-          CORE: ${{ github.workspace }}/quarto-course
-          PL: ${{ github.workspace }}/quarto-course-prairielearn
-          DOWNLOAD: ${{ github.workspace }}/quarto-project-download
-          QRC: ${{ github.workspace }}/quarto-reference-catalog
+          CORE: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/core
+          PL: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/pl
+          DOWNLOAD: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/download
+          QRC: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/qrc
         run: |
           npm ci --ignore-scripts
           npm run check:types
@@ -148,10 +112,10 @@ jobs:
       - name: Native cache и currentness при изменении входов
         working-directory: quarto-project-publish
         env:
-          CORE: ${{ github.workspace }}/quarto-course
-          PL: ${{ github.workspace }}/quarto-course-prairielearn
-          DOWNLOAD: ${{ github.workspace }}/quarto-project-download
-          QRC: ${{ github.workspace }}/quarto-reference-catalog
+          CORE: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/core
+          PL: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/pl
+          DOWNLOAD: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/download
+          QRC: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/qrc
         run: quarto run tests/native-cache-currentness.ts
       - name: HTML-дерево и автономная поставка навигации
         working-directory: quarto-project-publish
@@ -165,12 +129,12 @@ jobs:
         working-directory: quarto-project-publish
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/course-site-browsers
-          CORE: ${{ github.workspace }}/quarto-course
-          QRC: ${{ github.workspace }}/quarto-reference-catalog
-          DOWNLOAD: ${{ github.workspace }}/quarto-project-download
-          PL: ${{ github.workspace }}/quarto-course-prairielearn
-          COURSE_CORE_PROVIDER: ${{ github.workspace }}/quarto-course
-          QRC_PROVIDER: ${{ github.workspace }}/quarto-reference-catalog
+          CORE: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/core
+          QRC: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/qrc
+          DOWNLOAD: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/download
+          PL: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/pl
+          COURSE_CORE_PROVIDER: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/core
+          QRC_PROVIDER: ${{ github.workspace }}/quarto-project-publish/tests/dependencies/qrc
           COURSE_SITE_TEST_ROOT: ${{ runner.temp }}/course-site-native
           COURSE_SITE_DOMAIN_ROOT: ${{ runner.temp }}/course-site-domains
           COURSE_SITE_PROJECT_ROOT: ${{ runner.temp }}/course-site-project

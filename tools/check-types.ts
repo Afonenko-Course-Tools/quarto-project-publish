@@ -8,6 +8,7 @@ if (typeof coverage !== "object" || coverage === null || !("owned" in coverage) 
 async function sourceFiles(directory: string): Promise<string[]> {
   const found: string[] = [];
   for await (const entry of Deno.readDir(join(root, directory))) {
+    if (directory === "tests" && entry.name === "dependencies") continue;
     if (["vendor", "node_modules", "_generated", ".quarto", ".git"].includes(entry.name) || directory.startsWith("examples/") && entry.name === "_extensions") continue;
     const path = directory + "/" + entry.name;
     if (entry.isDirectory) found.push(...await sourceFiles(path));

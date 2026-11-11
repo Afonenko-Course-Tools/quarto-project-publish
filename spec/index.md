@@ -16,7 +16,7 @@ vocabulary, architecture, reference и plan; `component` указывает вл
 | [Контракт Publisher](contract.md) | contract | publisher | current |
 | [Исполняемая проверка subprojects](../_extensions/course-site/infrastructure/config.ts) | contract/runtime | publisher | current |
 | [Диагностика](../docs/diagnostics.md) | reference | publisher | current |
-| [Авторская модель Core](https://github.com/Afonenko-Course-Tools/quarto-course/blob/aadeea62b54d4b129d98215241737c35d2f17851/spec/index.md) | specification/index | course-core | current |
+| [Авторская модель Core](../tests/dependencies/core/spec/index.md) | specification/index | course-core | current |
 | [Результат реализации](../docs/releases/2026-10-08-implementation.md) | implementation-report | publisher | historical |
 | [Карта сохранённой истории](../docs/history-index.md) | history-index | publisher | current |
 
@@ -24,7 +24,7 @@ Publisher владеет `subprojects`, размещением native outputs, c
 
 Версия пакета определяется [descriptor](../_extensions/course-site/_extension.yml) того же Git ref.
 Минимальный Quarto — 1.11.5; матрица CI включает 1.11.5 и 1.11.6; исполняемая проверка конфигурации принадлежит TS-модулю Publisher.
-Текущий ref — кандидат **6.0.1**; полный GREEN CI и выпуск ещё не подтверждены. Изменения после
+Текущий ref — кандидат **6.1.0**; полный GREEN CI и выпуск ещё не подтверждены. Изменения после
 выпущенного тега имеют статус **unreleased**.
 Документация установленного выпуска читается из того же immutable tag, что и код.
 

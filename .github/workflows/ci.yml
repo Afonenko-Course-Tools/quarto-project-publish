@@ -23,6 +23,12 @@ jobs:
         with:
           path: quarto-project-publish
           persist-credentials: false
+      - name: Настроить HTTPS зеркало Ubuntu
+        run: |
+          test -f /etc/apt/apt-mirrors.txt
+          test ! -L /etc/apt/apt-mirrors.txt
+          grep -Rq 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d
+          printf '%s\n' 'https://mirrors.edge.kernel.org/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt
       - name: Подготовить доступный кеш Quarto
         run: |
           mkdir -p -- "$XDG_CACHE_HOME"

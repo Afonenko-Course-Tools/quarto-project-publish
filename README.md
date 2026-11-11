@@ -1,24 +1,24 @@
 # course-site: составной сайт из native проектов Quarto
 
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
-Текущий ref — кандидат **6.0.1**. Полный GREEN CI и публикация кандидата
+Текущий ref — кандидат **6.1.0**. Полный GREEN CI и публикация кандидата
 ещё не подтверждены. Версия
 определяется descriptor; код и документация опубликованного выпуска читаются
 из одного immutable tag. Минимум — Quarto 1.11.5. Конфигурацию проверяет исполняемый TS-контракт владельца. Локальная разработка устанавливает расширение штатным
 `quarto add` из согласованного checkout производителя.
 
-После публикации версия 6.0.1 устанавливается из существующего
+После публикации версия 6.1.0 устанавливается из существующего
 репозитория `quarto-project-publish`:
 
 ```bash
-quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.1
+quarto add Afonenko-Course-Tools/quarto-project-publish@v6.1.0
 quarto render --profile student
 quarto preview --no-watch-inputs
 quarto publish gh-pages --profile student
 ```
 
 После публикации нового тега установка из GitHub выполняется командой
-`quarto add Afonenko-Course-Tools/quarto-project-publish@v6.0.1`. Наличие тега
+`quarto add Afonenko-Course-Tools/quarto-project-publish@v6.1.0`. Наличие тега
 и готовность установленного курса проверяются отдельно.
 
 Используйте фактический installation prefix, показанный `quarto add`. Ниже пути
@@ -171,9 +171,9 @@ ID и причины. Неизвестная внутренняя ошибка �
 
 ## Проверка
 
-Текущий кандидат 6.0.1 сохраняет main наблюдение/preview и публичный B3 путь.
-Точные контрольные commits Core/QRC/Download/C задаются [CI](.github/workflows/ci.yml)
-того же Git ref. Целевой договор — Core 9 и PrairieLearn 9; старые матрицы не
+Текущий кандидат 6.1.0 сохраняет main наблюдение/preview и публичный B3 путь.
+Точные исходники интеграционных fixtures Core/QRC/Download/PL задаются gitlinks
+в `tests/dependencies` того же Git ref. Целевой договор — Core 9 и PrairieLearn 9; старые матрицы не
 подтверждают новую пару. Core включается через `filters: [course-core]`, старый
 runtime-флаг не обязателен. Реальный CI, установка и публикация проверяются отдельно.
 
@@ -182,8 +182,8 @@ runtime-флаг не обязателен. Реальный CI, установ�
 в `typecheck/coverage.json`; проверка отклоняет расхождение с фактическим составом.
 Мосты наблюдения проверяет владелец шаблона Performance. Сторонний код
 остаётся внешней зависимостью. Компиляция использует действительные публичные
-типы соседних Core/PL/Download/QRC/Navigation из рабочих каталогов рядом с Publisher;
-другие пути задаются через `CORE`, `PL`, `DOWNLOAD`, `QRC`.
+типы Core/PL/Download/QRC/Navigation из native fixtures;
+их пути задаются через `CORE`, `PL`, `DOWNLOAD`, `QRC` в bootstrap ниже.
 Входы JSON и нативного `inspect` проверяются во время исполнения, а типы последующей
 обработки выводятся из проверенных результатов.
 
@@ -192,10 +192,9 @@ runtime-флаг не обязателен. Реальный CI, установ�
 проверяются командой `shellcheck tests/fixtures/*.sh`. Во всех трёх TS/JS средах
 включены `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`.
 
-Lua проверяется общим инструментом `quarto-course-performance@0781f03a11f461691d7ce116f2c53bb5d8af68d7`.
-Копии `observability/bridge.ts` и `observability/bridge.lua` перенесены без изменений из этой редакции Performance: Git blob `1f5493b75d3ff39808ab58ded3c31080b748f65f` и `47b0e87e54451afbcbad2e8f6514ca2664350287` соответственно.
-По умолчанию он берётся из соседнего `../quarto-course-performance`; переменная
-`PERFORMANCE` задаёт другой рабочий каталог той же закреплённой редакции.
+Lua проверяется общим инструментом из gitlink `tests/dependencies/performance`.
+Копии `observability/bridge.ts` и `observability/bridge.lua` остаются автономными
+частями установленного пакета. Bootstrap задаёт `PERFORMANCE` для выбранного checkout.
 Обёртка передаёт конечный собственный список `--scope`, точное исключение
 канонического моста наблюдения и каталог его типов. Собственного движка LuaLS
 и установщика здесь нет.
@@ -235,8 +234,8 @@ quarto run tests/site-web-selection.ts
 quarto run tests/site-local.ts
 ```
 
-Domain suite устанавливает полные payloads через настоящий `quarto add` из соседних
-checkout `quarto-course` и `quarto-reference-catalog`; пути можно задать через
+Domain suite устанавливает полные payloads через настоящий `quarto add` из native
+fixtures Core и QRC; bootstrap задаёт пути через
 `COURSE_CORE_PROVIDER` и `QRC_PROVIDER`. Preview suite:
 `quarto run tests/site-preview.ts <fixture-path>` после site-native suite. Для выбора
 Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME` разделяется
@@ -247,7 +246,7 @@ Quarto используйте `QUARTO=/absolute/path/to/quarto`; `XDG_CACHE_HOME
 
 ## Версии и обновление
 
-Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 6.0.1;
+Версия определяется descriptor того же Git ref. Текущий ref описывает кандидат 6.1.0;
 изменения предыдущих выпусков сохранены ниже и в истории Git.
 Документация и код выбранного выпуска читаются из одного ref.
 Сохраните установленные `_extensions` в Git курса; при обновлении просмотрите diff и выполните проверки курса. Опубликованные
@@ -366,3 +365,24 @@ Navigation из того же namespace установленных расшир�
 маршрут; grading/seed qualification выполняется отдельно. Download публикует
 готовый draft после успешного Core closing. Ранние clean/render/mount effects
 сохраняются без общего rollback. Подробности — [публичная композиция](docs/public-operation.md).
+
+## Исходники для разработки
+
+```bash
+git submodule update --init
+git submodule foreach 'git rev-parse HEAD'
+export CORE="$PWD/tests/dependencies/core"
+export PL="$PWD/tests/dependencies/pl"
+export DOWNLOAD="$PWD/tests/dependencies/download"
+export QRC="$PWD/tests/dependencies/qrc"
+export PERFORMANCE="$PWD/tests/dependencies/performance"
+export COURSE_PERFORMANCE_SOURCE="$PERFORMANCE"
+export COURSE_CORE_PROVIDER="$CORE"
+export QRC_PROVIDER="$QRC"
+```
+
+`tests/dependencies` содержит только интеграционные fixtures. Их gitlinks —
+единственные selectors исходников; CI использует фактические HEAD как evidence.
+Инициализация намеренно без `--recursive`: чужие fixture graphs не являются
+зависимостями установленного расширения. Для локальной установки используйте
+`quarto add` с путём выбранного checkout.

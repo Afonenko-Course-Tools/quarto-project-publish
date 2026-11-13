@@ -11,18 +11,18 @@
     "useUnknownInCatchVariables": true,
     "module": "Node16",
     "moduleResolution": "Node16",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "types": [
-      "node"
-    ]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
   },
-  "files": [
-    "../tests/playwright.cjs",
-    "../tests/site-navigation.browser.cjs",
-    "../tests/site-composed-navigation.browser.cjs"
+  "include": [
+    "../tests/**/*.js",
+    "../tests/**/*.cjs",
+    "../tests/**/*.mjs",
+    "../tools/**/*.js",
+    "../tools/**/*.cjs",
+    "../tools/**/*.mjs",
+    "../*.config.js",
+    "../*.config.cjs",
+    "../*.config.mjs"
   ]
 }

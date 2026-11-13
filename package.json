@@ -5,7 +5,10 @@
     "test:browser": "node tests/site-navigation.browser.cjs",
     "check:types": "quarto run tools/check-types.ts",
     "check-quality": "node tools/check-quality.mjs",
-    "check-quality:controls": "node tools/check-quality-controls.mjs"
+    "check-quality:controls": "node tools/check-quality-controls.mjs",
+    "check:formats": "bash tools/check-formats.sh",
+    "format": "bash tools/check-formats.sh --write",
+    "check:formats:controls": "bash tools/check-format-controls.sh"
   },
   "devDependencies": {
     "playwright": "1.62.1",

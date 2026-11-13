@@ -72,7 +72,8 @@ Node include автоматически находит новые tools/tests `.
 TS/JS tests и tools, включая `.mjs`.
 
 `npm run check:formats` проверяет все собственные TS/JS/JSON/YAML через Prettier,
-Lua через StyLua и Luacheck, shell через shfmt, ShellCheck и `bash -n`, YAML через
+Lua через StyLua и Luacheck, shell через shfmt, ShellCheck и `bash -n`, TOML через
+`taplo lint --no-schema` и `taplo format`, YAML через
 yamllint и workflow через actionlint. Каждый формат имеет одного владельца стиля.
 `npm run format` применяет этот стиль; канонические observability bridge, vendor
 и generated принадлежат своим владельцам. Luacheck знает только реальные
@@ -89,3 +90,15 @@ Lua с ошибкой имени runtime, shell с SC2086, YAML с повтор�
 CLI через подставленный executable. Контроли запускаются последовательно с gates
 того же checkout, временные исходники удаляются через trap. Инструменты ставятся
 стандартными package managers в CI; локальная команда ничего не устанавливает.
+
+
+TOML обнаруживается тем же Git tracked/untracked списком, включая `stylua.toml`.
+Taplo — единственный владелец стиля TOML: без сетевых схем и авто-конфигурации,
+ширина 120, порядок ключей сохраняется. CI устанавливает стандартный
+`@taplo/cli@0.7.0`; локально используется установленный CLI. Контроли нового TOML
+отдельно проверяют формат и синтаксическую ошибку. Новый YAML `flag: yes`
+подтверждает ненулевой выход `yamllint --strict` и для предупреждения `truthy`.
+
+ESLint 10 используется с поддерживающим его typescript-eslint; scoped overrides
+minimatch в ESLint и typescript-estree устраняют диагностированные npm audit
+замечания без подмены runtime API курса и без принудительного обхода peer checks.

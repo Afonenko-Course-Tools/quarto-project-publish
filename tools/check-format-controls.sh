@@ -2,7 +2,7 @@
 # Контроли запускают штатный gate и всегда удаляют новые исходники.
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-paths=(tools/__quality_format.mjs tests/fixtures/__quality_format.lua tests/fixtures/__quality_format.sh tools/__quality_format.yml)
+paths=(tools/__quality_format.mjs tests/fixtures/__quality_format.lua tests/fixtures/__quality_format.sh tools/__quality_format.yml tools/__quality_format.toml)
 for file in "${paths[@]}"; do
   [[ ! -e "$file" ]] || {
     printf 'Контрольный путь занят: %s\n' "$file" >&2
@@ -40,6 +40,12 @@ printf '%s\n' '#!/usr/bin/env bash' "echo \$QUALITY_CONTROL_VALUE" >"${paths[2]}
 reject 'SC2086'
 printf '%s\n' 'key: first' 'key: second' >"${paths[3]}"
 reject 'unique|repeated|duplicat'
+printf '%s\n' 'flag: yes' >"${paths[3]}"
+reject 'truthy'
+printf '%s\n' 'value=1' >"${paths[4]}"
+reject '__quality_format.toml'
+printf '%s\n' 'value = [' >"${paths[4]}"
+reject 'syntax|parse|invalid|error'
 printf '%s\n' '#!/usr/bin/env bash' 'echo QUALITY_TOOL_FAILURE >&2' 'exit 23' >"$temporary/prettier"
 chmod +x "$temporary/prettier"
 if PATH="$temporary:$PATH" bash tools/check-formats.sh >"$temporary/tool.log" 2>&1; then

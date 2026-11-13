@@ -110,7 +110,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes shfmt yamllint jq luarocks
           sudo luarocks install luacheck 1.2.0
-          npm install --global prettier@3.8.1
+          npm install --global prettier@3.8.1 @taplo/cli@0.7.0
           cargo install stylua --locked --version 2.6.0
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           printf '%s\n' "$HOME/.cargo/bin" "$HOME/go/bin" >> "$GITHUB_PATH"

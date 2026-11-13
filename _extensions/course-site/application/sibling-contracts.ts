@@ -16,23 +16,20 @@ export interface SiblingModuleMap {
 }
 
 /** Поля текущего результата, используемые native операцией Java Site. */
-export type NativeSiteRecord = Pick<
-  CollectionRecord,
-  "projectRoot" | "outputDir" | "profiles" | "nativeOutputs"
-> & {
+export type NativeSiteRecord = Pick<CollectionRecord, "projectRoot" | "outputDir" | "profiles" | "nativeOutputs"> & {
   selectedSources?: Workspace["selectedSources"];
 };
 
-export type {
-  NativeCatalog,
-  NativePublication,
-} from "course-core/public.ts";
+export type { NativeCatalog, NativePublication } from "course-core/public.ts";
 
 export type { PreparedDownloads } from "project-download/public.ts";
 export type { PublicationInspection } from "course-prairielearn/public.ts";
 
 /** Runtime граница проверяет именно операции, используемые данным consumer. */
-export function isSibling<Name extends keyof SiblingModuleMap>(name: Name, value: unknown): value is SiblingModuleMap[Name] {
+export function isSibling<Name extends keyof SiblingModuleMap>(
+  name: Name,
+  value: unknown,
+): value is SiblingModuleMap[Name] {
   if (typeof value !== "object" || value === null) return false;
   const required = {
     "course-core": ["withNativePublication"],
@@ -41,5 +38,5 @@ export function isSibling<Name extends keyof SiblingModuleMap>(name: Name, value
     "reference-catalog": ["publishReferenceCatalog"],
     "course-navigation": ["composeNavigation"],
   } satisfies { [Key in keyof SiblingModuleMap]: (keyof SiblingModuleMap[Key])[] };
-  return required[name].every(key => key in value && typeof Reflect.get(value, key) === "function");
+  return required[name].every((key) => key in value && typeof Reflect.get(value, key) === "function");
 }

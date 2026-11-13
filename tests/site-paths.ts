@@ -11,92 +11,100 @@ try {
     subprojects: ["./a/slides", "b/slides"],
   };
   const result = await validateConfig(root, base, ["student"]);
-  assertEquals(result.projects.map((p) => p.mount), ["a/slides", "b/slides"]);
+  assertEquals(
+    result.projects.map((p) => p.mount),
+    ["a/slides", "b/slides"],
+  );
   assertEquals(new Set(result.projects.map((p) => p.id)).size, 2);
   assertEquals(result.profiles, ["student"]);
+  await assertRejects(() => validateConfig(root, { ...base, subprojects: [] }, []), "SITE.CONFIG_INVALID", [
+    root,
+    "subprojects",
+  ]);
   await assertRejects(
-    () => validateConfig(root, { ...base, subprojects: [] }, []),
-    "SITE.CONFIG_INVALID",
-    [root, "subprojects"],
-  );
-  await assertRejects(
-    () =>
-      validateConfig(
-        root,
-        { ...base, subprojects: ["part", "part/nested"] },
-        [],
-      ),
+    () => validateConfig(root, { ...base, subprojects: ["part", "part/nested"] }, []),
     "SITE.SUBPROJECT_INVALID",
     [root, "part", "subprojects"],
   );
   await assertRejects(
     () =>
-      validateConfig(root, {
-        ...base,
-        project: { ...base.project, "output-dir": ".quarto/site" },
-      }, []),
+      validateConfig(
+        root,
+        {
+          ...base,
+          project: { ...base.project, "output-dir": ".quarto/site" },
+        },
+        [],
+      ),
     "SITE.OUTPUT_OVERLAP",
     [root, "output-dir"],
   );
   await assertRejects(
     () =>
-      validateConfig(root, {
-        ...base,
-        subprojects: ["not-directory.qmd"],
-      }, []),
+      validateConfig(
+        root,
+        {
+          ...base,
+          subprojects: ["not-directory.qmd"],
+        },
+        [],
+      ),
     "SITE.SUBPROJECT_INVALID",
     [root, "not-directory.qmd", "subprojects"],
   );
-  await assertRejects(
-    () =>
-      validateConfig(root, { ...base, subprojects: ["absent"] }, []),
-    "SITE.SUBPROJECT_INVALID",
-    [root, "absent", "subprojects"],
-  );
+  await assertRejects(() => validateConfig(root, { ...base, subprojects: ["absent"] }, []), "SITE.SUBPROJECT_INVALID", [
+    root,
+    "absent",
+    "subprojects",
+  ]);
   for (const output of [".", "..", ".quarto/site", "_freeze/site", "a"]) {
     await assertRejects(() =>
-      validateConfig(root, {
-        ...base,
-        project: { ...base.project, "output-dir": output },
-      }, [])
+      validateConfig(
+        root,
+        {
+          ...base,
+          project: { ...base.project, "output-dir": output },
+        },
+        [],
+      ),
     );
   }
-  for (
-    const subprojects of [
-      ["."],
-      ["../outside"],
-      ["/tmp/outside"],
-      ["part", "./part"],
-      ["part", "part/nested"],
-      [{ path: "part" }],
-      [],
-    ]
-  ) {
-    await assertRejects(() =>
-      validateConfig(root, { ...base, subprojects }, [])
-    );
+  for (const subprojects of [
+    ["."],
+    ["../outside"],
+    ["/tmp/outside"],
+    ["part", "./part"],
+    ["part", "part/nested"],
+    [{ path: "part" }],
+    [],
+  ]) {
+    await assertRejects(() => validateConfig(root, { ...base, subprojects }, []));
   }
   await assertRejects(() =>
-    validateConfig(root, {
-      ...base,
-      "course-site": {
-        projects: [{ id: "part", path: "part", format: "html", mount: "part" }],
+    validateConfig(
+      root,
+      {
+        ...base,
+        "course-site": {
+          projects: [{ id: "part", path: "part", format: "html", mount: "part" }],
+        },
       },
-    }, [])
+      [],
+    ),
   );
   await Deno.symlink(`${root}/part`, `${root}/linked`);
   await assertRejects(() =>
-    validateConfig(root, {
-      ...base,
-      project: { ...base.project, "output-dir": "linked/site" },
-    }, [])
+    validateConfig(
+      root,
+      {
+        ...base,
+        project: { ...base.project, "output-dir": "linked/site" },
+      },
+      [],
+    ),
   );
-  await assertRejects(() =>
-    validateConfig(root, { ...base, subprojects: ["linked"] }, [])
-  );
-  console.log(
-    "PASS normalized subproject paths, symlinks, overlaps, old syntax rejection and profiles",
-  );
+  await assertRejects(() => validateConfig(root, { ...base, subprojects: ["linked"] }, []));
+  console.log("PASS normalized subproject paths, symlinks, overlaps, old syntax rejection and profiles");
 } finally {
   await Deno.remove(root, { recursive: true });
 }

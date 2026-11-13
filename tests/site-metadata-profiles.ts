@@ -17,11 +17,7 @@ async function run(args: string[]) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  assert(
-    result.success,
-    new TextDecoder().decode(result.stdout) +
-      new TextDecoder().decode(result.stderr),
-  );
+  assert(result.success, new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr));
 }
 try {
   await write(
@@ -29,16 +25,10 @@ try {
     "project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [part]\n",
   );
   await write("index.qmd", "# Root\n");
-  await write(
-    "part/index.qmd",
-    "# Child\n\n::: {.content-visible when-profile=full}\nFULL_PROFILE_CONTENT\n:::\n",
-  );
+  await write("part/index.qmd", "# Child\n\n::: {.content-visible when-profile=full}\nFULL_PROFILE_CONTENT\n:::\n");
   await write("part/_quarto-shared.yml", "format: html\n");
   await write("part/_quarto-full.yml", "project:\n  output-dir: _site-full\n");
-  await write(
-    "part/_quarto-student.yml",
-    "project:\n  output-dir: _site-student\n",
-  );
+  await write("part/_quarto-student.yml", "project:\n  output-dir: _site-student\n");
   await run(["add", repo, "--no-prompt"]);
   for (const include of ["shared", "full"]) {
     await write(
@@ -47,19 +37,14 @@ try {
     );
     await run(["render", "--fail-if-warnings"]);
     const html = await Deno.readTextFile(join(root, "_site/part/index.html"));
-    assert(
-      !html.includes("FULL_PROFILE_CONTENT"),
-      "metadata include activated a content profile",
-    );
+    assert(!html.includes("FULL_PROFILE_CONTENT"), "metadata include activated a content profile");
   }
   let collections = 0;
   const runs = join(root, "_generated/course-site/runs");
   for await (const directory of Deno.readDir(runs)) {
     for await (const entry of Deno.readDir(join(runs, directory.name))) {
       if (!entry.name.endsWith("-0.json")) continue;
-      const collectionValue: unknown = JSON.parse(
-        await Deno.readTextFile(join(runs, directory.name, entry.name)),
-      );
+      const collectionValue: unknown = JSON.parse(await Deno.readTextFile(join(runs, directory.name, entry.name)));
       assertEquals(record(collectionValue, root, "collection").profiles, []);
       collections++;
     }

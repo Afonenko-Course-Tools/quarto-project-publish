@@ -24,21 +24,19 @@ async function install(source: string, name: string, owner = "") {
   await new Deno.Command("chmod", { args: ["-R", "u+w", target] }).output();
 }
 try {
-  for (
-    const [source, name] of [
-      [core, "course-core"],
-      [qrc, "reference-catalog"],
-      [download, "project-download"],
-      [repo, "course-site"],
-    ] as const
-  ) await install(source, name);
-  for (
-    const [source, name] of [
-      [core, "course-core"],
-      [qrc, "reference-catalog"],
-      [download, "project-download"],
-    ] as const
-  ) await install(source, name, "tasks");
+  for (const [source, name] of [
+    [core, "course-core"],
+    [qrc, "reference-catalog"],
+    [download, "project-download"],
+    [repo, "course-site"],
+  ] as const)
+    await install(source, name);
+  for (const [source, name] of [
+    [core, "course-core"],
+    [qrc, "reference-catalog"],
+    [download, "project-download"],
+  ] as const)
+    await install(source, name, "tasks");
   await put(
     "_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: none\nwebsite:\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks]\nreference-catalog:\n  namespace: portal\n`,
@@ -65,14 +63,8 @@ try {
   await put("tasks/shared/build.gradle", "plugins { id 'java' }\n");
   await put("tasks/shared/settings.gradle", "rootProject.name='site'\n");
   await put("tasks/shared/gradle.md", "JDK25. gradle test.\n");
-  await put(
-    "tasks/projects/demo/_metadata.yml",
-    "course-project:\n  starter: {path: starter}\n",
-  );
-  await put(
-    "tasks/projects/demo/starter/src/main/java/Main.java",
-    "class Main {}\n",
-  );
+  await put("tasks/projects/demo/_metadata.yml", "course-project:\n  starter: {path: starter}\n");
+  await put("tasks/projects/demo/starter/src/main/java/Main.java", "class Main {}\n");
   await put("tasks/other.qmd", "# Другая страница {#target}\n");
   await put(
     "tasks/index.qmd",
@@ -80,13 +72,7 @@ try {
   );
   if (Deno.env.get("B2_DEFAULT_CORE")) {
     for (const owner of ["_quarto.yml", "tasks/_quarto.yml"]) {
-      await put(
-        owner,
-        (await Deno.readTextFile(join(root, owner))).replace(
-          "course-core-runtime: native-ts\n",
-          "",
-        ),
-      );
+      await put(owner, (await Deno.readTextFile(join(root, owner))).replace("course-core-runtime: native-ts\n", ""));
     }
   }
   const rendered = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
@@ -96,8 +82,7 @@ try {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const log = new TextDecoder().decode(rendered.stdout) +
-    new TextDecoder().decode(rendered.stderr);
+  const log = new TextDecoder().decode(rendered.stdout) + new TextDecoder().decode(rendered.stderr);
   await Deno.writeTextFile(join(root, "_generated/render.log"), log);
   assert(rendered.success, "Actual Publisher: " + root + "\n" + log);
   const archive = join(root, "_site/tasks/_downloads/exr-demo-starter.zip");
@@ -109,12 +94,9 @@ try {
   const readme = new TextDecoder().decode(result.stdout);
   assert(
     result.success &&
-      readme.includes(
-        "https://pages.example.test/course/tasks/other.html#target",
-      ) &&
-      readme.includes(
-        "https://pages.example.test/course/tasks/_downloads/exr-demo-starter.zip",
-      ) && !readme.includes("https://standalone.example/"),
+      readme.includes("https://pages.example.test/course/tasks/other.html#target") &&
+      readme.includes("https://pages.example.test/course/tasks/_downloads/exr-demo-starter.zip") &&
+      !readme.includes("https://standalone.example/"),
     "Publisher не назначил конечные адреса до единственной упаковки: " + readme,
   );
   if (Deno.env.get("B2_ROOT_NATIVE")) {
@@ -128,26 +110,20 @@ try {
   const dirs = await Array.fromAsync(Deno.readDir(runs));
   const firstRun = dirs[0];
   assert(firstRun, "Нет сохранённого composition run");
-  const composition = await readComposition(JSON.parse(
-    await Deno.readTextFile(join(runs, firstRun.name, "composition.json")),
-  ));
+  const composition = await readComposition(
+    JSON.parse(await Deno.readTextFile(join(runs, firstRun.name, "composition.json"))),
+  );
   assert(
-    composition.nativeOperations?.some((item: { project: string }) =>
-      item.project === "tasks"
-    ),
+    composition.nativeOperations?.some((item: { project: string }) => item.project === "tasks"),
     "Publisher не проверил actual public operation",
   );
   await put(
     "_quarto.yml",
     // Core 9 по умолчанию native: отсутствие старого флага не является отказом.
     // Здесь действительно отключаем Core, сохраняя course и прежнюю выдачу.
-    (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
-      "course-core-runtime: native-ts\n",
-      "",
-    ).replace(
-      "filters: [course-core, project-download]",
-      "filters: [project-download]",
-    ) +
+    (await Deno.readTextFile(join(root, "_quarto.yml")))
+      .replace("course-core-runtime: native-ts\n", "")
+      .replace("filters: [course-core, project-download]", "filters: [project-download]") +
       "\ncourse: {id: live-release}\n",
   );
   const refused = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
@@ -162,10 +138,7 @@ try {
     stderr: "piped",
   }).output();
   assert(
-    !refused.success &&
-      new TextDecoder().decode(refused.stderr).includes(
-        "SITE.RELEASE_UNQUALIFIED",
-      ),
+    !refused.success && new TextDecoder().decode(refused.stderr).includes("SITE.RELEASE_UNQUALIFIED"),
     "Недостающий Core publication session был молча пропущен",
   );
   const retained = await Deno.readFile(archive);

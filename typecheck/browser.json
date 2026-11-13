@@ -11,15 +11,8 @@
     "useUnknownInCatchVariables": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": [
-      "ES2023",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": []
   },
-  "files": [
-    "browser.d.ts",
-    "../_extensions/course-site/browser/navigation.js"
-  ]
+  "files": ["browser.d.ts", "../_extensions/course-site/browser/navigation.js"]
 }

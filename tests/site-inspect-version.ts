@@ -7,8 +7,10 @@ import { assert, assertEquals } from "./support.ts";
 
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const root = await Deno.makeTempDir({ prefix: "site-inspect-version-" });
-const saved = Deno.env.toObject(), originalCommand = Deno.Command;
-const commands: string[][] = [], failures: string[] = [];
+const saved = Deno.env.toObject(),
+  originalCommand = Deno.Command;
+const commands: string[][] = [],
+  failures: string[] = [];
 let version: unknown = "1.11.5";
 let malformed = false;
 try {
@@ -17,14 +19,8 @@ try {
   const qrc = join(root, "_extensions/reference-catalog");
   await Deno.mkdir(qrc, { recursive: true });
   await Deno.writeTextFile(join(qrc, "public.ts"), await fixture("qrc-spy.ts"));
-  const { post } = await loadSite(
-    "compose",
-    toFileUrl(join(extension, "application/compose.ts")).href,
-  );
-  const { workspace } = await loadSite(
-    "config",
-    toFileUrl(join(extension, "infrastructure/config.ts")).href,
-  );
+  const { post } = await loadSite("compose", toFileUrl(join(extension, "application/compose.ts")).href);
+  const { workspace } = await loadSite("config", toFileUrl(join(extension, "infrastructure/config.ts")).href);
   Deno.env.set("QUARTO_PROFILE", "student");
   Deno.env.delete("QUARTO_PROJECT_OUTPUT_DIR");
   Deno.env.delete("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES");
@@ -36,32 +32,29 @@ try {
       cwd: string;
       constructor(tool: string | URL, options: Deno.CommandOptions = {}) {
         super(tool, options);
-        this.args = [...options.args || []];
-        this.cwd = options.cwd instanceof URL
-          ? options.cwd.pathname
-          : options.cwd || Deno.cwd();
+        this.args = [...(options.args || [])];
+        this.cwd = options.cwd instanceof URL ? options.cwd.pathname : options.cwd || Deno.cwd();
       }
       override output() {
         commands.push(this.args);
-        assert(
-          this.args[0] === "inspect",
-          "Лишняя команда Quarto: " + this.args,
-        );
+        assert(this.args[0] === "inspect", "Лишняя команда Quarto: " + this.args);
         assertEquals(this.args, ["inspect", this.cwd, "--profile", "student"]);
         return Promise.resolve({
           success: true,
           code: 0,
           signal: null,
           stdout: new TextEncoder().encode(
-            malformed ? "{" : JSON.stringify({
-              quarto: { version },
-              config: {
-                project: { type: "website", "output-dir": "_site" },
-                subprojects: ["child"],
-                "reference-catalog": { namespace: "root" },
-              },
-              files: { input: [join(this.cwd, "index.qmd")], resources: [] },
-            }),
+            malformed
+              ? "{"
+              : JSON.stringify({
+                  quarto: { version },
+                  config: {
+                    project: { type: "website", "output-dir": "_site" },
+                    subprojects: ["child"],
+                    "reference-catalog": { namespace: "root" },
+                  },
+                  files: { input: [join(this.cwd, "index.qmd")], resources: [] },
+                }),
           ),
           stderr: new Uint8Array(),
         });
@@ -72,19 +65,15 @@ try {
     },
   });
   for (const scope of ["local", "full"]) {
-    const owner = join(root, scope), output = join(owner, "_site");
-    const child = join(owner, "child"), childOutput = join(child, "_site");
+    const owner = join(root, scope),
+      output = join(owner, "_site");
+    const child = join(owner, "child"),
+      childOutput = join(child, "_site");
     await Deno.mkdir(childOutput, { recursive: true });
     await Deno.mkdir(output, { recursive: true });
     await Deno.writeTextFile(join(owner, "index.qmd"), "# Корень\n");
-    await Deno.writeTextFile(
-      join(output, "index.html"),
-      "<html><body>Корень</body></html>",
-    );
-    await Deno.writeTextFile(
-      join(childOutput, "index.html"),
-      "<html><body>Компонент</body></html>",
-    );
+    await Deno.writeTextFile(join(output, "index.html"), "<html><body>Корень</body></html>");
+    await Deno.writeTextFile(join(childOutput, "index.html"), "<html><body>Компонент</body></html>");
     Deno.env.set("QUARTO_PROJECT_RENDER_ALL", scope === "full" ? "1" : "0");
     Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", join(output, "index.html"));
     version = scope === "local" ? " 1.11.5\n " : "1.11.6";
@@ -100,34 +89,33 @@ try {
         JSON.stringify({
           ws,
           run,
-          records: [{
-            project,
-            config: {
-              project: { type: "website" },
-              "reference-catalog": { namespace: "child" },
+          records: [
+            {
+              project,
+              config: {
+                project: { type: "website" },
+                "reference-catalog": { namespace: "child" },
+              },
+              record: {
+                id: project.id,
+                projectRoot: child,
+                outputDir: childOutput,
+                profiles: ws.profiles,
+                nativeOutputs: [join(childOutput, "index.html")],
+                files: [join(childOutput, "index.html")],
+                selectedSources: [],
+              },
             },
-            record: {
-              id: project.id,
-              projectRoot: child,
-              outputDir: childOutput,
-              profiles: ws.profiles,
-              nativeOutputs: [join(childOutput, "index.html")],
-              files: [join(childOutput, "index.html")],
-              selectedSources: [],
-            },
-          }],
+          ],
         }),
       );
     }
     const activePath = join(owner, "_generated/course-site/active.json");
-    const activeState = scope === "full"
-      ? record(JSON.parse(await Deno.readTextFile(activePath)), owner, "active")
-      : undefined;
+    const activeState =
+      scope === "full" ? record(JSON.parse(await Deno.readTextFile(activePath)), owner, "active") : undefined;
     try {
       await post(owner);
-      const requestValue: unknown = JSON.parse(
-        await Deno.readTextFile(join(owner, "qrc-call.json")),
-      );
+      const requestValue: unknown = JSON.parse(await Deno.readTextFile(join(owner, "qrc-call.json")));
       const request = record(requestValue, owner, "request");
       assertEquals(request.quarto, scope === "local" ? "1.11.5" : "1.11.6");
       assertEquals(request.scope, scope);
@@ -141,27 +129,21 @@ try {
         request.members,
         scope === "local"
           ? [{ namespace: "root", format: "html" }]
-          : [{ namespace: "child", format: "html" }, {
-            namespace: "root",
-            format: "html",
-          }],
+          : [
+              { namespace: "child", format: "html" },
+              {
+                namespace: "root",
+                format: "html",
+              },
+            ],
       );
       assertEquals(commands.length - before, 1);
       if (scope === "full") {
-        assert(
-          (await Deno.readTextFile(join(output, "child/index.html"))).includes(
-            "Компонент",
-          ),
-        );
+        assert((await Deno.readTextFile(join(output, "child/index.html"))).includes("Компонент"));
         const compositionValue: unknown = JSON.parse(
-          await Deno.readTextFile(
-            join(owner, "_generated/course-site/runs/current/composition.json"),
-          ),
+          await Deno.readTextFile(join(owner, "_generated/course-site/runs/current/composition.json")),
         );
-        assertEquals(
-          record(compositionValue, owner, "composition").outputs,
-          request.outputs,
-        );
+        assertEquals(record(compositionValue, owner, "composition").outputs, request.outputs);
         assert(activeState);
         delete record(activeState.ws, owner, "active.ws").quartoVersion;
         await Deno.writeTextFile(activePath, JSON.stringify(activeState));
@@ -176,9 +158,7 @@ try {
         assert(staleError instanceof Error && "code" in staleError);
         assertEquals(staleError.code, "SITE.CONFIG_INVALID");
         assert(String(staleError).includes("quarto.version"));
-        for (
-          const path of [join(output, "child"), join(owner, "qrc-call.json")]
-        ) {
+        for (const path of [join(output, "child"), join(owner, "qrc-call.json")]) {
           let exists = false;
           try {
             await Deno.stat(path);
@@ -202,7 +182,8 @@ try {
       error = caught;
     }
     if (
-      !(error instanceof Error) || !("code" in error) ||
+      !(error instanceof Error) ||
+      !("code" in error) ||
       error.code !== "SITE.CONFIG_INVALID" ||
       !String(error).includes("quarto.version")
     ) {
@@ -218,17 +199,12 @@ try {
     malformedFailure = cause;
   }
   assert(
-    malformedFailure instanceof Error && "code" in malformedFailure &&
-      malformedFailure.code === "SITE.CONFIG_INVALID",
+    malformedFailure instanceof Error && "code" in malformedFailure && malformedFailure.code === "SITE.CONFIG_INVALID",
     "Malformed inspect должен дать адресный SITE.CONFIG_INVALID",
   );
+  assert(malformedFailure.cause instanceof SyntaxError, "Inspect потерял исходный JSON cause");
   assert(
-    malformedFailure.cause instanceof SyntaxError,
-    "Inspect потерял исходный JSON cause",
-  );
-  assert(
-    malformedFailure.message.includes(join(root, "local")) &&
-      malformedFailure.message.includes("inspect"),
+    malformedFailure.message.includes(join(root, "local")) && malformedFailure.message.includes("inspect"),
     "Inspect потерял source/field",
   );
   assertEquals(commands.length - beforeMalformed, 1);

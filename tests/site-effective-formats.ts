@@ -15,21 +15,14 @@ async function native(args: string[]) {
     stderr: "piped",
     env: { QUARTO: executable, QUARTO_PROFILE: "" },
   }).output();
-  assert(
-    r.success,
-    new TextDecoder().decode(r.stdout) + new TextDecoder().decode(r.stderr),
-  );
+  assert(r.success, new TextDecoder().decode(r.stdout) + new TextDecoder().decode(r.stderr));
 }
 async function render(profiles: string[] = []) {
   await write(
     "_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: _extensions/course-site/entrypoints/pre.ts\n  post-render: _extensions/course-site/entrypoints/post.ts\nformat: html\nsubprojects: [part]\n`,
   );
-  await native([
-    "render",
-    ".",
-    ...(profiles.length ? ["--profile", profiles.join(",")] : []),
-  ]);
+  await native(["render", ".", ...(profiles.length ? ["--profile", profiles.join(",")] : [])]);
   const output = profiles.length ? "_site-full" : "_site";
   return {
     index: await Deno.readTextFile(join(root, output, "part/index.html")),
@@ -44,22 +37,12 @@ try {
   );
   await Deno.mkdir(join(root, "_extensions"));
   const copied = await new Deno.Command("cp", {
-    args: [
-      "-R",
-      join(repo, "_extensions/course-site"),
-      join(root, "_extensions/course-site"),
-    ],
+    args: ["-R", join(repo, "_extensions/course-site"), join(root, "_extensions/course-site")],
   }).output();
   assert(copied.success, "Копирование Publisher");
   await write("_quarto-full.yml", "project: {output-dir: _site-full}\n");
-  await write(
-    "part/_quarto-full.yml",
-    "project: {output-dir: _site-full}\nformat: revealjs\n",
-  );
-  await write(
-    "part/index.qmd",
-    "---\nformat: html\n---\n# Native HTML\n",
-  );
+  await write("part/_quarto-full.yml", "project: {output-dir: _site-full}\nformat: revealjs\n");
+  await write("part/index.qmd", "---\nformat: html\n---\n# Native HTML\n");
   // Этот документ получает Revealjs из профиля дочернего проекта.
   await write("part/slides.qmd", "# Native слайды\n");
   const actual = await render(["full"]);

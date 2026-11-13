@@ -36,21 +36,18 @@ async function install(source: string, name: string, owner = "") {
 }
 try {
   for (const owner of ["", "tasks"]) {
-    for (
-      const [source, name] of [
-        [core, "course-core"],
-        [qrc, "reference-catalog"],
-        [download, "project-download"],
-        [repo, "course-site"],
-      ] as const
-    ) await install(source, name, owner);
+    for (const [source, name] of [
+      [core, "course-core"],
+      [qrc, "reference-catalog"],
+      [download, "project-download"],
+      [repo, "course-site"],
+    ] as const)
+      await install(source, name, owner);
   }
   if (withPL) await install(pl, "course-prairielearn", "tasks");
   if (mode === "root-pl") await install(pl, "course-prairielearn");
   if (mode === "pl-missing") {
-    await Deno.remove(
-      join(root, "tasks", ext, "course-prairielearn/public.ts"),
-    );
+    await Deno.remove(join(root, "tasks", ext, "course-prairielearn/public.ts"));
   }
   const projection = author ? "author" : "student",
     view = author ? "full" : "student";
@@ -73,8 +70,7 @@ try {
   if (mode === "inactive-course") {
     await put(
       "_quarto.yml",
-      (await Deno.readTextFile(join(root, "_quarto.yml"))) +
-        "\ncourse: {id: no-owner, view: student}\n",
+      (await Deno.readTextFile(join(root, "_quarto.yml"))) + "\ncourse: {id: no-owner, view: student}\n",
     );
   }
   await put(
@@ -83,33 +79,26 @@ try {
       author ? " --author" : ""
     }]\nformat: {html: {theme: none}}\nfilters: [course-core, project-download]\ncourse-core-runtime: native-ts\ncourse-core-projection: ${projection}\nexercise-bank: true\nproject-download:\n  course-model: true\n  resources: {data: {path: assets, gitignore: false}}\ncourse-project:\n  build:\n    files: {build.gradle: {path: shared/build.gradle, base: config}, settings.gradle: {path: shared/settings.gradle, base: config}}\n  instructions:\n    gradle: {path: shared/gradle.md, base: config}\n    local: {path: README.local.md}\nreference-catalog: {namespace: tasks}\n`,
   );
-  for (
-    const [path, text] of Object.entries({
-      "shared/build.gradle": "plugins { id 'java' }\n",
-      "shared/settings.gradle": "rootProject.name='b3'\n",
-      "shared/gradle.md":
-        "Общая инструкция [данные](guide.txt?version=1#data).\n",
-      "shared/guide.txt": "SHARED_DATA\n",
-      "assets/data.txt": "ORDINARY_DATA\n",
-      "visible.svg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
-      "private.svg":
-        '<svg xmlns="http://www.w3.org/2000/svg"><text>PRIVATE_RESOURCE</text></svg>',
-      "projects/demo/_metadata.yml":
-        "course-project:\n  starter: {path: starter}\n  solutions: {reference: {path: solutions/reference}}\n",
-      "projects/demo/README.local.md":
-        "Локальная инструкция [данные](guide.txt#local).\n",
-      "projects/demo/guide.txt": "LOCAL_DATA\n",
-      "projects/demo/starter/src/main/java/Main.java": "class Main {}\n",
-      "projects/demo/solutions/reference/src/main/java/Main.java":
-        "class Main { int answer=42; }\n",
-    })
-  ) await put("tasks/" + path, text);
+  for (const [path, text] of Object.entries({
+    "shared/build.gradle": "plugins { id 'java' }\n",
+    "shared/settings.gradle": "rootProject.name='b3'\n",
+    "shared/gradle.md": "Общая инструкция [данные](guide.txt?version=1#data).\n",
+    "shared/guide.txt": "SHARED_DATA\n",
+    "assets/data.txt": "ORDINARY_DATA\n",
+    "visible.svg": '<svg xmlns="http://www.w3.org/2000/svg"/>',
+    "private.svg": '<svg xmlns="http://www.w3.org/2000/svg"><text>PRIVATE_RESOURCE</text></svg>',
+    "projects/demo/_metadata.yml":
+      "course-project:\n  starter: {path: starter}\n  solutions: {reference: {path: solutions/reference}}\n",
+    "projects/demo/README.local.md": "Локальная инструкция [данные](guide.txt#local).\n",
+    "projects/demo/guide.txt": "LOCAL_DATA\n",
+    "projects/demo/starter/src/main/java/Main.java": "class Main {}\n",
+    "projects/demo/solutions/reference/src/main/java/Main.java": "class Main { int answer=42; }\n",
+  }))
+    await put("tasks/" + path, text);
   if (slides) {
     await put(
       "tasks/projects/demo/_metadata.yml",
-      (await Deno.readTextFile(
-        join(root, "tasks/projects/demo/_metadata.yml"),
-      )) + "\nformat: revealjs\n",
+      (await Deno.readTextFile(join(root, "tasks/projects/demo/_metadata.yml"))) + "\nformat: revealjs\n",
     );
   }
   if (mode === "mixed-default") {
@@ -122,34 +111,21 @@ try {
     );
   }
   const identity = (id = "bounded-course") =>
-    `course: {id: ${id}, view: ${view}${
-      withPL ? ", adapters: [prairielearn]" : ""
-    }}\n`;
+    `course: {id: ${id}, view: ${view}${withPL ? ", adapters: [prairielearn]" : ""}}\n`;
   const plConfig = withPL
     ? "prairielearn:\n  question-defaults: {topic: Git, grading: {method: manual}, submission: {mode: upload}}\n"
     : "";
-  const kind = mode === "author-starter"
-    ? "starter"
-    : author
-    ? "full"
-    : mode === "conditions"
-    ? "conditions"
-    : "starter";
-  const artifact = slides && mode !== "reveal-model"
-    ? ""
-    : `{{< project-download exr-demo${
-      mode === "default" ? "" : " kind=" + kind
-    } >}}`;
-  const assessment = mode === "assessment"
-    ? "assessment: {id: invalid-test, kind: test}\ntitle: Неверная работа\n"
-    : "";
+  const kind =
+    mode === "author-starter" ? "starter" : author ? "full" : mode === "conditions" ? "conditions" : "starter";
+  const artifact =
+    slides && mode !== "reveal-model"
+      ? ""
+      : `{{< project-download exr-demo${mode === "default" ? "" : " kind=" + kind} >}}`;
+  const assessment =
+    mode === "assessment" ? "assessment: {id: invalid-test, kind: test}\ntitle: Неверная работа\n" : "";
   await put(
     "tasks/index.qmd",
-    `---\n${
-      identity(
-        mode === "document-course" ? "different-course" : "bounded-course",
-      )
-    }${plConfig}${assessment}${
+    `---\n${identity(mode === "document-course" ? "different-course" : "bounded-course")}${plConfig}${assessment}${
       slides ? "format: revealjs\n" : ""
     }---\n# Упражнения\n\n::: {#exr-demo difficulty=introductory time=7 statement-visibility=open project="projects/demo"${
       withPL ? " target=prairielearn prairielearn-grading=manual" : ""
@@ -159,10 +135,7 @@ try {
         : ""
     }`,
   );
-  await put(
-    "tasks/other.qmd",
-    `---\n${identity()}${plConfig}---\n# Другая страница {#target}\n`,
-  );
+  await put("tasks/other.qmd", `---\n${identity()}${plConfig}---\n# Другая страница {#target}\n`);
   const rendered = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
     args: ["render", "--to", "html"],
     cwd: root,
@@ -170,8 +143,7 @@ try {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const log = new TextDecoder().decode(rendered.stdout) +
-    new TextDecoder().decode(rendered.stderr);
+  const log = new TextDecoder().decode(rendered.stdout) + new TextDecoder().decode(rendered.stderr);
   if (Deno.env.get("B3_LOG")) {
     await Deno.writeTextFile(Deno.env.get("B3_LOG")!, log);
     await Deno.writeTextFile(
@@ -211,68 +183,40 @@ try {
     );
   }
   if (expected[mode]) {
-    assert(
-      !rendered.success && log.includes(expected[mode]),
-      `B3 ${mode}: требуется ${expected[mode]}\n${log}`,
-    );
+    assert(!rendered.success && log.includes(expected[mode]), `B3 ${mode}: требуется ${expected[mode]}\n${log}`);
     let success = false;
     try {
-      await Deno.stat(
-        join(root, `_site/tasks/_downloads/exr-demo-${kind}.zip`),
-      );
+      await Deno.stat(join(root, `_site/tasks/_downloads/exr-demo-${kind}.zip`));
       success = true;
     } catch (e) {
       if (!(e instanceof Deno.errors.NotFound)) throw e;
     }
     assert(!success, "Отказ создал новый архив");
-    console.log(
-      JSON.stringify({ mode, expected: expected[mode], status: "PASS" }),
-    );
+    console.log(JSON.stringify({ mode, expected: expected[mode], status: "PASS" }));
   } else {
     assert(rendered.success, `B3 ${mode}: actual render\n${log}`);
-    const runs = await Array.fromAsync(
-      Deno.readDir(join(root, "_generated/course-site/runs")),
-    );
+    const runs = await Array.fromAsync(Deno.readDir(join(root, "_generated/course-site/runs")));
     const firstRun = runs[0];
     assert(firstRun, "Нет сохранённого composition run");
-    const composition = await readComposition(JSON.parse(
-      await Deno.readTextFile(
-        join(
-          root,
-          "_generated/course-site/runs",
-          firstRun.name,
-          "composition.json",
-        ),
-      ),
-    ));
+    const composition = await readComposition(
+      JSON.parse(await Deno.readTextFile(join(root, "_generated/course-site/runs", firstRun.name, "composition.json"))),
+    );
     if (mode === "root-pl") {
-      const rootPublication = composition.nativeOperations.find((
-        row: { project: string },
-      ) => row.project === "root");
+      const rootPublication = composition.nativeOperations.find((row: { project: string }) => row.project === "root");
       assert(
-        rootPublication?.course.id === "root-course" &&
-          rootPublication.inspection?.course.id === "root-course",
+        rootPublication?.course.id === "root-course" && rootPublication.inspection?.course.id === "root-course",
         "Root PL publication без Download не выполнена",
       );
     }
-    const current = composition.nativeOperations.find((
-      row: { project: string },
-    ) => row.project === "tasks");
+    const current = composition.nativeOperations.find((row: { project: string }) => row.project === "tasks");
+    assert(current?.course?.id === "bounded-course", "Нет текущего owner publication course");
     assert(
-      current?.course?.id === "bounded-course",
-      "Нет текущего owner publication course",
-    );
-    assert(
-      JSON.stringify(current.catalog.documents.map((d: {source: string}) => d.source).sort()) ===
+      JSON.stringify(current.catalog.documents.map((d: { source: string }) => d.source).sort()) ===
         JSON.stringify(["index.qmd", "other.qmd"]),
       "Catalog потерял owner source coverage",
     );
 
-    const archive = join(
-      root,
-      "_site/tasks/_downloads",
-      slides ? "data.zip" : `exr-demo-${kind}.zip`,
-    );
+    const archive = join(root, "_site/tasks/_downloads", slides ? "data.zip" : `exr-demo-${kind}.zip`);
     const extracted = await new Deno.Command("unzip", {
       args: ["-p", archive, slides ? "data.txt" : "README.md"],
       stdout: "piped",
@@ -281,48 +225,28 @@ try {
     const text = new TextDecoder().decode(extracted.stdout);
     assert(extracted.success, "Нет конечного ZIP");
     if (!slides) {
+      assert(text.includes("https://pages.example.test/course/tasks/other.html#target"), "Потерян final mounted URL");
       assert(
-        text.includes(
-          "https://pages.example.test/course/tasks/other.html#target",
-        ),
-        "Потерян final mounted URL",
-      );
-      assert(
-        text.includes("SHARED_DATA") === false &&
-          text.includes("resources/shared/guide.txt?version=1#data"),
+        text.includes("SHARED_DATA") === false && text.includes("resources/shared/guide.txt?version=1#data"),
         "Нет owner fragment resource suffix",
       );
       assert(
-        text.includes('id="point"') &&
-          text.includes("resources/visible.svg?version=1#shape"),
+        text.includes('id="point"') && text.includes("resources/visible.svg?version=1#shape"),
         "Утеряны condition anchor/resource suffix",
       );
       if (!author) {
-        assert(
-          !text.includes("PRIVATE_SOLUTION42"),
-          "Student README содержит решение",
-        );
+        assert(!text.includes("PRIVATE_SOLUTION42"), "Student README содержит решение");
       }
-      const names = await new Deno.Command("unzip", { args: ["-Z1", archive] })
-        .output();
+      const names = await new Deno.Command("unzip", { args: ["-Z1", archive] }).output();
       const list = new TextDecoder().decode(names.stdout);
-      assert(
-        author ? list.includes("author/reference/") : !list.includes("author/"),
-        "Нарушена student/full privacy",
-      );
+      assert(author ? list.includes("author/reference/") : !list.includes("author/"), "Нарушена student/full privacy");
       if (mode === "conditions") {
-        assert(
-          !list.includes("Main.java") && !list.includes("build.gradle"),
-          "Condition-only включает код/build",
-        );
+        assert(!list.includes("Main.java") && !list.includes("build.gradle"), "Condition-only включает код/build");
       }
-    } else {assert(
-        text === "ORDINARY_DATA\n",
-        "Обычный reveal resource изменился",
-      );}
-    console.log(
-      JSON.stringify({ mode, status: "PASS", course: current.course }),
-    );
+    } else {
+      assert(text === "ORDINARY_DATA\n", "Обычный reveal resource изменился");
+    }
+    console.log(JSON.stringify({ mode, status: "PASS", course: current.course }));
   }
 } finally {
   if (Deno.env.get("B3_KEEP")) console.log(root);

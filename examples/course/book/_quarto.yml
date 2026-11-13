@@ -22,4 +22,4 @@ book:
 format: html
 bibliography: ../references.bib
 filters: [reference-catalog]
-reference-catalog: {namespace: theory}
+reference-catalog: { namespace: theory }

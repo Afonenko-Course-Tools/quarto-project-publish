@@ -16,11 +16,14 @@ try {
     startupFailure = error;
   }
   assert(startupFailure instanceof Error, "missing executable did not fail");
-  assert("tool" in startupFailure && "exitCode" in startupFailure && "stdout" in startupFailure && "stderr" in startupFailure && "forwarded" in startupFailure);
   assert(
-    startupFailure.cause instanceof Deno.errors.NotFound,
-    "lost operational NotFound cause",
+    "tool" in startupFailure &&
+      "exitCode" in startupFailure &&
+      "stdout" in startupFailure &&
+      "stderr" in startupFailure &&
+      "forwarded" in startupFailure,
   );
+  assert(startupFailure.cause instanceof Deno.errors.NotFound, "lost operational NotFound cause");
   const startup = join(root, "startup.ts");
   await Deno.writeTextFile(startup, await fixture("process-hook.ts", fixtureImports));
   const startupResult = await new Deno.Command(actualQuarto, {
@@ -29,13 +32,9 @@ try {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const startupText = new TextDecoder().decode(startupResult.stdout) +
-    new TextDecoder().decode(startupResult.stderr);
+  const startupText = new TextDecoder().decode(startupResult.stdout) + new TextDecoder().decode(startupResult.stderr);
   assert(!startupResult.success, "startup hook succeeded");
-  assert(
-    startupText.includes(missing),
-    `configured executable lost at runHook boundary: ${startupText}`,
-  );
+  assert(startupText.includes(missing), `configured executable lost at runHook boundary: ${startupText}`);
   assertEquals(startupText.split(startupFailure.cause.message).length - 1, 1);
   assertEquals(startupFailure.name, "ExternalToolFailure");
   assertEquals(startupFailure.tool, missing);
@@ -43,14 +42,8 @@ try {
   assertEquals(startupFailure.stdout, "");
   assertEquals(startupFailure.stderr, "");
   assertEquals(startupFailure.forwarded, false);
-  assert(
-    !startupText.includes("SITE."),
-    "startup failure received semantic SITE ID",
-  );
-  assert(
-    !startupText.includes("at runHook"),
-    `expected failure leaked wrapper stack: ${startupText}`,
-  );
+  assert(!startupText.includes("SITE."), "startup failure received semantic SITE ID");
+  assert(!startupText.includes("at runHook"), `expected failure leaked wrapper stack: ${startupText}`);
   const fake = join(root, "fake-quarto");
   await Deno.writeTextFile(fake, await fixture("native-failure.sh"));
   await Deno.chmod(fake, 0o755);
@@ -69,7 +62,13 @@ try {
   } catch (error) {
     assert(error instanceof Error);
     const failure = error;
-    assert("tool" in failure && "exitCode" in failure && "stdout" in failure && "stderr" in failure && "forwarded" in failure);
+    assert(
+      "tool" in failure &&
+        "exitCode" in failure &&
+        "stdout" in failure &&
+        "stderr" in failure &&
+        "forwarded" in failure,
+    );
     assertEquals(failure.name, "ExternalToolFailure");
     assertEquals(failure.tool, fake);
     assertEquals(failure.exitCode, 23);
@@ -89,8 +88,7 @@ try {
       stderr: "piped",
     }).output();
     assert(!result.success);
-    const text = new TextDecoder().decode(result.stdout) +
-      new TextDecoder().decode(result.stderr);
+    const text = new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr);
     assertEquals(text.split("CHILD_STDOUT_SENTINEL").length - 1, 1);
     assertEquals(text.split("CHILD_STDERR_SENTINEL").length - 1, 1);
     assert(!text.includes("SITE."), `foreign ID was reclassified: ${text}`);
@@ -103,11 +101,7 @@ try {
     stderr: "piped",
   }).output();
   const text = new TextDecoder().decode(result.stderr);
-  assert(
-    !result.success && text.includes("internalFailure") &&
-      text.includes("unknown.ts"),
-    text,
-  );
+  assert(!result.success && text.includes("internalFailure") && text.includes("unknown.ts"), text);
   console.log(
     "PASS startup hook retains executable/OS cause once; native exit/streams/cause retained, single forwarded output, unknown stack",
   );

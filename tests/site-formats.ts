@@ -15,11 +15,7 @@ async function run(args: string[]) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  assert(
-    result.success,
-    new TextDecoder().decode(result.stdout) +
-      new TextDecoder().decode(result.stderr),
-  );
+  assert(result.success, new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr));
 }
 await write(
   "_quarto.yml",
@@ -58,41 +54,21 @@ await write(
 format: revealjs
 `,
 );
-await write(
-  "slides/talk.qmd",
-  "---\nformat: revealjs\n---\n# Native Talk\n\n## Visible Slide\n\nSlide content\n",
-);
-await write(
-  "slides/index.qmd",
-  "---\nformat: html\n---\n# Website HTML beside Reveal\n",
-);
+await write("slides/talk.qmd", "---\nformat: revealjs\n---\n# Native Talk\n\n## Visible Slide\n\nSlide content\n");
+await write("slides/index.qmd", "---\nformat: html\n---\n# Website HTML beside Reveal\n");
 await run(["add", repo, "--no-prompt"]);
 await run(["render"]);
 await run(["render"]);
 const chapter = await Deno.readTextFile(join(root, "_site/book/chapter.html"));
+assert(chapter.includes("Native Chapter") && chapter.includes("index.html"), "native book chapter/navigation missing");
+const mixedHtml = await Deno.readTextFile(join(root, "_site/slides/index.html"));
 assert(
-  chapter.includes("Native Chapter") && chapter.includes("index.html"),
-  "native book chapter/navigation missing",
-);
-const mixedHtml = await Deno.readTextFile(
-  join(root, "_site/slides/index.html"),
-);
-assert(
-  mixedHtml.includes("Website HTML beside Reveal") &&
-    !isRevealHtml(mixedHtml),
+  mixedHtml.includes("Website HTML beside Reveal") && !isRevealHtml(mixedHtml),
   "document HTML front matter was forced to Reveal",
 );
 const talk = await Deno.readTextFile(join(root, "_site/slides/talk.html"));
-assert(
-  talk.includes("Visible Slide") && isRevealHtml(talk),
-  "native reveal output missing",
-);
+assert(talk.includes("Visible Slide") && isRevealHtml(talk), "native reveal output missing");
 const script = Array.from(talk.matchAll(/src="([^"]*reveal\.js)"/g))[0]?.[1];
 assert(script, "reveal library URL absent");
-assert(
-  (await Deno.stat(join(root, "_site/slides", script))).isFile,
-  "mounted reveal library missing",
-);
-console.log(
-  `PASS installed native book and Reveal mounted outputs/assets: ${root}`,
-);
+assert((await Deno.stat(join(root, "_site/slides", script))).isFile, "mounted reveal library missing");
+console.log(`PASS installed native book and Reveal mounted outputs/assets: ${root}`);

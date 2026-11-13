@@ -10,13 +10,13 @@ function contextText(context: DiagnosticContext): string {
     context.source && `источник: ${context.source}`,
     context.id && `ID: ${context.id}`,
     context.field && `поле: ${context.field}`,
-    ...(context.related || []).map((item) =>
-      `связано: ${
-        [item.source, item.id, item.field].filter(Boolean).join("; ")
-      }`
+    ...(context.related || []).map(
+      (item) => `связано: ${[item.source, item.id, item.field].filter(Boolean).join("; ")}`,
     ),
     context.hint && `подсказка: ${context.hint}`,
-  ].filter(Boolean).join("; ");
+  ]
+    .filter(Boolean)
+    .join("; ");
 }
 export function diagnostic(
   code: string,
@@ -33,10 +33,7 @@ export function diagnostic(
   return Object.assign(error, { code });
 }
 /** Add caller provenance only to this component's own diagnostics. */
-export function contextualize(
-  error: unknown,
-  context: DiagnosticContext,
-): unknown {
+export function contextualize(error: unknown, context: DiagnosticContext): unknown {
   if (error instanceof Error && error.name === "ExtensionDiagnostic") {
     const details = contextText(context);
     if (details) error.message += ` (${details})`;
@@ -49,11 +46,7 @@ export async function runHook(action: () => Promise<unknown>): Promise<void> {
   try {
     await action();
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.name === "ExtensionDiagnostic" ||
-        error.name === "ExternalToolFailure")
-    ) {
+    if (error instanceof Error && (error.name === "ExtensionDiagnostic" || error.name === "ExternalToolFailure")) {
       console.error(error.message);
       Deno.exit(1);
     }

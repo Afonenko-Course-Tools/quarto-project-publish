@@ -98,30 +98,22 @@ jobs:
       - name: Строгая проверка собственного Lua
         working-directory: quarto-project-publish
         run: quarto run tools/check-types.ts --lua
-      - name: ShellCheck и синтаксис каждого собственного shell-файла
-        working-directory: quarto-project-publish
-        run: |
-          shellcheck --severity=style \
-            tests/fixtures/command-probe.sh \
-            tests/fixtures/functional-env.sh \
-            tests/fixtures/live-tool.sh \
-            tests/fixtures/native-failure.sh \
-            tests/fixtures/performance-tool.sh
-          for script in \
-            tests/fixtures/command-probe.sh \
-            tests/fixtures/functional-env.sh \
-            tests/fixtures/live-tool.sh \
-            tests/fixtures/native-failure.sh \
-            tests/fixtures/performance-tool.sh; do
-            bash -n "$script"
-          done
       - name: Восстанавливаемая Markdown-копия и защищённые исходники
         working-directory: quarto-project-publish
         run: timeout --signal=TERM --kill-after=5s 60s quarto run tests/release-resources.ts
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '26.10.0'
+          node-version: "26.10.0"
           package-manager-cache: false
+      - name: Установить инструменты стиля и workflow
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes shfmt yamllint jq luarocks
+          sudo luarocks install luacheck 1.2.0
+          npm install --global prettier@3.8.1 @taplo/cli@0.7.0
+          cargo install stylua --locked --version 2.6.0 --features lua54
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          printf '%s\n' "$HOME/.cargo/bin" "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Строгая типизация полного собственного состава
         working-directory: quarto-project-publish
         env:
@@ -132,6 +124,8 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm run check:types
+          npm run check:formats
+          npm run check:formats:controls
           npm run check-quality
           npm run check-quality:controls
       - name: Зависимости браузерной проверки

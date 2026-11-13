@@ -26,22 +26,20 @@ async function install(source: string, name: string, owner = "") {
   await new Deno.Command("chmod", { args: ["-R", "u+w", target] }).output();
 }
 try {
-  for (
-    const [source, name] of [
-      [core, "course-core"],
-      [qrc, "reference-catalog"],
-      [download, "project-download"],
-      [repo, "course-site"],
-      [core, "course-navigation"],
-    ] as const
-  ) await install(source, name);
-  for (
-    const [source, name] of [
-      [core, "course-core"],
-      [qrc, "reference-catalog"],
-      [download, "project-download"],
-    ] as const
-  ) await install(source, name, "tasks");
+  for (const [source, name] of [
+    [core, "course-core"],
+    [qrc, "reference-catalog"],
+    [download, "project-download"],
+    [repo, "course-site"],
+    [core, "course-navigation"],
+  ] as const)
+    await install(source, name);
+  for (const [source, name] of [
+    [core, "course-core"],
+    [qrc, "reference-catalog"],
+    [download, "project-download"],
+  ] as const)
+    await install(source, name, "tasks");
   await put(
     "_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd]\n  pre-render: [quarto run ${ext}/course-site/entrypoints/pre.ts]\n  post-render: [quarto run ${ext}/course-site/entrypoints/post.ts]\nformat:\n  html:\n    theme: cosmo\nwebsite:\n  title: Курс\n  navbar: {}\n  site-url: https://pages.example.test/course/\nsubprojects: [tasks, book]\nreference-catalog:\n  namespace: portal\ncourse-navigation:\n  enabled: true\n`,
@@ -57,9 +55,7 @@ try {
   await put("assets/root.txt", "ROOT_NATIVE_RESOURCE\n");
   await put(
     "index.qmd",
-    true
-      ? "# Общий сайт\n\n![Файл](assets/root.txt)\n\n{{< project-download root-data >}}\n"
-      : "# Общий сайт\n",
+    true ? "# Общий сайт\n\n![Файл](assets/root.txt)\n\n{{< project-download root-data >}}\n" : "# Общий сайт\n",
   );
   await put(
     "tasks/_quarto.yml",
@@ -68,14 +64,8 @@ try {
   await put("tasks/shared/build.gradle", "plugins { id 'java' }\n");
   await put("tasks/shared/settings.gradle", "rootProject.name='site'\n");
   await put("tasks/shared/gradle.md", "JDK25. gradle test.\n");
-  await put(
-    "tasks/projects/demo/_metadata.yml",
-    "course-project:\n  starter: {path: starter}\n",
-  );
-  await put(
-    "tasks/projects/demo/starter/src/main/java/Main.java",
-    "class Main {}\n",
-  );
+  await put("tasks/projects/demo/_metadata.yml", "course-project:\n  starter: {path: starter}\n");
+  await put("tasks/projects/demo/starter/src/main/java/Main.java", "class Main {}\n");
   await put("tasks/other.qmd", "# Другая страница {#target}\n");
   await put(
     "tasks/index.qmd",
@@ -83,19 +73,10 @@ try {
   );
   if (Deno.env.get("B2_DEFAULT_CORE")) {
     for (const owner of ["_quarto.yml", "tasks/_quarto.yml"]) {
-      await put(
-        owner,
-        (await Deno.readTextFile(join(root, owner))).replace(
-          "course-core-runtime: native-ts\n",
-          "",
-        ),
-      );
+      await put(owner, (await Deno.readTextFile(join(root, owner))).replace("course-core-runtime: native-ts\n", ""));
     }
   }
-  await put(
-    "tasks/talk.qmd",
-    "---\nformat: revealjs\n---\n# Слайды\n\n## Native reveal\n",
-  );
+  await put("tasks/talk.qmd", "---\nformat: revealjs\n---\n# Слайды\n\n## Native reveal\n");
   await put(
     "book/_quarto.yml",
     `project:\n  type: book\n  output-dir: _book\n  post-render: ../${ext}/course-site/entrypoints/collect.ts\nbook:\n  title: Книга\n  navbar: {}\n  chapters: [index.qmd, chapter.qmd]\nformat: html\n`,
@@ -119,22 +100,17 @@ try {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const log = new TextDecoder().decode(rendered.stdout) +
-    new TextDecoder().decode(rendered.stderr);
+  const log = new TextDecoder().decode(rendered.stdout) + new TextDecoder().decode(rendered.stderr);
   await Deno.writeTextFile(join(root, "_generated/render.log"), log);
   if (mutant) {
-    const expectedDiagnostic = mutant === "root-missing"
-      ? "RELEASE.EXPECTED_SOURCES_INVALID"
-      : "RELEASE.COVERAGE";
+    const expectedDiagnostic = mutant === "root-missing" ? "RELEASE.EXPECTED_SOURCES_INVALID" : "RELEASE.COVERAGE";
     assert(
       !rendered.success && log.includes(expectedDiagnostic),
       "Ожидался отказ Core publication " + expectedDiagnostic + ": " + root + "\n" + log,
     );
     const zip = join(
       root,
-      mutant === "root-missing"
-        ? "_site/_downloads/root-data.zip"
-        : "_site/tasks/_downloads/exr-demo-starter.zip",
+      mutant === "root-missing" ? "_site/_downloads/root-data.zip" : "_site/tasks/_downloads/exr-demo-starter.zip",
     );
     let exists = false;
     try {
@@ -144,20 +120,11 @@ try {
       if (!(error instanceof Deno.errors.NotFound)) throw error;
     }
     assert(!exists, "Отказ coverage создал ZIP");
-    const runs = await Array.fromAsync(
-      Deno.readDir(join(root, "_generated/course-site/runs")),
-    );
+    const runs = await Array.fromAsync(Deno.readDir(join(root, "_generated/course-site/runs")));
     for (const run of runs) {
       let completed = false;
       try {
-        await Deno.stat(
-          join(
-            root,
-            "_generated/course-site/runs",
-            run.name,
-            "composition.json",
-          ),
-        );
+        await Deno.stat(join(root, "_generated/course-site/runs", run.name, "composition.json"));
         completed = true;
       } catch (error) {
         if (!(error instanceof Deno.errors.NotFound)) throw error;
@@ -168,15 +135,9 @@ try {
   } else {
     assert(rendered.success, "Actual Publisher: " + root + "\n" + log);
     const slide = await Deno.readTextFile(join(root, "_site/tasks/talk.html"));
-    assert(
-      slide.includes("reveal.js") && slide.includes("Native reveal"),
-      "Native mixed revealjs отсутствует",
-    );
+    assert(slide.includes("reveal.js") && slide.includes("Native reveal"), "Native mixed revealjs отсутствует");
     const book = await Deno.readTextFile(join(root, "_site/book/chapter.html"));
-    assert(
-      book.includes("Native глава") && book.includes("index.html"),
-      "Native book отсутствует",
-    );
+    assert(book.includes("Native глава") && book.includes("index.html"), "Native book отсутствует");
     const archive = join(root, "_site/tasks/_downloads/exr-demo-starter.zip");
     const result = await new Deno.Command("unzip", {
       args: ["-p", archive, "README.md"],
@@ -186,14 +147,10 @@ try {
     const readme = new TextDecoder().decode(result.stdout);
     assert(
       result.success &&
-        readme.includes(
-          "https://pages.example.test/course/tasks/other.html#target",
-        ) &&
-        readme.includes(
-          "https://pages.example.test/course/tasks/_downloads/exr-demo-starter.zip",
-        ) && !readme.includes("https://standalone.example/"),
-      "Publisher не назначил конечные адреса до единственной упаковки: " +
-        readme,
+        readme.includes("https://pages.example.test/course/tasks/other.html#target") &&
+        readme.includes("https://pages.example.test/course/tasks/_downloads/exr-demo-starter.zip") &&
+        !readme.includes("https://standalone.example/"),
+      "Publisher не назначил конечные адреса до единственной упаковки: " + readme,
     );
     if (true) {
       assert(
@@ -206,26 +163,18 @@ try {
     const dirs = await Array.fromAsync(Deno.readDir(runs));
     const firstRun = dirs[0];
     assert(firstRun, "Нет сохранённого composition run");
-    const composition = await readComposition(JSON.parse(
-      await Deno.readTextFile(join(runs, firstRun.name, "composition.json")),
-    ));
+    const composition = await readComposition(
+      JSON.parse(await Deno.readTextFile(join(runs, firstRun.name, "composition.json"))),
+    );
     assert(
-      composition.nativeOperations?.some((item: { project: string }) =>
-        item.project === "tasks"
-      ),
+      composition.nativeOperations?.some((item: { project: string }) => item.project === "tasks"),
       "Publisher не проверил actual public operation",
     );
-    const native = composition.nativeOperations.find((item) =>
-      item.project === "tasks"
-    );
+    const native = composition.nativeOperations.find((item) => item.project === "tasks");
     assert(native, "Нет current tasks publication");
+    assert(native.catalog.documents.length === 3, "Неполный независимый child source set");
     assert(
-      native.catalog.documents.length === 3,
-      "Неполный независимый child source set",
-    );
-    assert(
-      native.catalog.documents.find((d) => d.source === "talk.qmd")
-        ?.format === "revealjs",
+      native.catalog.documents.find((d) => d.source === "talk.qmd")?.format === "revealjs",
       "Потерян actual native format",
     );
     assert(
@@ -234,22 +183,15 @@ try {
     );
     const observations = Deno.env.get("PUBLISHER_PIPELINE_OBSERVATIONS");
     if (observations) {
-      await Deno.writeTextFile(
-        observations,
-        JSON.stringify({ root, composition }, null, 2) + "\n",
-      );
+      await Deno.writeTextFile(observations, JSON.stringify({ root, composition }, null, 2) + "\n");
     }
     await put(
       "_quarto.yml",
       // Core 9 по умолчанию native: отсутствие старого флага не является отказом.
       // Здесь действительно отключаем Core, сохраняя course и прежнюю выдачу.
-      (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
-        "course-core-runtime: native-ts\n",
-        "",
-      ).replace(
-        "filters: [course-core, project-download]",
-        "filters: [project-download]",
-      ) +
+      (await Deno.readTextFile(join(root, "_quarto.yml")))
+        .replace("course-core-runtime: native-ts\n", "")
+        .replace("filters: [course-core, project-download]", "filters: [project-download]") +
         "\ncourse: {id: live-release}\n",
     );
     const refused = await new Deno.Command(Deno.env.get("QUARTO") || "quarto", {
@@ -264,10 +206,7 @@ try {
       stderr: "piped",
     }).output();
     assert(
-      !refused.success &&
-        new TextDecoder().decode(refused.stderr).includes(
-          "SITE.RELEASE_UNQUALIFIED",
-        ),
+      !refused.success && new TextDecoder().decode(refused.stderr).includes("SITE.RELEASE_UNQUALIFIED"),
       "Недостающий Core publication session был молча пропущен",
     );
     const retained = await Deno.readFile(archive);

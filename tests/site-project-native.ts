@@ -4,10 +4,8 @@ import { readComposition, loadCore } from "./results.ts";
 import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
-const core = Deno.env.get("COURSE_CORE_PROVIDER") || Deno.env.get("CORE") ||
-  join(dirname(repo), "quarto-course");
-const root = Deno.env.get("COURSE_SITE_PROJECT_ROOT") ||
-  await Deno.makeTempDir({ prefix: "site-project-native-" });
+const core = Deno.env.get("COURSE_CORE_PROVIDER") || Deno.env.get("CORE") || join(dirname(repo), "quarto-course");
+const root = Deno.env.get("COURSE_SITE_PROJECT_ROOT") || (await Deno.makeTempDir({ prefix: "site-project-native-" }));
 const quarto = Deno.env.get("QUARTO") || "quarto";
 async function write(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
@@ -20,20 +18,18 @@ async function run(args: string[], cwd = root) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const text = new TextDecoder().decode(result.stdout) +
-    new TextDecoder().decode(result.stderr);
+  const text = new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr);
   await write(`_generated/test-logs/${crypto.randomUUID()}.log`, text);
   assert(result.success, `Отказ ${result.code}: ${text}`);
 }
-const owners = ["", "part", "nested/second"], ids = ["root", "first", "second"];
+const owners = ["", "part", "nested/second"],
+  ids = ["root", "first", "second"];
 const namespace = "fixture-provider";
 for (const [i, owner] of owners.entries()) {
   const prefix = owner ? owner + "/" : "";
   const hook = `_extensions/${namespace}/course-core/entrypoints/`;
   const site = owner
-    ? `${
-      "../".repeat(owner.split("/").length)
-    }_extensions/${namespace}/course-site/entrypoints/collect.ts`
+    ? `${"../".repeat(owner.split("/").length)}_extensions/${namespace}/course-site/entrypoints/collect.ts`
     : `_extensions/${namespace}/course-site/entrypoints/`;
   await write(
     prefix + "_quarto.yml",
@@ -42,12 +38,10 @@ for (const [i, owner] of owners.entries()) {
   render: [index.qmd]
   output-dir: _output
   resources: ["!projects/**", "!common/**", "!_extensions/**", "!_generated/**"${
-      owner ? "" : ', "!part/**", "!nested/**"'
-    }]
+    owner ? "" : ', "!part/**", "!nested/**"'
+  }]
   pre-render: ${owner ? hook + "pre.ts" : site + "pre.ts"}
-  post-render: ${
-      owner ? "[" + site + ", " + hook + "post.ts]" : site + "post.ts"
-    }
+  post-render: ${owner ? "[" + site + ", " + hook + "post.ts]" : site + "post.ts"}
 format: {html: {theme: none}}
 lang: ru
 fail-if-warnings: true
@@ -73,10 +67,7 @@ project-checks:
 `,
   );
   for (const view of ["student", "full"]) {
-    await write(
-      prefix + `_quarto-${view}.yml`,
-      `project: {output-dir: _output-${view}}\ncourse: {view: ${view}}\n`,
-    );
+    await write(prefix + `_quarto-${view}.yml`, `project: {output-dir: _output-${view}}\ncourse: {view: ${view}}\n`);
   }
   await write(
     prefix + "index.qmd",
@@ -90,99 +81,58 @@ project-checks:
   );
   await write(
     prefix + "public.svg",
-    `<svg xmlns="http://www.w3.org/2000/svg"><text>PUBLIC_RESOURCE_${
-      ids[i]
-    }</text></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg"><text>PUBLIC_RESOURCE_${ids[i]}</text></svg>`,
   );
   await write(
     prefix + "closed.svg",
-    `<svg xmlns="http://www.w3.org/2000/svg"><text>PRIVATE_RESOURCE_${
-      ids[i]
-    }</text></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg"><text>PRIVATE_RESOURCE_${ids[i]}</text></svg>`,
   );
   await write(
     prefix + "projects/demo/_metadata.yml",
     "course-project:\n  starter: {path: student}\n  solutions: {reference: {path: reference}}\n",
   );
-  await write(
-    prefix + "projects/demo/student/Demo.java",
-    `class Demo {} // STUDENT_${ids[i]}\n`,
-  );
-  await write(
-    prefix + "projects/demo/reference/Demo.java",
-    `class Demo {} // REFERENCE_${ids[i]}\n`,
-  );
-  await write(
-    prefix + "projects/demo/tests/DemoTest.java",
-    "class DemoTest {}\n",
-  );
-  await write(
-    prefix + "common/Public.java",
-    `class Public {} // COMMON_${ids[i]}\n`,
-  );
-  await write(
-    prefix + "common/Teacher.java",
-    "class Teacher {} // CLOSED_COMMON\n",
-  );
+  await write(prefix + "projects/demo/student/Demo.java", `class Demo {} // STUDENT_${ids[i]}\n`);
+  await write(prefix + "projects/demo/reference/Demo.java", `class Demo {} // REFERENCE_${ids[i]}\n`);
+  await write(prefix + "projects/demo/tests/DemoTest.java", "class DemoTest {}\n");
+  await write(prefix + "common/Public.java", `class Public {} // COMMON_${ids[i]}\n`);
+  await write(prefix + "common/Teacher.java", "class Teacher {} // CLOSED_COMMON\n");
   const cwd = join(root, owner);
   await run(["add", core, "--no-prompt"], cwd);
   await Deno.mkdir(join(cwd, "_extensions", namespace), { recursive: true });
-  for (
-    const name of ["course-core", "course-presentation", "course-navigation"]
-  ) {
-    await Deno.rename(
-      join(cwd, "_extensions", name),
-      join(cwd, "_extensions", namespace, name),
-    );
+  for (const name of ["course-core", "course-presentation", "course-navigation"]) {
+    await Deno.rename(join(cwd, "_extensions", name), join(cwd, "_extensions", namespace, name));
   }
 }
 await run(["add", repo, "--no-prompt"]);
-await Deno.rename(
-  join(root, "_extensions/course-site"),
-  join(root, "_extensions", namespace, "course-site"),
-);
+await Deno.rename(join(root, "_extensions/course-site"), join(root, "_extensions", namespace, "course-site"));
 const original = await Deno.readTextFile(join(root, "_quarto.yml"));
 for (const view of ["student", "full"]) {
   const prior = new Set(
-    await Array.fromAsync(
-      Deno.readDir(join(root, "_generated/course-site/runs")),
-    ).catch((e) => {
-      if (e instanceof Deno.errors.NotFound) return [];
-      throw e;
-    }).then((rows) => rows.map((r) => r.name)),
+    await Array.fromAsync(Deno.readDir(join(root, "_generated/course-site/runs")))
+      .catch((e) => {
+        if (e instanceof Deno.errors.NotFound) return [];
+        throw e;
+      })
+      .then((rows) => rows.map((r) => r.name)),
   );
   await run(["render", "--profile", view, "--fail-if-warnings"]);
-  const runs = await Array.fromAsync(
-    Deno.readDir(join(root, "_generated/course-site/runs")),
-  );
+  const runs = await Array.fromAsync(Deno.readDir(join(root, "_generated/course-site/runs")));
   const fresh = runs.filter((r) => !prior.has(r.name));
   assertEquals(fresh.length, 1);
   const currentRun = fresh[0];
   assert(currentRun, "Нет нового composition run");
-  const composition = await readComposition(JSON.parse(
-    await Deno.readTextFile(
-      join(
-        root,
-        "_generated/course-site/runs",
-        currentRun.name,
-        "composition.json",
-      ),
-    ),
-  ));
-  assertEquals(composition.nativeOperations.map((r) => r.project).sort(), [
-    "nested/second",
-    "part",
-    "root",
-  ]);
+  const composition = await readComposition(
+    JSON.parse(await Deno.readTextFile(join(root, "_generated/course-site/runs", currentRun.name, "composition.json"))),
+  );
+  assertEquals(composition.nativeOperations.map((r) => r.project).sort(), ["nested/second", "part", "root"]);
   const operationIds = [];
   for (const [i, owner] of owners.entries()) {
-    const release = composition.nativeOperations.find((row) =>
-      row.project === (owner || "root")
-    );
+    const release = composition.nativeOperations.find((row) => row.project === (owner || "root"));
     assert(release, "Нет current owner publication");
-    assertEquals(release.catalog.documents.map((d) => d.source), [
-      "index.qmd",
-    ]);
+    assertEquals(
+      release.catalog.documents.map((d) => d.source),
+      ["index.qmd"],
+    );
     assertEquals(release.course, {
       id: "project-source",
       view,
@@ -190,98 +140,86 @@ for (const view of ["student", "full"]) {
     });
     operationIds.push(release.catalog.identity.operation);
     const ownerRoot = join(root, owner);
-    const Core = await loadCore(
-      toFileUrl(
-        join(ownerRoot, "_extensions", namespace, "course-core/public.ts"),
-      ).href
-    );
-    await Core.withCurrentNativeOperation({
-      root: ownerRoot,
-      profiles: [view],
-      projection: view === "full" ? "author" : "student",
-      outputDirectory: join(ownerRoot, `_output-${view}`),
-    }, async (op) => {
-      const doc = op.document({ source: "index.qmd" });
-      assertEquals(doc.context.input, "index.qmd");
-      const definition = doc.definitions[`exr-${ids[i]}`];
-      assert(definition, "Нет определения текущего упражнения");
-      assertEquals(definition.project, "/projects/demo");
-      assertEquals(definition["project-check"], "junit");
-      await op.withProjectContexts([{
-        owner: ownerRoot,
-        directories: ["projects/demo"],
+    const Core = await loadCore(toFileUrl(join(ownerRoot, "_extensions", namespace, "course-core/public.ts")).href);
+    await Core.withCurrentNativeOperation(
+      {
+        root: ownerRoot,
         profiles: [view],
-        format: "html",
-      }], async (batch) => {
-        const group = batch.groups[0];
-        assert(group, "Нет группы project contexts");
-        const context = group.contexts[0];
-        assert(context, "Нет текущего project context");
-        assertEquals(context.owner, ownerRoot);
-        assertEquals(context.input, join(ownerRoot, "projects/demo"));
-        assert(context.contract.starter, "Нет author-declared starter");
-        assertEquals(context.contract.starter.path, join(context.input, "student"));
-        const reference = context.contract.solutions.reference;
-        assert(reference, "Нет reference solution");
-        assertEquals(
-          reference.path,
-          join(context.input, "reference"),
+        projection: view === "full" ? "author" : "student",
+        outputDirectory: join(ownerRoot, `_output-${view}`),
+      },
+      async (op) => {
+        const doc = op.document({ source: "index.qmd" });
+        assertEquals(doc.context.input, "index.qmd");
+        const definition = doc.definitions[`exr-${ids[i]}`];
+        assert(definition, "Нет определения текущего упражнения");
+        assertEquals(definition.project, "/projects/demo");
+        assertEquals(definition["project-check"], "junit");
+        await op.withProjectContexts(
+          [
+            {
+              owner: ownerRoot,
+              directories: ["projects/demo"],
+              profiles: [view],
+              format: "html",
+            },
+          ],
+          async (batch) => {
+            const group = batch.groups[0];
+            assert(group, "Нет группы project contexts");
+            const context = group.contexts[0];
+            assert(context, "Нет текущего project context");
+            assertEquals(context.owner, ownerRoot);
+            assertEquals(context.input, join(ownerRoot, "projects/demo"));
+            assert(context.contract.starter, "Нет author-declared starter");
+            assertEquals(context.contract.starter.path, join(context.input, "student"));
+            const reference = context.contract.solutions.reference;
+            assert(reference, "Нет reference solution");
+            assertEquals(reference.path, join(context.input, "reference"));
+            const publicFile = context.contract.build.files["Public.java"];
+            assert(publicFile, "Нет Public.java в build contract");
+            assertEquals(publicFile.path, join(ownerRoot, "common/Public.java"));
+            const plan = await Core.planProject(context, {
+              audience: view === "full" ? "full" : "student",
+            });
+            const inventory = await Core.materializeProject(
+              plan,
+              op.condition({
+                source: "index.qmd",
+                exerciseId: `exr-${ids[i]}`,
+                view: view === "full" ? "author" : "student",
+              }),
+              { submission: { files: [], instructions: "Сдайте исходник." } },
+            );
+            const files = new Map(inventory.files.map((f) => [f.target, new TextDecoder().decode(f.bytes)]));
+            assert(String(files.get("Demo.java")).includes(`STUDENT_${ids[i]}`), "Нет настоящих starter bytes");
+            assert(
+              String(files.get("Public.java")).includes(`COMMON_${ids[i]}`),
+              "Потеряно native происхождение build файла",
+            );
+            const text = [...files.values()].join("\n");
+            assertEquals(text.includes(`REFERENCE_${ids[i]}`), view === "full");
+            assertEquals(text.includes(`PRIVATE_${ids[i]}`), view === "full");
+            assert(!text.includes("CLOSED_COMMON"), "Grading metadata превратились в student ресурс");
+          },
         );
-        const publicFile = context.contract.build.files["Public.java"];
-        assert(publicFile, "Нет Public.java в build contract");
-        assertEquals(
-          publicFile.path,
-          join(ownerRoot, "common/Public.java"),
-        );
-        const plan = await Core.planProject(context, {
-          audience: view === "full" ? "full" : "student",
-        });
-        const inventory = await Core.materializeProject(
-          plan,
-          op.condition({
-            source: "index.qmd",
-            exerciseId: `exr-${ids[i]}`,
-            view: view === "full" ? "author" : "student",
-          }),
-          { submission: { files: [], instructions: "Сдайте исходник." } },
-        );
-        const files = new Map(
-          inventory.files.map((
-            f,
-          ) => [f.target, new TextDecoder().decode(f.bytes)]),
-        );
-        assert(
-          String(files.get("Demo.java")).includes(`STUDENT_${ids[i]}`),
-          "Нет настоящих starter bytes",
-        );
-        assert(
-          String(files.get("Public.java")).includes(`COMMON_${ids[i]}`),
-          "Потеряно native происхождение build файла",
-        );
-        const text = [...files.values()].join("\n");
-        assertEquals(text.includes(`REFERENCE_${ids[i]}`), view === "full");
-        assertEquals(text.includes(`PRIVATE_${ids[i]}`), view === "full");
-        assert(
-          !text.includes("CLOSED_COMMON"),
-          "Grading metadata превратились в student ресурс",
-        );
-      });
-    });
+      },
+    );
     const mounted = join(root, `_output-${view}`, owner, "index.html");
     const html = await Deno.readTextFile(mounted);
     assert(html.includes("PUBLIC_" + ids[i]));
     assertEquals(html.includes("PRIVATE_" + ids[i]), view === "full");
     assert(!html.includes("CLOSED_COMMON"));
     assert(
-      (await Deno.readTextFile(
-        join(root, `_output-${view}`, owner, "public.svg"),
-      )).includes("PUBLIC_RESOURCE_" + ids[i]),
+      (await Deno.readTextFile(join(root, `_output-${view}`, owner, "public.svg"))).includes(
+        "PUBLIC_RESOURCE_" + ids[i],
+      ),
     );
     let closed = false;
     try {
-      closed = (await Deno.readTextFile(
-        join(root, `_output-${view}`, owner, "closed.svg"),
-      )).includes("PRIVATE_RESOURCE_");
+      closed = (await Deno.readTextFile(join(root, `_output-${view}`, owner, "closed.svg"))).includes(
+        "PRIVATE_RESOURCE_",
+      );
     } catch (error) {
       if (!(error instanceof Deno.errors.NotFound)) throw error;
     }
@@ -304,8 +242,7 @@ try {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const text = new TextDecoder().decode(result.stdout) +
-    new TextDecoder().decode(result.stderr);
+  const text = new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr);
   await write("_generated/test-logs/foreign-source.log", text);
   assert(!result.success && text.includes("SITE.SUBPROJECT_INVALID"), text);
   await Deno.remove(source);

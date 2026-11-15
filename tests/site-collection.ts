@@ -1,8 +1,5 @@
 import { assertEquals, assertRejects } from "./support.ts";
-import {
-  collect,
-  readCollection,
-} from "../_extensions/course-site/infrastructure/collection.ts";
+import { collect, readCollection } from "../_extensions/course-site/infrastructure/collection.ts";
 import { cleanOutput } from "../_extensions/course-site/infrastructure/files.ts";
 import { post } from "../_extensions/course-site/application/compose.ts";
 const root = await Deno.makeTempDir();
@@ -17,62 +14,29 @@ try {
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "_site/index.html");
   Deno.env.delete("QUARTO_PROFILE");
   await collect();
-  const record = await readCollection(
-    `${root}/record.json`,
-    "one",
-    root,
-    `${root}/_site`,
-    [],
-  );
+  const record = await readCollection(`${root}/record.json`, "one", root, `${root}/_site`, []);
   assertEquals(record.nativeOutputs, [`${root}/_site/index.html`]);
   Deno.env.set("QUARTO_PROFILE", "web,content");
   await collect();
-  const native = await readCollection(
-    `${root}/record.json`,
-    "one",
-    root,
-    `${root}/_site`,
-    ["web"],
-    true,
-  );
+  const native = await readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"], true);
   assertEquals(native.profiles, ["web", "content"]);
   await assertRejects(
-    () =>
-      readCollection(`${root}/record.json`, "one", root, `${root}/_site`, [
-        "web",
-      ]),
+    () => readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"]),
     "SITE.COLLECTION_INVALID",
     [root, "one", "profiles"],
   );
   await Deno.writeTextFile(`${root}/_quarto-content.yml`, "format: html\n");
-  assertEquals(
-    (await readCollection(
-      `${root}/record.json`,
-      "one",
-      root,
-      `${root}/_site`,
-      ["web"],
-      true,
-    )).profiles,
-    ["web", "content"],
-  );
-  await assertRejects(() =>
-    readCollection(
-      `${root}/record.json`,
-      "one",
-      root,
-      `${root}/_site`,
-      ["student"],
-      true,
-    )
-  );
+  assertEquals((await readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["web"], true)).profiles, [
+    "web",
+    "content",
+  ]);
+  await assertRejects(() => readCollection(`${root}/record.json`, "one", root, `${root}/_site`, ["student"], true));
   await Deno.remove(`${root}/_quarto-content.yml`);
   Deno.env.delete("QUARTO_PROFILE");
   await collect();
   await Deno.remove(`${root}/_site/index.html`);
   await assertRejects(
-    () =>
-      readCollection(`${root}/record.json`, "one", root, `${root}/_site`, []),
+    () => readCollection(`${root}/record.json`, "one", root, `${root}/_site`, []),
     "SITE.CURRENT_RESULT_MISSING",
     [root, "one", "index.html"],
   );
@@ -81,17 +45,11 @@ try {
   await Deno.mkdir(`${root}/_site/site_libs/revealjs/plugin/pdf-export`, {
     recursive: true,
   });
-  await Deno.writeTextFile(
-    `${root}/_site/site_libs/revealjs/plugin/pdf-export/plugin.yml`,
-    "name: pdf-export",
-  );
+  await Deno.writeTextFile(`${root}/_site/site_libs/revealjs/plugin/pdf-export/plugin.yml`, "name: pdf-export");
   await cleanOutput(root, `${root}/_site`);
   await Deno.writeTextFile(`${root}/_site/source.qmd`, "author source");
   await assertRejects(() => cleanOutput(root, `${root}/_site`));
-  assertEquals(
-    await Deno.readTextFile(`${root}/_site/source.qmd`),
-    "author source",
-  );
+  assertEquals(await Deno.readTextFile(`${root}/_site/source.qmd`), "author source");
   await Deno.remove(`${root}/_site/source.qmd`);
   await Deno.mkdir(`${root}/_site/lessons`);
   await Deno.writeTextFile(`${root}/_site/lessons/author.txt`, "root resource");
@@ -102,27 +60,24 @@ try {
     JSON.stringify({
       ws: { root, output: `${root}/_site`, config: {}, profiles: [] },
       run: `${root}/run`,
-      records: [{
-        project: { id: "part", mount: "lessons" },
-        config: {},
-        record: {
-          outputDir: `${root}/part/_site`,
-          files: [],
-          nativeOutputs: [],
+      records: [
+        {
+          project: { id: "part", mount: "lessons" },
+          config: {},
+          record: {
+            outputDir: `${root}/part/_site`,
+            files: [],
+            nativeOutputs: [],
+          },
         },
-      }],
+      ],
     }),
   );
   Deno.env.set("QUARTO_PROJECT_RENDER_ALL", "1");
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "_site/index.html");
   await assertRejects(() => post(root));
-  assertEquals(
-    await Deno.readTextFile(`${root}/_site/lessons/author.txt`),
-    "root resource",
-  );
-  console.log(
-    "PASS missing current outputs, containment and source-preserving cleanup",
-  );
+  assertEquals(await Deno.readTextFile(`${root}/_site/lessons/author.txt`), "root resource");
+  console.log("PASS missing current outputs, containment and source-preserving cleanup");
 } finally {
   Deno.chdir(cwd);
   await Deno.remove(root, { recursive: true });

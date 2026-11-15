@@ -12,38 +12,26 @@ export interface Record {
   nativeOutputs: string[];
   files: string[];
 }
-async function publicOutputsImpl(
-  root: string,
-  outputDir: string,
-): Promise<string[]> {
+async function publicOutputsImpl(root: string, outputDir: string): Promise<string[]> {
   const file = Deno.env.get("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES");
-  const text = file
-    ? await Deno.readTextFile(resolve(root, file))
-    : Deno.env.get("QUARTO_PROJECT_OUTPUT_FILES");
+  const text = file ? await Deno.readTextFile(resolve(root, file)) : Deno.env.get("QUARTO_PROJECT_OUTPUT_FILES");
   if (text === undefined) {
-    throw diagnostic(
-      "SITE.COLLECTION_INVALID",
-      "Не получен список текущих результатов Quarto",
-      {
-        source: root,
-        field: "QUARTO_PROJECT_OUTPUT_FILES",
-        hint: "Запускайте collect последним post-render hook.",
-      },
-    );
+    throw diagnostic("SITE.COLLECTION_INVALID", "Не получен список текущих результатов Quarto", {
+      source: root,
+      field: "QUARTO_PROJECT_OUTPUT_FILES",
+      hint: "Запускайте collect последним post-render hook.",
+    });
   }
-  const outputs = text.split(/\r?\n/).filter(Boolean).map((path) =>
-    resolve(root, path)
-  );
+  const outputs = text
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((path) => resolve(root, path));
   if (new Set(outputs).size !== outputs.length) {
-    throw diagnostic(
-      "SITE.COLLECTION_INVALID",
-      "Список результатов содержит повторяющиеся пути",
-      {
-        source: root,
-        field: "nativeOutputs",
-        hint: "Проверьте post-render окружение Quarto.",
-      },
-    );
+    throw diagnostic("SITE.COLLECTION_INVALID", "Список результатов содержит повторяющиеся пути", {
+      source: root,
+      field: "nativeOutputs",
+      hint: "Проверьте post-render окружение Quarto.",
+    });
   }
   for (const path of outputs) {
     within(outputDir, path);
@@ -61,16 +49,12 @@ async function publicOutputsImpl(
       );
     }
     if (!stat.isFile) {
-      throw diagnostic(
-        "SITE.CURRENT_RESULT_MISSING",
-        "Текущий результат Quarto отсутствует",
-        {
-          source: root,
-          field: "nativeOutputs",
-          related: [{ source: path }],
-          hint: "Повторите успешную сборку.",
-        },
-      );
+      throw diagnostic("SITE.CURRENT_RESULT_MISSING", "Текущий результат Quarto отсутствует", {
+        source: root,
+        field: "nativeOutputs",
+        related: [{ source: path }],
+        hint: "Повторите успешную сборку.",
+      });
     }
   }
   return outputs;
@@ -78,36 +62,30 @@ async function publicOutputsImpl(
 async function collectImpl(): Promise<void> {
   const destination = Deno.env.get("COURSE_SITE_COLLECTION");
   if (
-    !destination && !Deno.env.has("QUARTO_PROJECT_OUTPUT_FILES") &&
+    !destination &&
+    !Deno.env.has("QUARTO_PROJECT_OUTPUT_FILES") &&
     !Deno.env.has("QUARTO_USE_FILE_FOR_PROJECT_OUTPUT_FILES")
-  ) return;
+  )
+    return;
   const root = Deno.cwd(),
     outputDir = resolve(root, Deno.env.get("QUARTO_PROJECT_OUTPUT_DIR") || "");
   if (outputDir === root) {
-    throw diagnostic(
-      "SITE.COLLECTION_INVALID",
-      "Не задан каталог текущего результата",
-      {
-        source: root,
-        field: "QUARTO_PROJECT_OUTPUT_DIR",
-        hint: "Задайте native project.output-dir.",
-      },
-    );
+    throw diagnostic("SITE.COLLECTION_INVALID", "Не задан каталог текущего результата", {
+      source: root,
+      field: "QUARTO_PROJECT_OUTPUT_DIR",
+      hint: "Задайте native project.output-dir.",
+    });
   }
   const nativeOutputs = await publicOutputs(root, outputDir);
   await addressNavigation(outputDir, nativeOutputs);
   if (!destination) return;
   const id = Deno.env.get("COURSE_SITE_PROJECT");
   if (!id) {
-    throw diagnostic(
-      "SITE.COLLECTION_INVALID",
-      "Не задан идентификатор текущего компонента",
-      {
-        source: root,
-        field: "COURSE_SITE_PROJECT",
-        hint: "В композиции Publisher задаёт идентификатор автоматически.",
-      },
-    );
+    throw diagnostic("SITE.COLLECTION_INVALID", "Не задан идентификатор текущего компонента", {
+      source: root,
+      field: "COURSE_SITE_PROJECT",
+      hint: "В композиции Publisher задаёт идентификатор автоматически.",
+    });
   }
   const record: Record = {
     id,
@@ -132,14 +110,9 @@ async function readCollectionImpl(
   try {
     value = JSON.parse(await Deno.readTextFile(path));
   } catch (cause) {
-    if (
-      !(cause instanceof Deno.errors.NotFound) &&
-      !(cause instanceof SyntaxError)
-    ) throw cause;
+    if (!(cause instanceof Deno.errors.NotFound) && !(cause instanceof SyntaxError)) throw cause;
     throw diagnostic(
-      cause instanceof SyntaxError
-        ? "SITE.COLLECTION_INVALID"
-        : "SITE.CURRENT_RESULT_MISSING",
+      cause instanceof SyntaxError ? "SITE.COLLECTION_INVALID" : "SITE.CURRENT_RESULT_MISSING",
       "Не удалось прочитать текущую коллекцию",
       {
         source: projectRoot,
@@ -152,19 +125,16 @@ async function readCollectionImpl(
     );
   }
   if (
-    !isRecord(value) || value.id !== id || value.projectRoot !== projectRoot ||
+    !isRecord(value) ||
+    value.id !== id ||
+    value.projectRoot !== projectRoot ||
     value.outputDir !== outputDir ||
     !isStrings(value.profiles) ||
-    value.profiles.some((profile: unknown) =>
-      typeof profile !== "string" || !/^[\w][\w.-]*$/.test(profile)
-    ) || new Set(value.profiles).size !== value.profiles.length ||
+    value.profiles.some((profile: unknown) => typeof profile !== "string" || !/^[\w][\w.-]*$/.test(profile)) ||
+    new Set(value.profiles).size !== value.profiles.length ||
     JSON.stringify(
-        nativeProfileContext
-          ? value.profiles.filter((profile: string) =>
-            profiles.includes(profile)
-          )
-          : value.profiles,
-      ) !== JSON.stringify(profiles) ||
+      nativeProfileContext ? value.profiles.filter((profile: string) => profiles.includes(profile)) : value.profiles,
+    ) !== JSON.stringify(profiles) ||
     !isStrings(value.nativeOutputs) ||
     !isStrings(value.files)
   ) {
@@ -209,44 +179,48 @@ async function readCollectionImpl(
       );
     }
     if (!stat.isFile) {
-      throw diagnostic(
-        "SITE.CURRENT_RESULT_MISSING",
-        "Файл текущей коллекции отсутствует",
-        {
-          source: projectRoot,
-          id,
-          field: "files/nativeOutputs",
-          related: [{ source: path }],
-          hint: "Повторите успешную сборку компонента.",
-        },
-      );
+      throw diagnostic("SITE.CURRENT_RESULT_MISSING", "Файл текущей коллекции отсутствует", {
+        source: projectRoot,
+        id,
+        field: "files/nativeOutputs",
+        related: [{ source: path }],
+        hint: "Повторите успешную сборку компонента.",
+      });
     }
   }
   return current;
 }
 
-export const publicOutputs = __metrics.wrapAsync({
-  id: "course-site.infrastructure.collection.publicOutputs",
-  kind: "io",
-}, publicOutputsImpl);
-export const collect = __metrics.wrapAsync({
-  id: "course-site.infrastructure.collection.collect",
-  kind: "io",
-}, collectImpl);
-const observedReadCollection = __metrics.wrapAsync({
-  id: "course-site.infrastructure.collection.readCollection",
-  kind: "io",
-}, readCollectionImpl);
+export const publicOutputs = __metrics.wrapAsync(
+  {
+    id: "course-site.infrastructure.collection.publicOutputs",
+    kind: "io",
+  },
+  publicOutputsImpl,
+);
+export const collect = __metrics.wrapAsync(
+  {
+    id: "course-site.infrastructure.collection.collect",
+    kind: "io",
+  },
+  collectImpl,
+);
+const observedReadCollection = __metrics.wrapAsync(
+  {
+    id: "course-site.infrastructure.collection.readCollection",
+    kind: "io",
+  },
+  readCollectionImpl,
+);
 export async function readCollection(
-  ...[path, id, projectRoot, outputDir, profiles, nativeProfileContext = false]:
-    [
-      path: string,
-      id: string,
-      projectRoot: string,
-      outputDir: string,
-      profiles: string[],
-      nativeProfileContext?: boolean,
-    ]
+  ...[path, id, projectRoot, outputDir, profiles, nativeProfileContext = false]: [
+    path: string,
+    id: string,
+    projectRoot: string,
+    outputDir: string,
+    profiles: string[],
+    nativeProfileContext?: boolean,
+  ]
 ): Promise<Record> {
   return await observedReadCollection(path, id, projectRoot, outputDir, {
     profiles,

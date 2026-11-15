@@ -12,7 +12,7 @@ profile:
 format: html
 bibliography: ../references.bib
 filters: [reference-catalog]
-reference-catalog: {namespace: study}
+reference-catalog: { namespace: study }
 website:
   repo-url: https://github.com/Afonenko-Course-Tools/quarto-project-publish
   repo-branch: v5.2.0

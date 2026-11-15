@@ -16,12 +16,7 @@ async function run(args: string[], cwd = root) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  assert.equal(
-    result.code,
-    0,
-    new TextDecoder().decode(result.stdout) +
-      new TextDecoder().decode(result.stderr),
-  );
+  assert.equal(result.code, 0, new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr));
 }
 try {
   await write(
@@ -40,17 +35,10 @@ website:
   navbar: {}
 filters: [course-navigation]
 course-navigation: {enabled: true}
-subprojects: ${
-      webOnly
-        ? "[theory, slides]"
-        : "[theory, slides, handout]"
-    }
+subprojects: ${webOnly ? "[theory, slides]" : "[theory, slides, handout]"}
 `,
   );
-  await write(
-    "index.qmd",
-    "# Портал\n\n[Статический файл](static-handout.pdf)\n",
-  );
+  await write("index.qmd", "# Портал\n\n[Статический файл](static-handout.pdf)\n");
   await write(
     "theory/_quarto.yml",
     `project:
@@ -97,15 +85,12 @@ course-navigation: {enabled: true}
     "static-handout.pdf",
     "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
   );
-  for (
-    const scope of ["", "theory", "slides", ...(webOnly ? [] : ["handout"])]
-  ) {
+  for (const scope of ["", "theory", "slides", ...(webOnly ? [] : ["handout"])]) {
     await run(["add", provider, "--no-prompt"], join(root, scope));
     for (const profile of ["student", "full"]) {
       await write(
         (scope ? scope + "/" : "") + "_quarto-" + profile + ".yml",
-        "project:\n  output-dir: " + (scope ? "_output-" : "_site-") + profile +
-          "\n",
+        "project:\n  output-dir: " + (scope ? "_output-" : "_site-") + profile + "\n",
       );
     }
   }
@@ -113,22 +98,14 @@ course-navigation: {enabled: true}
   for (const profile of ["student", "full", "student"]) {
     await run(["render", "--profile", profile, "--fail-if-warnings"]);
     const output = join(root, "_site-" + profile);
-    const chapter = await Deno.readTextFile(
-      join(output, "theory/nested/chapter.html"),
-    );
-    assert.ok(
-      chapter.includes('data-course-link="root"'),
-      "Site передаёт состав курса в Navigation",
-    );
+    const chapter = await Deno.readTextFile(join(output, "theory/nested/chapter.html"));
+    assert.ok(chapter.includes('data-course-link="root"'), "Site передаёт состав курса в Navigation");
     assert.equal(
       (chapter.match(/data-course-link="root"/g) || []).length,
       1,
       "Повторная композиция сохраняет ровно один вход корня",
     );
-    assert.ok(
-      !chapter.includes('data-course-link="handout"'),
-      "PDF-only компонент не становится web-участником",
-    );
+    assert.ok(!chapter.includes('data-course-link="handout"'), "PDF-only компонент не становится web-участником");
     if (!webOnly) {
       assert.ok((await Deno.stat(join(output, "handout/index.pdf"))).isFile);
     }
@@ -143,28 +120,14 @@ course-navigation: {enabled: true}
     );
     const deck = await Deno.readTextFile(join(output, "slides/lesson.html"));
     assert.ok(deck.includes('"href":"../theory/"'));
-    assert.ok(
-      deck.includes('"scope":"repository"'),
-      "Ссылки репозитория сохранены",
-    );
-    assert.ok(
-      !chapter.includes('id="course-site-navigation"'),
-      "Готовое меню не требует перебазирования браузером",
-    );
+    assert.ok(deck.includes('"scope":"repository"'), "Ссылки репозитория сохранены");
+    assert.ok(!chapter.includes('id="course-site-navigation"'), "Готовое меню не требует перебазирования браузером");
     const index = await Deno.readTextFile(join(output, "slides/index.html"));
     assert.ok(/href="[^\"]*lesson.html"[^>]*target="_blank"/.test(index));
   }
-  await run(
-    ["render", "--profile", "student", "--fail-if-warnings"],
-    join(root, "theory"),
-  );
-  const standalone = await Deno.readTextFile(
-    join(root, "theory/_output-student/index.html"),
-  );
-  assert.ok(
-    !standalone.includes('data-course-link="root"'),
-    "Standalone не создаёт меню всей композиции",
-  );
+  await run(["render", "--profile", "student", "--fail-if-warnings"], join(root, "theory"));
+  const standalone = await Deno.readTextFile(join(root, "theory/_output-student/index.html"));
+  assert.ok(!standalone.includes('data-course-link="root"'), "Standalone не создаёт меню всей композиции");
   const browser = await new Deno.Command("node", {
     args: [join(repo, "tests/site-composed-navigation.browser.cjs"), root],
     stdout: "inherit",
@@ -174,19 +137,11 @@ course-navigation: {enabled: true}
   const config = await Deno.readTextFile(join(root, "_quarto.yml"));
   await write(
     "_quarto.yml",
-    config.replace(
-      "course-navigation: {enabled: true}",
-      "course-navigation: {enabled: false}",
-    ),
+    config.replace("course-navigation: {enabled: true}", "course-navigation: {enabled: false}"),
   );
   await run(["render", "--profile", "student", "--fail-if-warnings"]);
-  const withoutComposition = await Deno.readTextFile(
-    join(root, "_site-student/theory/nested/chapter.html"),
-  );
-  assert.ok(
-    !withoutComposition.includes('data-course-link="root"'),
-    "Без явного включения общее меню не создаётся",
-  );
+  const withoutComposition = await Deno.readTextFile(join(root, "_site-student/theory/nested/chapter.html"));
+  assert.ok(!withoutComposition.includes('data-course-link="root"'), "Без явного включения общее меню не создаётся");
   console.log(
     "PASS установленная композиция Navigation/Site: student/full/repeat, HTML/Reveal, PDF-only, standalone и opt-in",
   );

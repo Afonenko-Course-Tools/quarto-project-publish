@@ -18,19 +18,10 @@ try {
     stderr: "piped",
   }).output();
   assert(add.success);
-  const { pre } = await loadSite("compose",
-    `file://${root}/_extensions/course-site/application/compose.ts`
-  );
+  const { pre } = await loadSite("compose", `file://${root}/_extensions/course-site/application/compose.ts`);
   Deno.env.delete("QUARTO_PROJECT_RENDER_ALL");
-  await assertRejects(() => pre(root), "SITE.SIBLING_MISSING", [
-    "project-download",
-    "public.ts",
-    "module",
-  ]);
-  const source = join(
-    root,
-    "_extensions/project-download/public.ts",
-  );
+  await assertRejects(() => pre(root), "SITE.SIBLING_MISSING", ["project-download", "public.ts", "module"]);
+  const source = join(root, "_extensions/project-download/public.ts");
   await Deno.mkdir(dirname(source), { recursive: true });
   await Deno.writeTextFile(source, await fixture("download-sentinel.ts"));
   try {
@@ -52,15 +43,10 @@ try {
   await Deno.mkdir(join(root, "_site"));
   await Deno.writeTextFile(join(root, "_site/index.html"), "current");
   Deno.env.set("QUARTO_PROJECT_OUTPUT_FILES", "_site/index.html");
-  const qrc = join(
-    root,
-    "_extensions/reference-catalog/public.ts",
-  );
+  const qrc = join(root, "_extensions/reference-catalog/public.ts");
   await Deno.mkdir(dirname(qrc), { recursive: true });
   await Deno.writeTextFile(qrc, await fixture("initialization-sentinel.ts"));
-  const { post } = await loadSite("compose",
-    `file://${root}/_extensions/course-site/application/compose.ts`
-  );
+  const { post } = await loadSite("compose", `file://${root}/_extensions/course-site/application/compose.ts`);
   try {
     await post(root);
     throw new Error("expected import error");
@@ -70,9 +56,7 @@ try {
     assertEquals(error.cause, "module cause");
     assert(error.stack?.includes("public.ts"));
   }
-  console.log(
-    "PASS missing sibling distinct from foreign call/import diagnostics and causes",
-  );
+  console.log("PASS missing sibling distinct from foreign call/import diagnostics and causes");
 } finally {
   await Deno.remove(root, { recursive: true });
 }

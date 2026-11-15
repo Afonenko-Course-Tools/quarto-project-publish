@@ -1,5 +1,7 @@
 # course-site: составной сайт из native проектов Quarto
 
+Среда разработки и инструменты: [общая архитектура](https://github.com/Afonenko-Course-Tools/quarto-course/blob/main/docs/development-arch.md), [локальные проверки](tools/README-quality.md).
+
 Действующие правила: [индекс спецификаций](spec/index.md) и [контракт Publisher](spec/contract.md).
 Текущий ref — кандидат **6.0.1**. Полный GREEN CI и публикация кандидата
 ещё не подтверждены. Версия

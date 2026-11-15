@@ -20,5 +20,5 @@ website:
         href: https://github.com/Afonenko-Course-Tools/quarto-project-publish/tree/v5.2.0/examples/course/
 format: html
 filters: [reference-catalog]
-reference-catalog: {namespace: portal}
+reference-catalog: { namespace: portal }
 subprojects: [book, materials]

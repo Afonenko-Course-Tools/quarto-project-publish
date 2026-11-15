@@ -1,26 +1,21 @@
 import { fixture } from "./fixtures.ts";
 import { readCommandEvent } from "./results.ts";
-import {commandProbe} from "./command-probe.ts";
+import { commandProbe } from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const mode = Deno.args[0] || "all";
 const root =
   (mode === "warnings" ? undefined : Deno.env.get("COURSE_SITE_TEST_ROOT")) ||
-  await Deno.makeTempDir({ prefix: "course-site-native-" });
+  (await Deno.makeTempDir({ prefix: "course-site-native-" }));
 const quarto = Deno.env.get("QUARTO") || "quarto";
-const probe=await commandProbe(root,quarto,join(root,"trace.jsonl"));
+const probe = await commandProbe(root, quarto, join(root, "trace.jsonl"));
 async function write(name: string, text: string) {
   const path = join(root, name);
   await Deno.mkdir(dirname(path), { recursive: true });
   await Deno.writeTextFile(path, text);
 }
-async function run(
-  args: string[],
-  cwd = root,
-  success = true,
-  env: Record<string, string> = {},
-) {
+async function run(args: string[], cwd = root, success = true, env: Record<string, string> = {}) {
   const r = await new Deno.Command(quarto, {
     args,
     cwd,
@@ -31,13 +26,9 @@ async function run(
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const text = new TextDecoder().decode(r.stdout) +
-    new TextDecoder().decode(r.stderr);
+  const text = new TextDecoder().decode(r.stdout) + new TextDecoder().decode(r.stderr);
   await write(`logs/${crypto.randomUUID()}.log`, text);
-  assert(
-    r.success === success,
-    `unexpected exit ${r.code}: ${args.join(" ")}\n${text}`,
-  );
+  assert(r.success === success, `unexpected exit ${r.code}: ${args.join(" ")}\n${text}`);
   return text;
 }
 await Deno.mkdir(root, { recursive: true });
@@ -77,65 +68,39 @@ await write(
 await write("part/later.qmd", "# Later\n");
 await write("part/asset.txt", "CURRENT_ASSET");
 for (const profile of ["student", "full"]) {
-  await write(
-    `_quarto-${profile}.yml`,
-    `project:\n  output-dir: _site-${profile}\n`,
-  );
-  await write(
-    `part/_quarto-${profile}.yml`,
-    `project:\n  output-dir: _output/${profile}\n`,
-  );
+  await write(`_quarto-${profile}.yml`, `project:\n  output-dir: _site-${profile}\n`);
+  await write(`part/_quarto-${profile}.yml`, `project:\n  output-dir: _output/${profile}\n`);
 }
 await run(["add", repo, "--no-prompt"]);
 if (mode === "warnings") {
-  await write(
-    "part/warning.lua",
-    await fixture("warning.lua"),
-  );
+  await write("part/warning.lua", await fixture("warning.lua"));
   const child = await Deno.readTextFile(join(root, "part/_quarto.yml"));
   await write("part/_quarto.yml", child + "\nfilters: [warning.lua]\n");
   const inherited = await run(["render", "--fail-if-warnings"]);
-  assert(
-    inherited.includes("NATIVE_WARNING_SENTINEL"),
-    "child warning missing",
-  );
-  assert(
-    (await Deno.readTextFile(join(root, "_site/part/index.html"))).includes(
-      "PUBLIC_PART",
-    ),
-  );
-  let calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
-    "\n",
-  ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
+  assert(inherited.includes("NATIVE_WARNING_SENTINEL"), "child warning missing");
+  assert((await Deno.readTextFile(join(root, "_site/part/index.html"))).includes("PUBLIC_PART"));
+  let calls = (await Deno.readTextFile(join(root, "trace.jsonl")))
+    .trim()
+    .split("\n")
+    .map((line) => readCommandEvent(JSON.parse(line)))
+    .filter((row) => row.kind === "render");
   assertEquals(calls.length, 1);
   const inheritedCall = calls[0];
   assert(inheritedCall, "Нет inherited child render");
-  assert(
-    !inheritedCall.args.includes("--fail-if-warnings"),
-    "root flag unexpectedly forwarded",
-  );
-  await write(
-    "part/_quarto.yml",
-    child + "\nfilters: [warning.lua]\nfail-if-warnings: true\n",
-  );
+  assert(!inheritedCall.args.includes("--fail-if-warnings"), "root flag unexpectedly forwarded");
+  await write("part/_quarto.yml", child + "\nfilters: [warning.lua]\nfail-if-warnings: true\n");
   const strict = await run(["render"], root, false);
-  assert(
-    strict.includes("NATIVE_WARNING_SENTINEL"),
-    "strict child warning missing",
-  );
-  calls = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
-    "\n",
-  ).map((line) => readCommandEvent(JSON.parse(line))).filter((row) => row.kind === "render");
+  assert(strict.includes("NATIVE_WARNING_SENTINEL"), "strict child warning missing");
+  calls = (await Deno.readTextFile(join(root, "trace.jsonl")))
+    .trim()
+    .split("\n")
+    .map((line) => readCommandEvent(JSON.parse(line)))
+    .filter((row) => row.kind === "render");
   assertEquals(calls.length, 2);
   const strictCall = calls[1];
   assert(strictCall, "Нет strict child render");
   assert(strictCall.exitCode !== 0, "strict warning child succeeded");
-  for (
-    const path of [
-      "_generated/course-site/active.json",
-      "_site/part/index.html",
-    ]
-  ) {
+  for (const path of ["_generated/course-site/active.json", "_site/part/index.html"]) {
     try {
       await Deno.stat(join(root, path));
       throw new Error(`failed composition exposed ${path}`);
@@ -143,49 +108,30 @@ if (mode === "warnings") {
       assert(error instanceof Deno.errors.NotFound, String(error));
     }
   }
-  console.log(
-    "PASS root warning flag stays local; native child warning strictness aborts composition",
-  );
+  console.log("PASS root warning flag stays local; native child warning strictness aborts composition");
   Deno.exit(0);
 }
 await run(["render"]);
 assert(
-  (await Deno.readTextFile(join(root, "_site/part/index.html"))).includes(
-    "PUBLIC_PART",
-  ),
+  (await Deno.readTextFile(join(root, "_site/part/index.html"))).includes("PUBLIC_PART"),
   "missing mounted current HTML",
 );
-assertEquals(
-  await Deno.readTextFile(join(root, "_site/part/asset.txt")),
-  "CURRENT_ASSET",
-);
-let trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim().split(
-  "\n",
-).map((line) => readCommandEvent(JSON.parse(line)));
+assertEquals(await Deno.readTextFile(join(root, "_site/part/asset.txt")), "CURRENT_ASSET");
+let trace = (await Deno.readTextFile(join(root, "trace.jsonl")))
+  .trim()
+  .split("\n")
+  .map((line) => readCommandEvent(JSON.parse(line)));
 assertEquals(trace.filter((x) => x.kind === "render").length, 1);
-assert(
-  (await Deno.readTextFile(join(root, "_site/part/search.json"))).includes(
-    "PUBLIC_PART",
-  ),
-  "missing fresh search",
-);
+assert((await Deno.readTextFile(join(root, "_site/part/search.json"))).includes("PUBLIC_PART"), "missing fresh search");
 if (mode === "smoke") {
-  console.log(
-    "PASS installed native composition, one render, assets and search",
-  );
+  console.log("PASS installed native composition, one render, assets and search");
   Deno.exit(0);
 }
 {
   const rootConfigPath = join(root, "_quarto.yml");
   const rootConfig = await Deno.readTextFile(rootConfigPath);
-  await Deno.writeTextFile(
-    rootConfigPath,
-    rootConfig.replace("subprojects: [part]", "subprojects: [part, late]"),
-  );
-  await write(
-    "late/_quarto.yml",
-    "project: {type: website, output-dir: _output, render: [index.qmd]}\nformat: html\n",
-  );
+  await Deno.writeTextFile(rootConfigPath, rootConfig.replace("subprojects: [part]", "subprojects: [part, late]"));
+  await write("late/_quarto.yml", "project: {type: website, output-dir: _output, render: [index.qmd]}\nformat: html\n");
   await write("late/index.qmd", "# Late\n");
   const draftPath = "late/_output/draft.qmd";
   const draft = "# Защищённый черновик\r\n\r\nИсходные байты.\r\n";
@@ -196,42 +142,29 @@ if (mode === "smoke") {
   ] as const;
   for (const [path, contents] of previousOutputs) await write(path, contents);
 
-  const refused = await run(
-    ["run", "_extensions/course-site/entrypoints/pre.ts"],
-    root,
-    false,
-    {
-      QUARTO_PROJECT_RENDER_ALL: "1",
-      QUARTO_PROFILE: "",
-      QUARTO_PROJECT_OUTPUT_DIR: "",
-    },
-  );
-  assert(
-    refused.includes("[SITE.OUTPUT_OVERLAP]") &&
-      refused.includes(join(root, draftPath)),
-    refused,
-  );
-  assertEquals(
-    [...await Deno.readFile(join(root, draftPath))],
-    [...new TextEncoder().encode(draft)],
-  );
+  const refused = await run(["run", "_extensions/course-site/entrypoints/pre.ts"], root, false, {
+    QUARTO_PROJECT_RENDER_ALL: "1",
+    QUARTO_PROFILE: "",
+    QUARTO_PROJECT_OUTPUT_DIR: "",
+  });
+  assert(refused.includes("[SITE.OUTPUT_OVERLAP]") && refused.includes(join(root, draftPath)), refused);
+  assertEquals([...(await Deno.readFile(join(root, draftPath)))], [...new TextEncoder().encode(draft)]);
   for (const [path, contents] of previousOutputs) {
     assertEquals(await Deno.readTextFile(join(root, path)), contents);
   }
   const preflightTrace = (await Deno.readTextFile(join(root, "trace.jsonl")))
-    .trim().split("\n").slice(trace.length)
+    .trim()
+    .split("\n")
+    .slice(trace.length)
     .map((line) => readCommandEvent(JSON.parse(line)));
-  assertEquals(preflightTrace.map((event) => event.kind), [
-    "inspect",
-    "inspect",
-    "inspect",
-  ]);
+  assertEquals(
+    preflightTrace.map((event) => event.kind),
+    ["inspect", "inspect", "inspect"],
+  );
 
   await Deno.writeTextFile(rootConfigPath, rootConfig);
   await Deno.remove(join(root, "late"), { recursive: true });
-  console.log(
-    "PASS защищённый draft.qmd последней части сохраняет обе прежние выдачи без child render",
-  );
+  console.log("PASS защищённый draft.qmd последней части сохраняет обе прежние выдачи без child render");
   if (mode === "preflight") Deno.exit(0);
 }
 await write("part/.quarto/cache-sentinel", "keep");
@@ -247,24 +180,15 @@ try {
 assert(missing, "retained output entered fresh collection");
 for (const profile of ["student", "full", "student"]) {
   await run(["render", "--profile", profile]);
-  const html = await Deno.readTextFile(
-    join(root, `_site-${profile}/part/index.html`),
-  );
+  const html = await Deno.readTextFile(join(root, `_site-${profile}/part/index.html`));
   assertEquals(html.includes("PRIVATE_PART"), profile === "full");
 }
 assert(
-  (await Deno.readTextFile(join(root, "_site-full/part/index.html")))
-    .includes("PRIVATE_PART"),
+  (await Deno.readTextFile(join(root, "_site-full/part/index.html"))).includes("PRIVATE_PART"),
   "student deleted full output",
 );
-assertEquals(
-  await Deno.readTextFile(join(root, "part/.quarto/cache-sentinel")),
-  "keep",
-);
-assertEquals(
-  await Deno.readTextFile(join(root, "part/_freeze/cache-sentinel")),
-  "keep",
-);
+assertEquals(await Deno.readTextFile(join(root, "part/.quarto/cache-sentinel")), "keep");
+assertEquals(await Deno.readTextFile(join(root, "part/_freeze/cache-sentinel")), "keep");
 await write("part/fail.ts", await fixture("late-failure.ts"));
 const original = await Deno.readTextFile(join(root, "part/_quarto.yml"));
 await write(
@@ -275,10 +199,7 @@ await write(
   ),
 );
 const failed = await run(["render"], root, false);
-assert(
-  failed.includes("LATE_CHILD_FAILURE"),
-  "native failure lost later-hook diagnostics",
-);
+assert(failed.includes("LATE_CHILD_FAILURE"), "native failure lost later-hook diagnostics");
 assertEquals(failed.split("Error: LATE_CHILD_FAILURE").length - 1, 1);
 try {
   await Deno.stat(join(root, "_generated/course-site/active.json"));
@@ -289,10 +210,7 @@ try {
 await write("part/_quarto.yml", original);
 await run(["render"]);
 await Deno.remove(join(root, "part/later.qmd"));
-await write(
-  "part/_quarto.yml",
-  original.replace("[index.qmd, later.qmd]", "[index.qmd]"),
-);
+await write("part/_quarto.yml", original.replace("[index.qmd, later.qmd]", "[index.qmd]"));
 await run(["render"]);
 missing = false;
 try {
@@ -303,29 +221,21 @@ try {
 assert(missing, "deleted source retained mounted HTML");
 await run(["render", "index.qmd"], join(root, "part"));
 const currentConfig = await Deno.readTextFile(join(root, "part/_quarto.yml"));
-await write(
-  "part/generate.ts",
-  await fixture("generate-source.ts"),
-);
+await write("part/generate.ts", await fixture("generate-source.ts"));
 await write(
   "part/_quarto.yml",
-  currentConfig.replace(
-    "render: [index.qmd]",
-    "render: ['*.qmd']\n  pre-render: generate.ts",
-  ),
+  currentConfig.replace("render: [index.qmd]", "render: ['*.qmd']\n  pre-render: generate.ts"),
 );
 await run(["render"]);
 assert(
-  (await Deno.readTextFile(join(root, "_site/part/generated.html")))
-    .includes("Fresh generated input"),
+  (await Deno.readTextFile(join(root, "_site/part/generated.html"))).includes("Fresh generated input"),
   "author pre-hook generated input missing",
 );
 const rootConfig = await Deno.readTextFile(join(root, "_quarto.yml"));
 await write("_quarto.yml", rootConfig + "\nprofile:\n  default: student\n");
 await run(["render"]);
 assert(
-  !(await Deno.readTextFile(join(root, "_site-student/part/index.html")))
-    .includes("PRIVATE_PART"),
+  !(await Deno.readTextFile(join(root, "_site-student/part/index.html"))).includes("PRIVATE_PART"),
   "default profile lost student audience",
 );
 await write("_quarto.yml", rootConfig);

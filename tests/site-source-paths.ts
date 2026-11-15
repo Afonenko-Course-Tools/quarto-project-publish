@@ -1,11 +1,11 @@
 import { readCommandEvent } from "./results.ts";
-import {commandProbe} from "./command-probe.ts";
+import { commandProbe } from "./command-probe.ts";
 import { dirname, fromFileUrl, join } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url)));
 const root = await Deno.makeTempDir({ prefix: "course-site-source-paths-" });
 const external = await Deno.makeTempFile({ suffix: ".qmd" });
-const probe=await commandProbe(root,Deno.env.get("QUARTO")||"quarto",join(root,"trace.jsonl"));
+const probe = await commandProbe(root, Deno.env.get("QUARTO") || "quarto", join(root, "trace.jsonl"));
 async function write(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), text);
@@ -37,33 +37,23 @@ try {
   // Retain the root's output through Quarto's own pre-hook cleanup so this
   // assertion isolates Publisher's all-member validation before its cleanup.
   const result = await run(["render", "--no-clean"]);
-  const text = new TextDecoder().decode(result.stdout) +
-    new TextDecoder().decode(result.stderr);
+  const text = new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr);
   assert(
-    !result.success && text.includes("SITE.SUBPROJECT_INVALID") &&
-      text.includes("index.qmd") && text.includes("input"),
+    !result.success && text.includes("SITE.SUBPROJECT_INVALID") && text.includes("index.qmd") && text.includes("input"),
     `external QMD was not rejected: ${text}`,
   );
-  assertEquals(
-    await Deno.readTextFile(join(root, "_site/sentinel.txt")),
-    "retain root",
-  );
-  assertEquals(
-    await Deno.readTextFile(join(root, "part/_site/sentinel.txt")),
-    "retain child",
-  );
-  const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
-    .split("\n").map((line) => readCommandEvent(JSON.parse(line)));
+  assertEquals(await Deno.readTextFile(join(root, "_site/sentinel.txt")), "retain root");
+  assertEquals(await Deno.readTextFile(join(root, "part/_site/sentinel.txt")), "retain child");
+  const trace = (await Deno.readTextFile(join(root, "trace.jsonl")))
+    .trim()
+    .split("\n")
+    .map((line) => readCommandEvent(JSON.parse(line)));
   assertEquals(trace.filter((row) => row.kind === "render").length, 0);
   assert(
-    !trace.some((row) =>
-      row.kind === "inspect" && row.args[1] === join(root, "part/index.qmd")
-    ),
+    !trace.some((row) => row.kind === "inspect" && row.args[1] === join(root, "part/index.qmd")),
     "unsafe document passed to native inspect",
   );
-  console.log(
-    "PASS explicit QMD symlink rejected without Core before cleanup, document inspect and child render",
-  );
+  console.log("PASS explicit QMD symlink rejected without Core before cleanup, document inspect and child render");
 } finally {
   await Deno.remove(root, { recursive: true });
   await Deno.remove(external);

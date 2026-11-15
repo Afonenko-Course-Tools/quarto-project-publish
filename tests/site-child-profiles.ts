@@ -17,11 +17,7 @@ async function run(args: string[], cwd = root) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  assert(
-    result.success,
-    new TextDecoder().decode(result.stdout) +
-      new TextDecoder().decode(result.stderr),
-  );
+  assert(result.success, new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr));
 }
 try {
   await write(
@@ -43,63 +39,46 @@ try {
           : "profile:\n  group:\n    - [web, print]\n    - [content, alternate]\n"
       }${core ? "filters: [course-core]\ncourse: {id: lesson}\n" : ""}`,
     );
-    await write(
-      `${part}/index.qmd`,
-      "# Lesson\n\n::: {.content-visible when-profile=content}\nGROUP_CONTENT\n:::\n",
-    );
+    await write(`${part}/index.qmd`, "# Lesson\n\n::: {.content-visible when-profile=content}\nGROUP_CONTENT\n:::\n");
     await write(
       `${part}/_quarto-full.yml`,
-      `project:\n  output-dir: _site-full\n${
-        core ? "course: {view: full}\n" : ""
-      }`,
+      `project:\n  output-dir: _site-full\n${core ? "course: {view: full}\n" : ""}`,
     );
     await write(
       `${part}/_quarto-student.yml`,
-      `project:\n  output-dir: _site-student\n${
-        core ? "course: {view: student}\n" : ""
-      }`,
+      `project:\n  output-dir: _site-student\n${core ? "course: {view: student}\n" : ""}`,
     );
     if (mode === "group") {
-      await write(
-        `${part}/_quarto-web.yml`,
-        `format: html\n${core ? "course: {view: student}\n" : ""}`,
-      );
+      await write(`${part}/_quarto-web.yml`, `format: html\n${core ? "course: {view: student}\n" : ""}`);
     }
   }
   await run(["add", repo, "--no-prompt"]);
-  const provider = Deno.env.get("COURSE_CORE_PROVIDER") ||
-    join(dirname(repo), "quarto-course");
+  const provider = Deno.env.get("COURSE_CORE_PROVIDER") || join(dirname(repo), "quarto-course");
   for (const cwd of [root, join(root, "core")]) {
     await run(["add", provider, "--no-prompt"], cwd);
   }
   await run(["render", "--fail-if-warnings"]);
   for (const part of ["plain", "core"]) {
-    const html = await Deno.readTextFile(
-      join(root, `_site/${part}/index.html`),
-    );
+    const html = await Deno.readTextFile(join(root, `_site/${part}/index.html`));
     if (mode === "group") {
-      assert(
-        html.includes("GROUP_CONTENT"),
-        "content-only native group profile missing",
-      );
+      assert(html.includes("GROUP_CONTENT"), "content-only native group profile missing");
     }
   }
   const profiles = mode === "default" ? ["full"] : ["web", "content"];
-  let releases = 0, collections = 0;
+  let releases = 0,
+    collections = 0;
   const runs = join(root, "_generated/course-site/runs");
   for await (const directory of Deno.readDir(runs)) {
     for await (const entry of Deno.readDir(join(runs, directory.name))) {
       if (entry.name.endsWith("-0.json")) {
-        const collectionValue: unknown = JSON.parse(
-          await Deno.readTextFile(join(runs, directory.name, entry.name)),
-        );
+        const collectionValue: unknown = JSON.parse(await Deno.readTextFile(join(runs, directory.name, entry.name)));
         assertEquals(record(collectionValue, root, "collection").profiles, profiles);
         collections++;
       }
       if (entry.name === "composition.json") {
-        const composition = await readComposition(JSON.parse(
-          await Deno.readTextFile(join(runs, directory.name, entry.name)),
-        ));
+        const composition = await readComposition(
+          JSON.parse(await Deno.readTextFile(join(runs, directory.name, entry.name))),
+        );
         assertEquals(composition.nativeOperations.length, 1);
         const release = composition.nativeOperations[0];
         assert(release, "Нет native operation ребёнка");
@@ -112,9 +91,7 @@ try {
   }
   assertEquals(collections, 2);
   assertEquals(releases, 1);
-  console.log(
-    `PASS native child ${mode} profiles: audience safety, mounted output, collection and Core release`,
-  );
+  console.log(`PASS native child ${mode} profiles: audience safety, mounted output, collection and Core release`);
 } finally {
   await Deno.remove(root, { recursive: true });
 }

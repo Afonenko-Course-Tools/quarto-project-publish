@@ -18,8 +18,7 @@ Deno.writeTextFileSync(
     {
       producer: "Afonenko-Course-Tools/quarto-project-publish",
       commit: Deno.env.get("DEMO_SOURCE_COMMIT") || run(["rev-parse", "HEAD"]),
-      sourceDirty: Deno.env.get("DEMO_SOURCE_DIRTY") === "true" ||
-        run(["status", "--porcelain"]).length > 0,
+      sourceDirty: Deno.env.get("DEMO_SOURCE_DIRTY") === "true" || run(["status", "--porcelain"]).length > 0,
       dependencies: {
         ...{
           "quarto-project-publish": "v5.2.0",

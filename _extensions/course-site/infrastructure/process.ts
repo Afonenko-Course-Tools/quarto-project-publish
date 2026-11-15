@@ -1,5 +1,5 @@
-import {createMetrics as __createMetrics} from "../observability/bridge.ts";
-const __metrics=__createMetrics("course-site");
+import { createMetrics as __createMetrics } from "../observability/bridge.ts";
+const __metrics = __createMetrics("course-site");
 function executableImpl(): string {
   return Deno.env.get("QUARTO") || "quarto";
 }
@@ -29,7 +29,11 @@ async function liveOutput(command: Deno.Command): Promise<Deno.CommandOutput> {
         }
       }
     } catch (error) {
-      try { child.kill("SIGTERM"); } catch { /* child уже мог завершиться */ }
+      try {
+        child.kill("SIGTERM");
+      } catch {
+        /* child уже мог завершиться */
+      }
       throw error;
     }
   };
@@ -46,7 +50,10 @@ async function liveOutput(command: Deno.Command): Promise<Deno.CommandOutput> {
   const concatenate = (parts: Uint8Array[]) => {
     const value = new Uint8Array(parts.reduce((size, part) => size + part.length, 0));
     let offset = 0;
-    for (const part of parts) { value.set(part, offset); offset += part.length; }
+    for (const part of parts) {
+      value.set(part, offset);
+      offset += part.length;
+    }
     return value;
   };
   return { ...status, stdout: concatenate(chunks[0]), stderr: concatenate(chunks[1]) };
@@ -76,9 +83,7 @@ async function quartoImpl(
       throw cause;
     }
     const error = new Error(
-      `course-site: не удалось запустить ${tool} в ${cwd}\n${
-        cause instanceof Error ? cause.message : String(cause)
-      }`,
+      `course-site: не удалось запустить ${tool} в ${cwd}\n${cause instanceof Error ? cause.message : String(cause)}`,
       { cause },
     );
     error.name = "ExternalToolFailure";
@@ -94,9 +99,7 @@ async function quartoImpl(
     err = new TextDecoder().decode(result.stderr);
   if (!result.success) {
     const error = new Error(
-      `course-site: Quarto ${
-        args[0]
-      } завершился с кодом ${result.code} (проект: ${cwd})${
+      `course-site: Quarto ${args[0]} завершился с кодом ${result.code} (проект: ${cwd})${
         forward ? "" : `\n${out}${err}`
       }`,
       { cause: result },
@@ -116,6 +119,15 @@ function profileArgumentsImpl(profiles: string[]): string[] {
   return profiles.length ? ["--profile", profiles.join(",")] : [];
 }
 
-export const executable = __metrics.wrapSync({id:"course-site.infrastructure.process.executable",kind:"command"},executableImpl);
-export const quarto = __metrics.wrapAsync({id:"course-site.infrastructure.process.quarto",kind:"command"},quartoImpl);
-export const profileArguments = __metrics.wrapSync({id:"course-site.infrastructure.process.profileArguments",kind:"command"},profileArgumentsImpl);
+export const executable = __metrics.wrapSync(
+  { id: "course-site.infrastructure.process.executable", kind: "command" },
+  executableImpl,
+);
+export const quarto = __metrics.wrapAsync(
+  { id: "course-site.infrastructure.process.quarto", kind: "command" },
+  quartoImpl,
+);
+export const profileArguments = __metrics.wrapSync(
+  { id: "course-site.infrastructure.process.profileArguments", kind: "command" },
+  profileArgumentsImpl,
+);

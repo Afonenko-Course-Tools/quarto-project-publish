@@ -15,8 +15,7 @@ async function run(args: string[]) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const text = new TextDecoder().decode(result.stdout) +
-    new TextDecoder().decode(result.stderr);
+  const text = new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr);
   assert(result.success, text);
   return text;
 }
@@ -37,28 +36,13 @@ subprojects: [part]
 await write("index.qmd", "# Root\n\n@part:sec-later\n");
 await write("about.qmd", "# About\n");
 // Deliberately invalid component: a selected root page must not render it.
-await write(
-  "part/_quarto.yml",
-  "project:\n  type: website\n  pre-render: missing-script.ts\n",
-);
+await write("part/_quarto.yml", "project:\n  type: website\n  pre-render: missing-script.ts\n");
 await run(["add", repo, "--no-prompt"]);
-await run([
-  "add",
-  Deno.env.get("QRC_PROVIDER") ||
-  join(dirname(repo), "quarto-reference-catalog"),
-  "--no-prompt",
-]);
+await run(["add", Deno.env.get("QRC_PROVIDER") || join(dirname(repo), "quarto-reference-catalog"), "--no-prompt"]);
 const log = await run(["render", "index.qmd"]);
+assert(log.includes("отложено ссылок: 1"), "selected root did not use local QRC finalization");
 assert(
-  log.includes("отложено ссылок: 1"),
-  "selected root did not use local QRC finalization",
-);
-assert(
-  (await Deno.readTextFile(join(root, "_site/index.html"))).includes(
-    'data-qrc-deferred="true"',
-  ),
+  (await Deno.readTextFile(join(root, "_site/index.html"))).includes('data-qrc-deferred="true"'),
   "local deferred reference missing",
 );
-console.log(
-  "PASS selected root local scope skips composition and defers unresolved QRC references",
-);
+console.log("PASS selected root local scope skips composition and defers unresolved QRC references");

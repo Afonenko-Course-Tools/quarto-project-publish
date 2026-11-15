@@ -23,11 +23,7 @@ async function run(args: string[], cwd = root) {
     stdout: "piped",
     stderr: "piped",
   }).output();
-  assert(
-    result.success,
-    new TextDecoder().decode(result.stdout) +
-      new TextDecoder().decode(result.stderr),
-  );
+  assert(result.success, new TextDecoder().decode(result.stdout) + new TextDecoder().decode(result.stderr));
 }
 try {
   await write(
@@ -39,10 +35,7 @@ try {
     "a/slides/_quarto.yml",
     `project:\n  type: website\n  output-dir: _site\n  render: [index.qmd, talk.qmd, notes.qmd]\n  post-render:\n    - _extensions/reference-catalog/entrypoints/post.ts\n    - ../../_extensions/course-site/entrypoints/collect.ts\nformat: html\nfilters: [count.lua, reference-catalog]\nreference-catalog: {namespace: talk}\n`,
   );
-  await write(
-    "a/slides/count.lua",
-    await fixture("count-formats.lua"),
-  );
+  await write("a/slides/count.lua", await fixture("count-formats.lua"));
   await write(
     "a/slides/index.qmd",
     "---\ntitle: Website\nformat: html\n---\n# Website {#sec-web}\n\n@talk:sec-slide\n",
@@ -57,55 +50,40 @@ try {
     "---\ntitle: Notes\nformat:\n  html: default\n  gfm: default\n---\n# Native notes\n",
   );
   await run(["add", repo, "--no-prompt"]);
-  const qrc = Deno.env.get("QRC_PROVIDER") ||
-    join(dirname(repo), "quarto-reference-catalog");
+  const qrc = Deno.env.get("QRC_PROVIDER") || join(dirname(repo), "quarto-reference-catalog");
   await run(["add", qrc, "--no-prompt"]);
   await run(["add", qrc, "--no-prompt"], join(root, "a/slides"));
   await run(["render"]);
-  const counts = (await Deno.readTextFile(join(root, "counts.txt"))).trim()
-    .split("\n").sort();
+  const counts = (await Deno.readTextFile(join(root, "counts.txt"))).trim().split("\n").sort();
   assertEquals(counts, ["Notes:gfm", "Notes:html", "Slides:revealjs", "Website:html"]);
-  const trace = (await Deno.readTextFile(join(root, "trace.jsonl"))).trim()
-    .split("\n").map((line) => readCommandEvent(JSON.parse(line)));
+  const trace = (await Deno.readTextFile(join(root, "trace.jsonl")))
+    .trim()
+    .split("\n")
+    .map((line) => readCommandEvent(JSON.parse(line)));
   const childRenders = trace.filter((row) => row.kind === "render");
   assertEquals(childRenders.length, 1);
   const childRender = childRenders[0];
   assert(childRender, "Нет child render");
   assertEquals(childRender.args, ["render", "."]);
   assert(
-    trace.filter((row) => row.kind === "inspect").every((row) => {
-      const input = row.args[1];
-      assert(input !== undefined, "Нет пути inspect");
-      return !input.endsWith(".qmd");
-    }),
+    trace
+      .filter((row) => row.kind === "inspect")
+      .every((row) => {
+        const input = row.args[1];
+        assert(input !== undefined, "Нет пути inspect");
+        return !input.endsWith(".qmd");
+      }),
     "Возвращён document inspect fanout",
   );
-  const webpage = await Deno.readTextFile(
-    join(root, "_site/a/slides/index.html"),
-  );
-  assert(
-    webpage.includes('href="talk.html#/sec-slide"'),
-    "nested local Reveal link was not resolved",
-  );
+  const webpage = await Deno.readTextFile(join(root, "_site/a/slides/index.html"));
+  assert(webpage.includes('href="talk.html#/sec-slide"'), "nested local Reveal link was not resolved");
   const talk = await Deno.readTextFile(join(root, "_site/a/slides/talk.html"));
-  assert(
-    talk.includes('href="index.html#sec-web"'),
-    "reverse web link was not resolved",
-  );
-  assert(
-    !(await Deno.readTextFile(join(root, "_site/index.html"))).includes(
-      "qrc-unresolved",
-    ),
-    "root link unresolved",
-  );
-  const catalog: unknown = JSON.parse(
-    await Deno.readTextFile(join(root, "_site/reference-catalog.json")),
-  );
+  assert(talk.includes('href="index.html#sec-web"'), "reverse web link was not resolved");
+  assert(!(await Deno.readTextFile(join(root, "_site/index.html"))).includes("qrc-unresolved"), "root link unresolved");
+  const catalog: unknown = JSON.parse(await Deno.readTextFile(join(root, "_site/reference-catalog.json")));
   const targets = record(record(catalog, root, "catalog").targets, root, "targets");
   assertEquals(record(targets["talk:sec-slide"], root, "target").page, "a/slides/talk.html");
-  const markdown = await Deno.readTextFile(
-    join(root, "_site/a/slides/notes.md"),
-  );
+  const markdown = await Deno.readTextFile(join(root, "_site/a/slides/notes.md"));
   assert(markdown.includes("# Native notes"), "Потерян настоящий native GFM результат");
   console.log(
     "PASS native HTML/GFM/Reveal selection, nested QRC, circular HTML/Reveal links, одна child команда и body каждого формата",

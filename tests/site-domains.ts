@@ -5,19 +5,13 @@ import { dirname, fromFileUrl, join, toFileUrl } from "stdlib/path";
 import { assert, assertEquals } from "./support.ts";
 const repo = dirname(dirname(fromFileUrl(import.meta.url))),
   base = dirname(repo);
-const root = Deno.env.get("COURSE_SITE_DOMAIN_ROOT") ||
-  await Deno.makeTempDir({ prefix: "course-site-domains-" });
+const root = Deno.env.get("COURSE_SITE_DOMAIN_ROOT") || (await Deno.makeTempDir({ prefix: "course-site-domains-" }));
 const quarto = Deno.env.get("QUARTO") || "quarto";
 async function write(path: string, text: string) {
   await Deno.mkdir(dirname(join(root, path)), { recursive: true });
   await Deno.writeTextFile(join(root, path), text);
 }
-async function run(
-  args: string[],
-  cwd = root,
-  success = true,
-  env: Record<string, string> = {},
-) {
+async function run(args: string[], cwd = root, success = true, env: Record<string, string> = {}) {
   const r = await new Deno.Command(quarto, {
     args,
     cwd,
@@ -25,8 +19,7 @@ async function run(
     stdout: "piped",
     stderr: "piped",
   }).output();
-  const text = new TextDecoder().decode(r.stdout) +
-    new TextDecoder().decode(r.stderr);
+  const text = new TextDecoder().decode(r.stdout) + new TextDecoder().decode(r.stderr);
   await write(`_generated/test-logs/${crypto.randomUUID()}.log`, text);
   assert(r.success === success, `exit ${r.code}: ${text}`);
   return text;
@@ -91,18 +84,14 @@ for (const id of ["part", "second"]) {
       `<svg xmlns="http://www.w3.org/2000/svg"><text>${asset.toUpperCase()}_RESOURCE_${id}</text></svg>`,
     );
   }
-  await write(
-    `${id}/asset.svg`,
-    `<svg xmlns="http://www.w3.org/2000/svg"><text>PUBLIC_RESOURCE_${id}</text></svg>`,
-  );
+  await write(`${id}/asset.svg`, `<svg xmlns="http://www.w3.org/2000/svg"><text>PUBLIC_RESOURCE_${id}</text></svg>`);
 }
 if (Deno.args[0] === "rootless") {
   await write(
     "_quarto.yml",
-    (await Deno.readTextFile(join(root, "_quarto.yml"))).replace(
-      "filters: [course-core, reference-catalog]",
-      "filters: [reference-catalog]",
-    ).replace("course: {id: portal}\n", ""),
+    (await Deno.readTextFile(join(root, "_quarto.yml")))
+      .replace("filters: [course-core, reference-catalog]", "filters: [reference-catalog]")
+      .replace("course: {id: portal}\n", ""),
   );
 }
 for (const id of ["", "part/", "second/"]) {
@@ -110,29 +99,23 @@ for (const id of ["", "part/", "second/"]) {
     await write(
       `${id}_quarto-${view}.yml`,
       `project:\n  output-dir: _site-${view}\n${
-        Deno.args[0] === "rootless" && id === ""
-          ? ""
-          : `course:\n  view: ${view}\n`
+        Deno.args[0] === "rootless" && id === "" ? "" : `course:\n  view: ${view}\n`
       }`,
     );
   }
 }
 await run(["add", repo, "--no-prompt"]);
 for (const cwd of [root, join(root, "part"), join(root, "second")]) {
-  for (
-    const provider of ["quarto-course-capture", "quarto-reference-catalog"]
-  ) {
-    await run([
-      "add",
-      (provider === "quarto-course-capture"
-        ? Deno.env.get("COURSE_CORE_PROVIDER")
-        : Deno.env.get("QRC_PROVIDER")) ||
-      join(
-        base,
-        provider === "quarto-course-capture" ? "quarto-course" : provider,
-      ),
-      "--no-prompt",
-    ], cwd);
+  for (const provider of ["quarto-course-capture", "quarto-reference-catalog"]) {
+    await run(
+      [
+        "add",
+        (provider === "quarto-course-capture" ? Deno.env.get("COURSE_CORE_PROVIDER") : Deno.env.get("QRC_PROVIDER")) ||
+          join(base, provider === "quarto-course-capture" ? "quarto-course" : provider),
+        "--no-prompt",
+      ],
+      cwd,
+    );
   }
 }
 const runs = join(root, "_generated/course-site/runs");
@@ -145,47 +128,25 @@ try {
 await run(["render", "--profile", "student"]);
 const html = await Deno.readTextFile(join(root, "_site-student/index.html"));
 assert(
-  html.includes("part/index.html#sec-part") &&
-    html.includes("second/index.html#sec-second"),
+  html.includes("part/index.html#sec-part") && html.includes("second/index.html#sec-second"),
   "full mounted links missing",
 );
 assert(
-  html.includes("ORDINARY_QUARTO_CONDITION") &&
-    html.includes("ORDINARY_QUARTO_SOLUTION"),
+  html.includes("ORDINARY_QUARTO_CONDITION") && html.includes("ORDINARY_QUARTO_SOLUTION"),
   "ordinary native Quarto outside bank changed",
 );
-const search = readSearch(JSON.parse(
-  await Deno.readTextFile(join(root, "_site-student/search.json")),
-));
+const search = readSearch(JSON.parse(await Deno.readTextFile(join(root, "_site-student/search.json"))));
 assert(
-  search.some((entry) =>
-    entry.href.startsWith("part/") && entry.text.includes("PUBLIC_part")
-  ),
+  search.some((entry) => entry.href.startsWith("part/") && entry.text.includes("PUBLIC_part")),
   "root search missing mounted lesson",
 );
 for (const id of ["part", "second"]) {
-  const mounted = await Deno.readTextFile(
-    join(root, `_site-student/${id}/index.html`),
-  );
-  assert(
-    mounted.includes(`WORK_PREVIEW_${id}`),
-    "student work preview missing",
-  );
-  assert(
-    !mounted.match(/RESTRICTED_|PRIVATE_/),
-    "student mounted page leaked closed declaration or assignment",
-  );
-  const catalog = await Deno.readTextFile(
-    join(root, "_site-student/reference-catalog.json"),
-  );
-  assert(
-    !catalog.includes("exr-restricted"),
-    "student catalog exposed restricted target",
-  );
-  assert(
-    !JSON.stringify(search).match(/RESTRICTED_|PRIVATE_/),
-    "student composed search leaked closed content",
-  );
+  const mounted = await Deno.readTextFile(join(root, `_site-student/${id}/index.html`));
+  assert(mounted.includes(`WORK_PREVIEW_${id}`), "student work preview missing");
+  assert(!mounted.match(/RESTRICTED_|PRIVATE_/), "student mounted page leaked closed declaration or assignment");
+  const catalog = await Deno.readTextFile(join(root, "_site-student/reference-catalog.json"));
+  assert(!catalog.includes("exr-restricted"), "student catalog exposed restricted target");
+  assert(!JSON.stringify(search).match(/RESTRICTED_|PRIVATE_/), "student composed search leaked closed content");
   for (const asset of ["restricted", "solution"]) {
     try {
       await Deno.stat(join(root, `_site-student/${id}/${asset}.svg`));
@@ -201,14 +162,10 @@ async function composition(view: string) {
   for await (const directory of Deno.readDir(runs)) {
     if (previousRuns.has(directory.name)) continue;
     try {
-      const value = await readComposition(JSON.parse(
-        await Deno.readTextFile(join(runs, directory.name, "composition.json")),
-      ));
-      if (
-        value.nativeOperations.some((row) =>
-          row.catalog.identity.profiles.includes(view)
-        )
-      ) matches.push(value);
+      const value = await readComposition(
+        JSON.parse(await Deno.readTextFile(join(runs, directory.name, "composition.json"))),
+      );
+      if (value.nativeOperations.some((row) => row.catalog.identity.profiles.includes(view))) matches.push(value);
     } catch (error) {
       if (!(error instanceof Deno.errors.NotFound)) throw error;
     }
@@ -223,19 +180,16 @@ async function composition(view: string) {
 }
 async function assertOwners(view: "student" | "full", resources = false) {
   const current = await composition(view);
-  const lessons = current.nativeOperations.filter((row) =>
-    ["part", "second"].includes(row.project)
-  );
+  const lessons = current.nativeOperations.filter((row) => ["part", "second"].includes(row.project));
   assertEquals(lessons.length, 2);
-  assertEquals(
-    new Set(lessons.map((row) => row.catalog.identity.operation)).size,
-    2,
-  );
+  assertEquals(new Set(lessons.map((row) => row.catalog.identity.operation)).size, 2);
   for (const row of lessons) {
-    const id = row.project, owner = join(root, id);
-    assertEquals(row.catalog.documents.map((d) => d.source), [
-      "index.qmd",
-    ]);
+    const id = row.project,
+      owner = join(root, id);
+    assertEquals(
+      row.catalog.documents.map((d) => d.source),
+      ["index.qmd"],
+    );
     assertEquals(row.course, {
       id: "shared-course",
       view,
@@ -243,147 +197,119 @@ async function assertOwners(view: "student" | "full", resources = false) {
     });
     const document = row.catalog.documents[0];
     assert(document, "Нет опубликованного документа owner");
-    const selectedIds = document.exercises.map((e) => e.id)
-      .sort();
-    assertEquals(
-      selectedIds,
-      view === "full"
-        ? [`exr-${id}`, `exr-restricted-${id}`].sort()
-        : [`exr-${id}`],
-    );
-    const Core = await loadCore(
-      toFileUrl(join(owner, "_extensions/course-core/public.ts")).href
-    );
-    await Core.withCurrentNativeOperation({
-      root: owner,
-      profiles: [view],
-      projection: view === "full" ? "author" : "student",
-      outputDirectory: join(owner, `_site-${view}`),
-    }, async (op) => {
-      assertEquals(op.identity, row.catalog.identity);
-      const doc = op.document({ source: "index.qmd" });
-      assertEquals(doc.context.input, "index.qmd");
-      assert(
-        !JSON.stringify(doc.occurrences).includes("WORK_PREVIEW_"),
-        "Preview вошёл в native exercise Body",
-      );
-      assertEquals(
-        JSON.stringify(doc.occurrences).includes(`PRIVATE_${id}`),
-        view === "full",
-      );
-      if (view === "student") {
-        let refused = false;
-        try {
-          op.condition({
-            source: "index.qmd",
-            exerciseId: `exr-restricted-${id}`,
-            view: "student",
-          });
-        } catch (error) {
-          refused = String(error).includes("CONDITION_OCCURRENCE");
+    const selectedIds = document.exercises.map((e) => e.id).sort();
+    assertEquals(selectedIds, view === "full" ? [`exr-${id}`, `exr-restricted-${id}`].sort() : [`exr-${id}`]);
+    const Core = await loadCore(toFileUrl(join(owner, "_extensions/course-core/public.ts")).href);
+    await Core.withCurrentNativeOperation(
+      {
+        root: owner,
+        profiles: [view],
+        projection: view === "full" ? "author" : "student",
+        outputDirectory: join(owner, `_site-${view}`),
+      },
+      async (op) => {
+        assertEquals(op.identity, row.catalog.identity);
+        const doc = op.document({ source: "index.qmd" });
+        assertEquals(doc.context.input, "index.qmd");
+        assert(!JSON.stringify(doc.occurrences).includes("WORK_PREVIEW_"), "Preview вошёл в native exercise Body");
+        assertEquals(JSON.stringify(doc.occurrences).includes(`PRIVATE_${id}`), view === "full");
+        if (view === "student") {
+          let refused = false;
+          try {
+            op.condition({
+              source: "index.qmd",
+              exerciseId: `exr-restricted-${id}`,
+              view: "student",
+            });
+          } catch (error) {
+            refused = String(error).includes("CONDITION_OCCURRENCE");
+          }
+          assert(refused, "Скрытое условие стало current public appearance");
         }
-        assert(refused, "Скрытое условие стало current public appearance");
-      }
-      if (resources) {
-        const condition = op.condition({
-          source: "index.qmd",
-          exerciseId: `exr-${id}`,
-          view: view === "full" ? "author" : "student",
-        });
-        assert(
-          condition.resources.includes("asset.svg"),
-          "Потерян ресурс current condition",
-        );
-        assert(
-          !JSON.stringify(condition).includes("WORK_PREVIEW_"),
-          "Condition захватило website preview",
-        );
-        const resourceFiles = await op.resourceFiles({
-          files: [{ source: "asset.svg", target: "asset.svg" }],
-        });
-        assertEquals(resourceFiles.audience, view);
-        assertEquals(
-          resourceFiles.files.map(({ source, target }) => ({
-            source,
-            target,
-          })),
-          [{ source: "asset.svg", target: "asset.svg" }],
-        );
-        const resource = resourceFiles.files[0];
-        assert(resource, "Нет current resource bytes");
-        assert(
-          new TextDecoder().decode(resource.bytes).includes(
-            `PUBLIC_RESOURCE_${id}`,
-          ),
-          "Смешаны ресурсы двух owner с одинаковым именем",
-        );
-        if (view === "full") {
-          const closed = op.condition({
+        if (resources) {
+          const condition = op.condition({
             source: "index.qmd",
-            exerciseId: `exr-restricted-${id}`,
-            view: "author",
+            exerciseId: `exr-${id}`,
+            view: view === "full" ? "author" : "student",
           });
-          assert(
-            JSON.stringify(closed).includes(`RESTRICTED_CONDITION_${id}`),
-            "Author condition потеряло закрытое условие",
-          );
-          const privateResources = await op.resourceFiles({
-            files: [{ source: "restricted.svg", target: "restricted.svg" }],
+          assert(condition.resources.includes("asset.svg"), "Потерян ресурс current condition");
+          assert(!JSON.stringify(condition).includes("WORK_PREVIEW_"), "Condition захватило website preview");
+          const resourceFiles = await op.resourceFiles({
+            files: [{ source: "asset.svg", target: "asset.svg" }],
           });
-          assertEquals(privateResources.audience, "full");
+          assertEquals(resourceFiles.audience, view);
           assertEquals(
-            privateResources.files.map(({ source, target }) => ({
+            resourceFiles.files.map(({ source, target }) => ({
               source,
               target,
             })),
-            [{ source: "restricted.svg", target: "restricted.svg" }],
+            [{ source: "asset.svg", target: "asset.svg" }],
           );
-          const privateResource = privateResources.files[0];
-          assert(privateResource, "Нет author resource bytes");
+          const resource = resourceFiles.files[0];
+          assert(resource, "Нет current resource bytes");
           assert(
-            new TextDecoder().decode(privateResource.bytes).includes(
-              `RESTRICTED_RESOURCE_${id}`,
-            ),
-            "Потеряны author bytes",
+            new TextDecoder().decode(resource.bytes).includes(`PUBLIC_RESOURCE_${id}`),
+            "Смешаны ресурсы двух owner с одинаковым именем",
           );
+          if (view === "full") {
+            const closed = op.condition({
+              source: "index.qmd",
+              exerciseId: `exr-restricted-${id}`,
+              view: "author",
+            });
+            assert(
+              JSON.stringify(closed).includes(`RESTRICTED_CONDITION_${id}`),
+              "Author condition потеряло закрытое условие",
+            );
+            const privateResources = await op.resourceFiles({
+              files: [{ source: "restricted.svg", target: "restricted.svg" }],
+            });
+            assertEquals(privateResources.audience, "full");
+            assertEquals(
+              privateResources.files.map(({ source, target }) => ({
+                source,
+                target,
+              })),
+              [{ source: "restricted.svg", target: "restricted.svg" }],
+            );
+            const privateResource = privateResources.files[0];
+            assert(privateResource, "Нет author resource bytes");
+            assert(
+              new TextDecoder().decode(privateResource.bytes).includes(`RESTRICTED_RESOURCE_${id}`),
+              "Потеряны author bytes",
+            );
+          }
         }
-      }
-    });
+      },
+    );
   }
 }
 await assertOwners("student", Deno.args[0] === "resources");
 async function assertFullProjection() {
   for (const id of ["part", "second"]) {
-    const page = await Deno.readTextFile(
-      join(root, `_site-full/${id}/index.html`),
-    );
+    const page = await Deno.readTextFile(join(root, `_site-full/${id}/index.html`));
     assert(
       page.includes(`PRIVATE_${id}`) &&
         page.includes(`RESTRICTED_CONDITION_${id}`) &&
         page.includes(`RESTRICTED_SOLUTION_${id}`),
       "full потерял закрытое содержимое",
     );
+    assert(page.includes(`exr-restricted-${id}`), "full потерял закрытый assignment slot");
     assert(
-      page.includes(`exr-restricted-${id}`),
-      "full потерял закрытый assignment slot",
-    );
-    assert(
-      (await Deno.readTextFile(join(root, "_site-full/reference-catalog.json")))
-        .includes(`exr-restricted-${id}`),
+      (await Deno.readTextFile(join(root, "_site-full/reference-catalog.json"))).includes(`exr-restricted-${id}`),
       "full потерял QRC target",
     );
     for (const asset of ["restricted", "solution"]) {
       assert(
-        (await Deno.readTextFile(join(root, `_site-full/${id}/${asset}.svg`)))
-          .includes(`${asset.toUpperCase()}_RESOURCE_${id}`),
+        (await Deno.readTextFile(join(root, `_site-full/${id}/${asset}.svg`))).includes(
+          `${asset.toUpperCase()}_RESOURCE_${id}`,
+        ),
         "full потерял закрытый resource",
       );
     }
   }
   assert(
-    (await Deno.readTextFile(join(root, "_site-full/search.json"))).includes(
-      "RESTRICTED_CONDITION_",
-    ),
+    (await Deno.readTextFile(join(root, "_site-full/search.json"))).includes("RESTRICTED_CONDITION_"),
     "full search потерял закрытое условие",
   );
 }
@@ -397,60 +323,43 @@ await assertOwners("full", Deno.args[0] === "resources");
 await run(["render", "--profile", "student"]);
 for (const id of ["part", "second"]) {
   assert(
-    !(await Deno.readTextFile(join(root, `_site-student/${id}/index.html`)))
-      .match(/PRIVATE_|RESTRICTED_/),
+    !(await Deno.readTextFile(join(root, `_site-student/${id}/index.html`))).match(/PRIVATE_|RESTRICTED_/),
     "student retry использовал full result",
   );
   assert(
-    (await Deno.readTextFile(join(root, `_site-full/${id}/index.html`)))
-      .includes(`PRIVATE_${id}`),
+    (await Deno.readTextFile(join(root, `_site-full/${id}/index.html`))).includes(`PRIVATE_${id}`),
     "student удалил independent full output",
   );
 }
 await assertOwners("student", Deno.args[0] === "resources");
 if (Deno.args[0] === "rootless") {
-  await write(
-    "second/_quarto-student.yml",
-    "project:\n  output-dir: _site-student\ncourse:\n  view: full\n",
-  );
+  await write("second/_quarto-student.yml", "project:\n  output-dir: _site-student\ncourse:\n  view: full\n");
   const retainedPaths = [
     "_site-student/index.html",
     "_site-student/second/index.html",
     "second/_site-student/index.html",
   ];
-  const retained = await Promise.all(
-    retainedPaths.map((p) => Deno.readFile(join(root, p))),
-  );
+  const retained = await Promise.all(retainedPaths.map((p) => Deno.readFile(join(root, p))));
   const trace = join(root, "_generated/test-logs/audience-refusal.jsonl");
   const probe = await commandProbe(root, quarto, trace);
-  const mixed = await run(
-    ["render", "--profile", "student", "--no-clean"],
-    root,
-    false,
-    { QUARTO: probe },
-  );
-  assert(
-    mixed.includes("SITE.AUDIENCE_MISMATCH"),
-    "Отсутствует адресный audience preflight: " + mixed,
-  );
+  const mixed = await run(["render", "--profile", "student", "--no-clean"], root, false, { QUARTO: probe });
+  assert(mixed.includes("SITE.AUDIENCE_MISMATCH"), "Отсутствует адресный audience preflight: " + mixed);
   for (const [i, path] of retainedPaths.entries()) {
     const actual = await Deno.readFile(join(root, path));
     const previous = retained[i];
     assert(previous, "Нет сохранённых previous bytes: " + path);
     assert(
-      actual.length === previous.length &&
-        actual.every((b, n) => b === previous[n]),
+      actual.length === previous.length && actual.every((b, n) => b === previous[n]),
       "Audience refusal изменил previous bytes: " + path,
     );
   }
-  const events = (await Deno.readTextFile(trace)).trim().split("\n").filter(
-    Boolean,
-  ).map((line) => readCommandEvent(JSON.parse(line)));
+  const events = (await Deno.readTextFile(trace))
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => readCommandEvent(JSON.parse(line)));
   assertEquals(events.filter((e) => e.kind === "render").length, 0);
-  assert(
-    mixed.includes("course.view"),
-    "Смешанная explicit аудитория отвергнута по иной причине: " + mixed,
-  );
+  assert(mixed.includes("course.view"), "Смешанная explicit аудитория отвергнута по иной причине: " + mixed);
 } else if (Deno.args[0] !== "resources") {
   // Отдельный корень для каждого failed build: Core M1 recovery не маскируется retry.
   const missingTarget = await Deno.makeTempDir({
@@ -470,23 +379,13 @@ if (Deno.args[0] === "rootless") {
       if (!(error instanceof Deno.errors.NotFound)) throw error;
     }
   }
-  await Deno.writeTextFile(
-    join(missingTarget, "second/index.qmd"),
-    "# Removed target {#sec-renamed}\n",
-  );
+  await Deno.writeTextFile(join(missingTarget, "second/index.qmd"), "# Removed target {#sec-renamed}\n");
   assert(
-    (await run(["render", "--profile", "student"], missingTarget, false))
-      .includes("second:sec-second"),
+    (await run(["render", "--profile", "student"], missingTarget, false)).includes("second:sec-second"),
     "strict QRC failure потерял missing target",
   );
   const partConfig = await Deno.readTextFile(join(root, "part/_quarto.yml"));
-  await write(
-    "part/_quarto.yml",
-    partConfig.replace(
-      "  pre-render: _extensions/course-core/entrypoints/pre.ts\n",
-      "",
-    ),
-  );
+  await write("part/_quarto.yml", partConfig.replace("  pre-render: _extensions/course-core/entrypoints/pre.ts\n", ""));
   const missingPre = await run(["render", "--profile", "student"], root, false);
   assert(
     missingPre.includes("DOCUMENT_BINDING") &&

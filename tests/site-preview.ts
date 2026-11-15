@@ -27,9 +27,11 @@ async function renders(): Promise<number> {
     if (error instanceof Deno.errors.NotFound) return 0;
     throw error;
   }
-  return text.split(/\r?\n/).filter((line) => line.trim()).map((line) =>
-    readCommandEvent(JSON.parse(line))
-  ).filter((event) => event.kind === "render").length;
+  return text
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .map((line) => readCommandEvent(JSON.parse(line)))
+    .filter((event) => event.kind === "render").length;
 }
 
 function deadline(ms: number, message: string) {
@@ -87,7 +89,7 @@ async function preview(cwd: string, clean = false): Promise<void> {
   let output = "";
   let listening = false;
   let ready!: () => void;
-  const served = new Promise<void>((resolve) => ready = resolve);
+  const served = new Promise<void>((resolve) => (ready = resolve));
   async function consume(stream: ReadableStream<Uint8Array>) {
     const decoder = new TextDecoder();
     for await (const chunk of stream) {
@@ -107,10 +109,7 @@ async function preview(cwd: string, clean = false): Promise<void> {
   // Keep the rejected exit promise observed after the serving race has settled.
   stopped.catch(() => {});
   // Чистый корень курса собирает три native проекта: два компонента и корень.
-  const startup = deadline(
-    course && clean && cwd === root ? 360_000 : 120_000,
-    "native preview did not start serving",
-  );
+  const startup = deadline(course && clean && cwd === root ? 360_000 : 120_000, "native preview did not start serving");
   try {
     await Promise.race([served, stopped, startup.promise]);
     startup.cancel();
@@ -149,26 +148,27 @@ async function preview(cwd: string, clean = false): Promise<void> {
     await streams;
   }
   const expected = clean && cwd === root ? (course ? 2 : 1) : 0;
-  assertEquals(await renders() - before, expected);
+  assertEquals((await renders()) - before, expected);
   if (course && !clean) {
-    const Core = await loadCore(
-      toFileUrl(join(cwd, "_extensions/course-core/public.ts")).href
-    );
+    const Core = await loadCore(toFileUrl(join(cwd, "_extensions/course-core/public.ts")).href);
     let refused = "";
     try {
-      await Core.withCurrentNativeOperation({
-        root: cwd,
-        profiles: ["student"],
-        projection: "student",
-        outputDirectory: join(cwd, "_site-student"),
-      }, async () => {});
+      await Core.withCurrentNativeOperation(
+        {
+          root: cwd,
+          profiles: ["student"],
+          projection: "student",
+          outputDirectory: join(cwd, "_site-student"),
+        },
+        async () => {},
+      );
     } catch (error) {
-      refused = error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : String(error);
+      refused =
+        error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : String(error);
     }
     assert(
       ["OPERATION_BINDING", "OPERATION_INCOMPLETE"].includes(refused),
-      "zero-output hook fabricated genuine completion or refused for another reason: " +
-        refused,
+      "zero-output hook fabricated genuine completion or refused for another reason: " + refused,
     );
   }
 }

@@ -12,10 +12,7 @@
   "lint": {
     "rules": {
       "tags": [],
-      "include": [
-        "no-explicit-any",
-        "ban-ts-comment"
-      ]
+      "include": ["no-explicit-any", "ban-ts-comment"]
     }
   }
 }
